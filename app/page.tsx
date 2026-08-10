@@ -2,6 +2,7 @@ import Hero from "@/app/components/home/Hero";
 import Brands from "@/app/components/home/Brands";
 import ProductSection from "@/app/components/home/ProductSection";
 import DressStyle from "./components/home/DressStyle";
+import Testimonials from "@/app/components/home/Testimonials";
 
 
 // Sample mock data matching Figma specs
@@ -27,6 +28,7 @@ export default function Home() {
       <ProductSection title="NEW ARRIVALS" products={newArrivalsData} />
       <ProductSection title="TOP SELLING" products={topSellingData} />
       <DressStyle />
+      <Testimonials />
     </main>
   );
 }
