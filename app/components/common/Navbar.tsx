@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search, ShoppingCart, User, Menu, ChevronDown } from "lucide-react";
+import { Search, ShoppingCart, User,Menu, ChevronDown,CircleUserRound } from "lucide-react";
 
 export default function Navbar() {
   return (
@@ -54,7 +54,7 @@ export default function Navbar() {
             <ShoppingCart size={24} />
           </Link>
           <Link href="#" aria-label="Account" className="text-black hover:opacity-80 transition">
-            <User size={24} />
+            <CircleUserRound size={24} />
           </Link>
         </div>
 
