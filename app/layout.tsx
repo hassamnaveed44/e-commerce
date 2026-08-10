@@ -3,6 +3,7 @@ import "./globals.css";
 import TopBanner from "@/app/components/common/TopBanner";
 import Navbar from "@/app/components/common/Navbar";
 import Footer from "@/app/components/common/Footer";
+// import Newsletter from "./components/common/Newsletter";
 
 export const metadata: Metadata = {
   title: "SHOP.CO - E-commerce Website",
@@ -20,6 +21,7 @@ export default function ShopLayout({
         <TopBanner />
         <Navbar />
         <main className="flex-grow">{children}</main>
+        {/* <Newsletter /> */}
          <Footer /> 
       </body>
     </html>
