@@ -1,7 +1,12 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { Search, ShoppingCart, User,Menu, ChevronDown,CircleUserRound } from "lucide-react";
+import { Search, ShoppingCart, Menu, X, ChevronDown, CircleUserRound } from "lucide-react";
 
 export default function Navbar() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-40 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-10 h-16 md:h-24 flex items-center justify-between gap-4">
@@ -9,10 +14,11 @@ export default function Navbar() {
         {/* Left: Mobile Menu Trigger & Logo */}
         <div className="flex items-center space-x-3 lg:space-x-10">
           <button 
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Open Menu"
             className="lg:hidden text-black focus:outline-none"
           >
-            <Menu size={24} />
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
           <Link 
             href="/" 
@@ -59,6 +65,42 @@ export default function Navbar() {
         </div>
 
       </div>
+
+      {/* Mobile Navigation Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden absolute top-full left-0 w-full bg-white border-b border-black/10 shadow-md py-6 px-6 transition-all">
+          <nav className="flex flex-col space-y-4 text-base text-black font-satoshi">
+            <Link 
+              href="#" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between hover:opacity-80 transition pb-2 border-b border-black/5"
+            >
+              Shop <ChevronDown size={16} />
+            </Link>
+            <Link 
+              href="#" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="hover:opacity-80 transition pb-2 border-b border-black/5"
+            >
+              On Sale
+            </Link>
+            <Link 
+              href="#" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="hover:opacity-80 transition pb-2 border-b border-black/5"
+            >
+              New Arrivals
+            </Link>
+            <Link 
+              href="#" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="hover:opacity-80 transition"
+            >
+              Brands
+            </Link>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
