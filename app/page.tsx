@@ -1,11 +1,13 @@
-import TopBanner from "@/app/components/common/TopBanner";
-import Navbar from "./components/common/Navbar";
+import Hero from "@/app/components/home/Hero";
+// import Brands from "@/components/home/Brands";
+// Import upcoming home components here as we build them
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-white">
-      <TopBanner />
-      <Navbar />
-    </main>
+    <>
+      <Hero />
+      {/* <Brands /> */}
+      {/* Subsequent home sections will be added here */}
+    </>
   );
 }
