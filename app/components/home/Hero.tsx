@@ -6,9 +6,7 @@ export default function Hero() {
     <section className="bg-[#F2F0F1] pt-10 md:pt-20 relative overflow-hidden">
       <div className="max-w-7xl mx-auto sm:px-6 xl:px-10 flex flex-col lg:flex-row items-start justify-between">
 
-        {/* Left Content Column — keeps its own horizontal padding on mobile only,
-            since the outer wrapper no longer pads at the base breakpoint (that's
-            now reserved for the full-bleed mobile image below). */}
+        {/* Left Content Column */}
         <div className="px-4 sm:px-0 lg:w-[577px] flex flex-col items-start pb-8 lg:pb-20 z-10">
           <h1 className="text-4xl sm:text-5xl lg:text-[64px] font-extrabold tracking-tight uppercase leading-[1] mb-6 text-black font-integral">
             FIND CLOTHES THAT MATCHES YOUR STYLE
@@ -23,9 +21,7 @@ export default function Hero() {
             Shop Now
           </Link>
 
-          {/* Stats Section — mobile: wraps 2-up then the 3rd centers on its own
-              line (flex-wrap + justify-center); desktop: original 3-col grid
-              with dividers, untouched. */}
+          {/* Stats Section */}
           <div className="flex flex-wrap justify-center gap-x-10 gap-y-4 text-center sm:grid sm:grid-cols-3 sm:gap-6 sm:text-left sm:justify-normal w-full font-satoshi">
             <div className="w-[40%] sm:w-auto">
               <h3 className="text-2xl sm:text-4xl font-bold text-black font-integral">200+</h3>
@@ -42,20 +38,17 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* Right Image Container:
-            - Mobile: full-bleed, edge-to-edge (w-full, no side padding, no max-w),
-              fixed aspect ratio matching the 390x448 Figma spec, flush to the
-              bottom of the section.
-            - Desktop (lg+): unchanged from before — centered column, capped width,
-              fixed height, top-aligned. */}
+        {/* Right Image Container — simple fixed heights at every breakpoint,
+            no aspect-ratio utility (that was conflicting with the fixed
+            lg:h value and causing the mismatched box/gap you saw). */}
         <div className="w-full lg:w-1/2 flex justify-center lg:justify-end relative">
-          <div className="relative w-full aspect-[390/448] lg:aspect-auto lg:max-w-[600px] lg:h-[500px]">
+          <div className="relative w-full h-[380px] sm:h-[450px] lg:w-[600px] lg:h-[560px]">
             <Image
-              src="/images/e-commercehero.png"
+              src="/images/mainhero.jpg"
               alt="Hero Fashion Models"
               fill
               priority
-              className="object-contain object-[30%_top] lg:object-top"
+              className="object-contain object-top lg:object-right"
             />
             {/* Decorative Vector Stars */}
             <div className="absolute top-2 right-10 lg:right-16 text-black text-4xl select-none pointer-events-none animate-pulse">
