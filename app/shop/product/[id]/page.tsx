@@ -1,6 +1,8 @@
 import Breadcrumb from "@/app/components/product/BreadCrumb";
 import ProductImages from "@/app/components/product/ProductImages";
 import ProductInfo from "@/app/components/product/ProductInfo";
+import Tabs from "@/app/components/product/Tabs";
+import ReviewsList from "@/app/components/product/ReviewsList";
 
 export default async function ProductPage({
   params,
@@ -11,16 +13,20 @@ export default async function ProductPage({
 
   return (
     <main className="min-h-screen bg-white">
-      {/* Top Divider & Breadcrumb */}
+      {/* Breadcrumb Section */}
       <Breadcrumb />
 
-      {/* Main Product Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-10 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-10 items-stretch">
+      {/* Main Product Section (Gallery + Info) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
           <ProductImages />
           <ProductInfo />
         </div>
       </section>
+
+      {/* Tabs & Reviews Section */}
+      <Tabs />
+      <ReviewsList />
     </main>
   );
 }
