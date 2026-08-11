@@ -1,7 +1,7 @@
 import Breadcrumb from "@/app/components/category/Breadcrumb";
 import FiltersSidebar from "@/app/components/category/FiltersSidebar";
 import ProductGrid from "@/app/components/category/ProductGrid";
-// import Pagination from "@/app/components/category/Pagination";
+import Pagination from "@/app/components/category/Pagination";
 
 export default async function CategoryPage({
   params,
@@ -28,7 +28,7 @@ export default async function CategoryPage({
           {/* Right Product Grid Area + Pagination */}
           <div className="flex-1 w-full">
             <ProductGrid categoryName={formattedCategory} />
-            {/* <Pagination /> */}
+            <Pagination />
           </div>
         </div>
       </section>
