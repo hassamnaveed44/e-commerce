@@ -51,7 +51,7 @@ export default function DressStyleSection() {
             {dressStyles.map((style) => (
               <Link
                 key={style.id}
-                href={`#${style.id}`}
+                href={`/category/${style.id}`}
                 className={`relative rounded-[20px] overflow-hidden bg-white h-[180px] sm:h-[289px] group transition duration-300 ${style.className}`}
               >
                 {/* Style Label */}

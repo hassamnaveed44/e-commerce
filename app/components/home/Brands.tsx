@@ -10,7 +10,7 @@ export default function Brands() {
   ];
 
   return (
-    <section className="bg-black py-9 md:py-11 overflow-hidden">
+    <section id="brands" className="bg-black py-9 md:py-11 overflow-hidden scroll-mt-16 md:scroll-mt-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-10 flex flex-wrap items-center justify-center md:justify-between gap-6 md:gap-8">
         {brands.map((brand, index) => (
           <div

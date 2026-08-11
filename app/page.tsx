@@ -4,7 +4,6 @@ import ProductSection from "@/app/components/home/ProductSection";
 import DressStyle from "./components/home/DressStyle";
 import Testimonials from "@/app/components/home/Testimonials";
 
-
 // Sample mock data matching Figma specs
 const newArrivalsData = [
   { id: 1, name: "T-shirt with Tape Details", image: "/images/product-1.png", price: 120, rating: 4.5 },
@@ -25,8 +24,8 @@ export default function Home() {
     <main>
       <Hero />
       <Brands />
-      <ProductSection title="NEW ARRIVALS" products={newArrivalsData} />
-      <ProductSection title="TOP SELLING" products={topSellingData} />
+      <ProductSection id="new-arrivals" title="NEW ARRIVALS" products={newArrivalsData} />
+      <ProductSection id="top-selling" title="TOP SELLING" products={topSellingData} />
       <DressStyle />
       <Testimonials />
     </main>

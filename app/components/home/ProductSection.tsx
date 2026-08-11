@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 interface Product {
-  id: number;
+  id: number | string;
   name: string;
   image: string;
   price: number;
@@ -14,11 +14,12 @@ interface Product {
 interface ProductSectionProps {
   title: string;
   products: Product[];
+  id?: string;
 }
 
-export default function ProductSection({ title, products }: ProductSectionProps) {
+export default function ProductSection({ title, products, id }: ProductSectionProps) {
   return (
-    <section className="py-12 md:py-16 bg-white border-b border-black/10">
+    <section id={id} className="py-12 md:py-16 bg-white border-b border-black/10 scroll-mt-16 md:scroll-mt-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-10">
         
         {/* Section Heading */}
@@ -34,19 +35,23 @@ export default function ProductSection({ title, products }: ProductSectionProps)
               className={`flex-col group font-satoshi ${index >= 2 ? "hidden lg:flex" : "flex"}`}
             >
               {/* Product Card Image Container */}
-              <div className="bg-[#F0EEED] rounded-[20px] aspect-square relative overflow-hidden mb-4 flex items-center justify-center p-4">
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  fill
-                  className="object-cover object-center group-hover:scale-105 transition duration-300"
-                />
-              </div>
+              <Link href={`/products/${product.id}`} className="block">
+                <div className="bg-[#F0EEED] rounded-[20px] aspect-square relative overflow-hidden mb-4 flex items-center justify-center p-4">
+                  <Image
+                    src={product.image}
+                    alt={product.name}
+                    fill
+                    className="object-cover object-center group-hover:scale-105 transition duration-300"
+                  />
+                </div>
+              </Link>
 
               {/* Product Title */}
-              <h3 className="font-bold text-base sm:text-lg text-black truncate mb-1">
-                {product.name}
-              </h3>
+              <Link href={`/products/${product.id}`}>
+                <h3 className="font-bold text-base sm:text-lg text-black truncate mb-1 hover:underline">
+                  {product.name}
+                </h3>
+              </Link>
 
               {/* Rating Section - Uses CSS clip-path or partial fill for fractional stars */}
               <div className="flex items-center gap-1.5 mb-2">
@@ -101,7 +106,7 @@ export default function ProductSection({ title, products }: ProductSectionProps)
         {/* View All Button */}
         <div className="text-center mt-10 md:mt-12">
           <Link
-            href="#"
+            href={id === "top-selling" ? "/#top-selling" : "/#new-arrivals"}
             className="inline-block w-full sm:w-auto text-center border border-black/15 text-black px-16 py-4 rounded-full font-medium hover:bg-black hover:text-white transition shadow-sm font-satoshi"
           >
             View All
