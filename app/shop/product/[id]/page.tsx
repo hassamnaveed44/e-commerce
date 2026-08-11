@@ -3,6 +3,7 @@ import ProductImages from "@/app/components/product/ProductImages";
 import ProductInfo from "@/app/components/product/ProductInfo";
 import Tabs from "@/app/components/product/Tabs";
 import ReviewsList from "@/app/components/product/ReviewsList";
+import YouMightAlsoLike from "@/app/components/product/YouMightAlsoLike";
 
 export default async function ProductPage({
   params,
@@ -27,6 +28,9 @@ export default async function ProductPage({
       {/* Tabs & Reviews Section */}
       <Tabs />
       <ReviewsList />
+
+      {/* Related Products Section */}
+      <YouMightAlsoLike />
     </main>
   );
 }
