@@ -46,7 +46,7 @@ export default function DressStyleSection() {
             BROWSE BY DRESS STYLE
           </h2>
 
-          {/* Styles Grid */}
+          {/* Styles Grid - Links to /category/[style.id] */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {dressStyles.map((style) => (
               <Link
