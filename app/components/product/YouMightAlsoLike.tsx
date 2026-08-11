@@ -6,6 +6,7 @@ interface RelatedProduct {
   id: string;
   name: string;
   image: string;
+  category?: string;
   price: number;
   originalPrice?: number;
   discount?: string;
@@ -18,6 +19,7 @@ const relatedProducts: RelatedProduct[] = [
     id: "polo-contrast-trims",
     name: "Polo with Contrast Trims",
     image: "/products/product4.png",
+    category: "casual",
     price: 212,
     originalPrice: 242,
     discount: "-20%",
@@ -28,6 +30,7 @@ const relatedProducts: RelatedProduct[] = [
     id: "gradient-graphic-tshirt",
     name: "Gradient Graphic T-shirt",
     image: "/products/product5.png",
+    category: "casual",
     price: 145,
     rating: 3.5,
     ratingMax: 5,
@@ -36,6 +39,7 @@ const relatedProducts: RelatedProduct[] = [
     id: "polo-tipping-details",
     name: "Polo with Tipping Details",
     image: "/products/product6.png",
+    category: "casual",
     price: 180,
     rating: 4.5,
     ratingMax: 5,
@@ -44,6 +48,7 @@ const relatedProducts: RelatedProduct[] = [
     id: "black-striped-tshirt",
     name: "Black Striped T-shirt",
     image: "/products/product7.png",
+    category: "casual",
     price: 120,
     originalPrice: 150,
     discount: "-30%",
@@ -60,12 +65,12 @@ export default function YouMightAlsoLike() {
         YOU MIGHT <br className="sm:hidden" /> ALSO LIKE
       </h2>
 
-      {/* Products Grid (2 on mobile, 4 on desktop) */}
+      {/* Products Grid (2 on mobile, 4 on desktop) -> Links to /category/[style] */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {relatedProducts.map((product, index) => (
           <Link
             key={product.id}
-            href={`/shop/product/${product.id}`}
+            href={`/category/${product.category || "casual"}`}
             className={`group flex-col ${index >= 2 ? "hidden lg:flex" : "flex"}`}
           >
             {/* Product Image Box */}
