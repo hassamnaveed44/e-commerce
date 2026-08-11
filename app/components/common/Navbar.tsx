@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, ShoppingCart, Menu, X, ChevronDown, CircleUserRound } from "lucide-react";
@@ -11,6 +11,35 @@ export default function Navbar() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShopDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setShopDropdownOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    // 200ms grace period so moving mouse to items won't close it abruptly
+    timeoutRef.current = setTimeout(() => {
+      setShopDropdownOpen(false);
+    }, 200);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,62 +74,66 @@ export default function Navbar() {
         <nav className="hidden lg:flex items-center space-x-6 text-base text-black">
           {/* Shop Dropdown */}
           <div 
-            className="relative"
-            onMouseEnter={() => setShopDropdownOpen(true)}
-            onMouseLeave={() => setShopDropdownOpen(false)}
+            ref={dropdownRef}
+            className="relative py-2"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
           >
             <button 
+              type="button"
               onClick={() => setShopDropdownOpen(!shopDropdownOpen)}
-              className="flex items-center gap-1 hover:opacity-80 transition cursor-pointer"
+              className="flex items-center gap-1 hover:opacity-80 transition cursor-pointer font-satoshi"
             >
               Shop <ChevronDown size={16} className={`transition-transform duration-200 ${shopDropdownOpen ? "rotate-180" : ""}`} />
             </button>
 
             {shopDropdownOpen && (
-              <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-black/10 rounded-xl shadow-lg py-2 z-50">
-                <Link 
-                  href="/#new-arrivals" 
-                  onClick={() => setShopDropdownOpen(false)}
-                  className="block px-4 py-2 text-sm text-black hover:bg-black/5 transition"
-                >
-                  New Arrivals
-                </Link>
-                <Link 
-                  href="/#top-selling" 
-                  onClick={() => setShopDropdownOpen(false)}
-                  className="block px-4 py-2 text-sm text-black hover:bg-black/5 transition"
-                >
-                  Top Selling
-                </Link>
-                <div className="border-t border-black/5 my-1" />
-                <Link 
-                  href="/category/casual" 
-                  onClick={() => setShopDropdownOpen(false)}
-                  className="block px-4 py-2 text-sm text-black/70 hover:bg-black/5 hover:text-black transition"
-                >
-                  Casual
-                </Link>
-                <Link 
-                  href="/category/formal" 
-                  onClick={() => setShopDropdownOpen(false)}
-                  className="block px-4 py-2 text-sm text-black/70 hover:bg-black/5 hover:text-black transition"
-                >
-                  Formal
-                </Link>
-                <Link 
-                  href="/category/party" 
-                  onClick={() => setShopDropdownOpen(false)}
-                  className="block px-4 py-2 text-sm text-black/70 hover:bg-black/5 hover:text-black transition"
-                >
-                  Party
-                </Link>
-                <Link 
-                  href="/category/gym" 
-                  onClick={() => setShopDropdownOpen(false)}
-                  className="block px-4 py-2 text-sm text-black/70 hover:bg-black/5 hover:text-black transition"
-                >
-                  Gym
-                </Link>
+              <div className="absolute top-full left-0 pt-1 w-48 z-50">
+                <div className="bg-white border border-black/10 rounded-xl shadow-lg py-2">
+                  <Link 
+                    href="/#new-arrivals" 
+                    onClick={() => setShopDropdownOpen(false)}
+                    className="block px-4 py-2 text-sm text-black hover:bg-black/5 transition font-satoshi"
+                  >
+                    New Arrivals
+                  </Link>
+                  <Link 
+                    href="/#top-selling" 
+                    onClick={() => setShopDropdownOpen(false)}
+                    className="block px-4 py-2 text-sm text-black hover:bg-black/5 transition font-satoshi"
+                  >
+                    Top Selling
+                  </Link>
+                  <div className="border-t border-black/5 my-1" />
+                  <Link 
+                    href="/category/casual" 
+                    onClick={() => setShopDropdownOpen(false)}
+                    className="block px-4 py-2 text-sm text-black/70 hover:bg-black/5 hover:text-black transition font-satoshi"
+                  >
+                    Casual
+                  </Link>
+                  <Link 
+                    href="/category/formal" 
+                    onClick={() => setShopDropdownOpen(false)}
+                    className="block px-4 py-2 text-sm text-black/70 hover:bg-black/5 hover:text-black transition font-satoshi"
+                  >
+                    Formal
+                  </Link>
+                  <Link 
+                    href="/category/party" 
+                    onClick={() => setShopDropdownOpen(false)}
+                    className="block px-4 py-2 text-sm text-black/70 hover:bg-black/5 hover:text-black transition font-satoshi"
+                  >
+                    Party
+                  </Link>
+                  <Link 
+                    href="/category/gym" 
+                    onClick={() => setShopDropdownOpen(false)}
+                    className="block px-4 py-2 text-sm text-black/70 hover:bg-black/5 hover:text-black transition font-satoshi"
+                  >
+                    Gym
+                  </Link>
+                </div>
               </div>
             )}
           </div>
@@ -177,17 +210,64 @@ export default function Navbar() {
                 <div className="pl-4 py-2 flex flex-col space-y-2 text-sm text-black/70">
                   <Link 
                     href="/#new-arrivals" 
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={() => {
+                      setShopDropdownOpen(false);
+                      setMobileMenuOpen(false);
+                    }}
                     className="hover:text-black transition"
                   >
                     • New Arrivals
                   </Link>
                   <Link 
                     href="/#top-selling" 
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={() => {
+                      setShopDropdownOpen(false);
+                      setMobileMenuOpen(false);
+                    }}
                     className="hover:text-black transition"
                   >
                     • Top Selling
+                  </Link>
+                  <div className="border-t border-black/5 my-1" />
+                  <Link 
+                    href="/category/casual" 
+                    onClick={() => {
+                      setShopDropdownOpen(false);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="hover:text-black transition"
+                  >
+                    • Casual
+                  </Link>
+                  <Link 
+                    href="/category/formal" 
+                    onClick={() => {
+                      setShopDropdownOpen(false);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="hover:text-black transition"
+                  >
+                    • Formal
+                  </Link>
+                  <Link 
+                    href="/category/party" 
+                    onClick={() => {
+                      setShopDropdownOpen(false);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="hover:text-black transition"
+                  >
+                    • Party
+                  </Link>
+                  <Link 
+                    href="/category/gym" 
+                    onClick={() => {
+                      setShopDropdownOpen(false);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="hover:text-black transition"
+                  >
+                    • Gym
                   </Link>
                 </div>
               )}
