@@ -34,8 +34,8 @@ export default function ProductSection({ title, products, id }: ProductSectionPr
               key={product.id} 
               className={`flex-col group font-satoshi ${index >= 2 ? "hidden lg:flex" : "flex"}`}
             >
-              {/* Product Card Image Container */}
-              <Link href={`/products/${product.id}`} className="block">
+              {/* Product Card Image Container -> Redirects to /shop/product/[id] */}
+              <Link href={`/shop/product/${product.id}`} className="block">
                 <div className="bg-[#F0EEED] rounded-[20px] aspect-square relative overflow-hidden mb-4 flex items-center justify-center p-4">
                   <Image
                     src={product.image}
@@ -46,14 +46,14 @@ export default function ProductSection({ title, products, id }: ProductSectionPr
                 </div>
               </Link>
 
-              {/* Product Title */}
-              <Link href={`/products/${product.id}`}>
+              {/* Product Title -> Redirects to /shop/product/[id] */}
+              <Link href={`/shop/product/${product.id}`}>
                 <h3 className="font-bold text-base sm:text-lg text-black truncate mb-1 hover:underline">
                   {product.name}
                 </h3>
               </Link>
 
-              {/* Rating Section - Uses CSS clip-path or partial fill for fractional stars */}
+              {/* Rating Section */}
               <div className="flex items-center gap-1.5 mb-2">
                 <div className="flex text-[#FFC633] text-sm font-black">
                   {Array.from({ length: 5 }, (_, i) => {
