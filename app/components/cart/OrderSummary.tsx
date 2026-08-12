@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Tag, ArrowRight } from "lucide-react";
 
 export default function OrderSummary() {
@@ -62,14 +63,14 @@ export default function OrderSummary() {
         </button>
       </div>
 
-      {/* Checkout Button */}
-      <button 
-        type="button"
+      {/* Checkout Link Button */}
+      <Link 
+        href="/checkout"
         className="w-full bg-black text-white rounded-full py-4 font-medium hover:bg-black/80 transition-colors flex items-center justify-center gap-2 text-base font-satoshi cursor-pointer shadow-sm"
       >
         <span>Go to Checkout</span>
         <ArrowRight size={18} />
-      </button>
+      </Link>
     </div>
   );
 }

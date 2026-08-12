@@ -1,16 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, User, X, CheckCircle2 } from "lucide-react";
 
-export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
+function AuthForm() {
+  const searchParams = useSearchParams();
+  const defaultTab = searchParams.get("tab") === "register" ? false : true;
+  
+  const [isLogin, setIsLogin] = useState(defaultTab);
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const router = useRouter();
 
   // Form State
@@ -22,8 +26,17 @@ export default function AuthPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate successful login/signup and redirect to checkout or account
-    router.push("/checkout");
+
+    if (!isLogin) {
+      // 1. User created account -> Show success alert & switch to Sign In tab
+      setSignupSuccess(true);
+      setIsLogin(true);
+      // Keep email pre-filled for convenience, clear password
+      setFormData((prev) => ({ ...prev, password: "" }));
+    } else {
+      // 2. User signed in -> Redirect to checkout or home
+      router.push("/checkout");
+    }
   };
 
   const handleResetSubmit = (e: React.FormEvent) => {
@@ -41,7 +54,7 @@ export default function AuthPage() {
       <div className="max-w-md w-full bg-white rounded-[24px] p-6 sm:p-10 border border-black/10 shadow-sm font-satoshi">
         
         {/* Header / Logo */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <Link href="/" className="text-3xl font-extrabold tracking-tighter uppercase font-sans text-black">
             SHOP.CO
           </Link>
@@ -50,11 +63,25 @@ export default function AuthPage() {
           </p>
         </div>
 
+        {/* Success Banner After Signup */}
+        {signupSuccess && (
+          <div className="mb-6 p-4 rounded-[16px] bg-emerald-50 border border-emerald-200 flex items-start gap-3 text-emerald-800 text-sm animate-in fade-in">
+            <CheckCircle2 size={20} className="shrink-0 text-emerald-600 mt-0.5" />
+            <div>
+              <p className="font-bold">Account Created Successfully!</p>
+              <p className="text-xs text-emerald-700 mt-0.5">Please sign in with your credentials below.</p>
+            </div>
+          </div>
+        )}
+
         {/* Tab Switcher */}
         <div className="flex bg-[#F0F0F0] rounded-full p-1 mb-8">
           <button
             type="button"
-            onClick={() => setIsLogin(true)}
+            onClick={() => {
+              setIsLogin(true);
+              setSignupSuccess(false);
+            }}
             className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-all cursor-pointer ${
               isLogin ? "bg-black text-white shadow-xs" : "text-black/60 hover:text-black"
             }`}
@@ -63,7 +90,10 @@ export default function AuthPage() {
           </button>
           <button
             type="button"
-            onClick={() => setIsLogin(false)}
+            onClick={() => {
+              setIsLogin(false);
+              setSignupSuccess(false);
+            }}
             className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-all cursor-pointer ${
               !isLogin ? "bg-black text-white shadow-xs" : "text-black/60 hover:text-black"
             }`}
@@ -82,7 +112,7 @@ export default function AuthPage() {
                 <input
                   type="text"
                   required
-                  placeholder="John Doe"
+                  placeholder="Alex Morgan"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full bg-[#F0F0F0] rounded-full pl-11 pr-4 py-3 text-sm text-black placeholder:text-black/40 outline-none border border-transparent focus:border-black/20"
@@ -228,5 +258,13 @@ export default function AuthPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F2F0F1]" />}>
+      <AuthForm />
+    </Suspense>
   );
 }
