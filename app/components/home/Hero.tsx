@@ -38,23 +38,21 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* Right Image Container — simple fixed heights at every breakpoint,
-            no aspect-ratio utility (that was conflicting with the fixed
-            lg:h value and causing the mismatched box/gap you saw). */}
-        <div className="w-full lg:w-1/2 flex justify-center lg:justify-end relative">
-          <div className="relative w-full h-[380px] sm:h-[450px] lg:w-[600px] lg:h-[560px]">
+        {/* Right Image Container */}
+        <div className="w-full lg:w-1/2 flex justify-center lg:justify-end relative lg:-mt-20">
+          <div className="relative w-full h-[400px] sm:h-[480px] lg:w-[600px] xl:w-[650px] lg:h-[663px]">
             <Image
               src="/images/mainhero.jpg"
               alt="Hero Fashion Models"
               fill
               priority
-              className="object-contain object-top lg:object-right"
+              className="object-cover object-top"
             />
             {/* Decorative Vector Stars */}
-            <div className="absolute top-2 right-10 lg:right-16 text-black text-4xl select-none pointer-events-none animate-pulse">
+            <div className="absolute top-4 right-6 lg:top-14 lg:right-8 xl:right-12 text-black text-4xl lg:text-5xl select-none pointer-events-none animate-pulse">
               ✦
             </div>
-            <div className="absolute top-1/2 left-0 text-black text-2xl select-none pointer-events-none animate-pulse">
+            <div className="absolute top-[48%] left-2 lg:-left-6 text-black text-2xl lg:text-3xl select-none pointer-events-none animate-pulse">
               ✦
             </div>
           </div>
