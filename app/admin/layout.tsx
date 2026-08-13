@@ -13,7 +13,7 @@ export default function AdminLayout({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] text-black font-satoshi flex">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#F9FAFB] text-black font-satoshi flex">
       {/* Sidebar Navigation */}
       <AdminSidebar
         collapsed={sidebarCollapsed}
@@ -23,9 +23,9 @@ export default function AdminLayout({
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden">
         <AdminHeader onMenuClick={() => setMobileSidebarOpen(true)} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto min-w-0 overflow-x-hidden">
           {children}
         </main>
       </div>
