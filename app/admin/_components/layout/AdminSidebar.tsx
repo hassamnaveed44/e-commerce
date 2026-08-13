@@ -4,29 +4,21 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  CreditCard,
   ShoppingBag,
-  Package,
-  PlusCircle,
-  ListOrdered,
-  FileText,
+  CreditCard,
   ChevronDown,
   ChevronRight,
-  Store,
-  Wallet,
-  ArrowLeftRight,
+  ChevronsUpDown,
+  MoreVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
-  collapsed?: boolean;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
 }
 
 export default function AdminSidebar({
-  collapsed = false,
   mobileOpen = false,
   onMobileClose,
 }: SidebarProps) {
@@ -35,58 +27,63 @@ export default function AdminSidebar({
   const [paymentOpen, setPaymentOpen] = useState(true);
 
   const ecommerceSubItems = [
-    { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { title: "Product List", href: "/admin/products", icon: Package },
-    { title: "Product Detail", href: "/admin/products/PROD-1", icon: FileText },
-    { title: "Add Product", href: "/admin/products/create", icon: PlusCircle },
-    { title: "Order List", href: "/admin/orders", icon: ListOrdered },
+    { title: "Dashboard", href: "/admin" },
+    { title: "Product List", href: "/admin/products" },
+    { title: "Product Detail", href: "/admin/products/PROD-1" },
+    { title: "Add Product", href: "/admin/products/create" },
+    { title: "Order List", href: "/admin/orders" },
   ];
 
   const paymentSubItems = [
-    { title: "Balances & Overview", href: "/admin/payments", icon: Wallet },
-    { title: "Transactions", href: "/admin/payments/transactions", icon: ArrowLeftRight },
+    { title: "Balances & Overview", href: "/admin/payments" },
+    { title: "Transactions", href: "/admin/payments/transactions" },
   ];
 
   const sidebarContent = (
-    <div className="flex h-full flex-col justify-between p-4 overflow-y-auto">
-      <div>
+    <div className="flex h-full flex-col justify-between p-3 select-none bg-[#F4F4F5] text-[#18181B]">
+      {/* Top Header & Menus */}
+      <div className="space-y-4">
         {/* Brand Header */}
-        <div className="flex items-center justify-between px-2 py-4 mb-4 border-b border-border">
-          <Link href="/admin" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground font-integral font-black shadow-md">
+        <div className="flex items-center justify-between p-1.5 rounded-xl hover:bg-black/5 transition cursor-pointer">
+          <Link href="/admin" className="flex items-center gap-2.5 flex-1 min-w-0">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black text-white font-integral text-sm font-black shadow-sm shrink-0">
               S.
             </div>
-            {!collapsed && (
-              <div className="flex flex-col">
-                <span className="font-integral text-base font-black tracking-tight text-foreground">
-                  SHOP.CO
-                </span>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground -mt-1">
-                  Admin Panel
-                </span>
-              </div>
-            )}
+            <div className="flex flex-col truncate">
+              <span className="font-integral text-sm font-extrabold tracking-tight text-[#18181B] truncate">
+                SHOP.CO Admin
+              </span>
+              <span className="text-[10px] text-[#71717A] -mt-0.5">Fashion Store</span>
+            </div>
           </Link>
+          <ChevronsUpDown className="h-4 w-4 text-[#71717A] shrink-0" />
         </div>
 
-        {/* Navigation Sections */}
-        <div className="space-y-3">
+        {/* Dashboards Section Title */}
+        <p className="px-2 text-[11px] font-medium text-[#71717A]">Dashboards</p>
+
+        {/* Menu Navigation */}
+        <div className="space-y-2">
           {/* E-COMMERCE SECTION */}
           <div>
             <button
               type="button"
               onClick={() => setEcommerceOpen(!ecommerceOpen)}
-              className="flex w-full items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground transition cursor-pointer"
+              className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#3F3F46] hover:bg-black/5 transition cursor-pointer"
             >
-              <div className="flex items-center gap-2.5">
-                <ShoppingBag className="h-4 w-4" />
-                {!collapsed && <span>E-Commerce</span>}
+              <div className="flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4 text-[#52525B]" />
+                <span>E-commerce</span>
               </div>
-              {!collapsed && (ecommerceOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />)}
+              {ecommerceOpen ? (
+                <ChevronDown className="h-3.5 w-3.5 text-[#71717A]" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 text-[#71717A]" />
+              )}
             </button>
 
-            {ecommerceOpen && !collapsed && (
-              <div className="mt-1 ml-3 pl-3 border-l border-border space-y-1">
+            {ecommerceOpen && (
+              <div className="mt-1 ml-4 pl-2.5 border-l border-[#E4E4E7] space-y-0.5">
                 {ecommerceSubItems.map((item) => {
                   const isActive = pathname === item.href;
                   return (
@@ -95,14 +92,13 @@ export default function AdminSidebar({
                       href={item.href}
                       onClick={onMobileClose}
                       className={cn(
-                        "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                        "block px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
                         isActive
-                          ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                          : "text-foreground/70 hover:bg-accent hover:text-foreground"
+                          ? "bg-[#E4E4E7] text-[#18181B] font-semibold shadow-2xs"
+                          : "text-[#52525B] hover:text-[#18181B] hover:bg-black/5"
                       )}
                     >
-                      <item.icon className="h-3.5 w-3.5" />
-                      <span>{item.title}</span>
+                      {item.title}
                     </Link>
                   );
                 })}
@@ -115,17 +111,21 @@ export default function AdminSidebar({
             <button
               type="button"
               onClick={() => setPaymentOpen(!paymentOpen)}
-              className="flex w-full items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground transition cursor-pointer"
+              className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#3F3F46] hover:bg-black/5 transition cursor-pointer"
             >
-              <div className="flex items-center gap-2.5">
-                <CreditCard className="h-4 w-4" />
-                {!collapsed && <span>Payments</span>}
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-[#52525B]" />
+                <span>Payment Dashboard</span>
               </div>
-              {!collapsed && (paymentOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />)}
+              {paymentOpen ? (
+                <ChevronDown className="h-3.5 w-3.5 text-[#71717A]" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 text-[#71717A]" />
+              )}
             </button>
 
-            {paymentOpen && !collapsed && (
-              <div className="mt-1 ml-3 pl-3 border-l border-border space-y-1">
+            {paymentOpen && (
+              <div className="mt-1 ml-4 pl-2.5 border-l border-[#E4E4E7] space-y-0.5">
                 {paymentSubItems.map((item) => {
                   const isActive = pathname === item.href;
                   return (
@@ -134,14 +134,13 @@ export default function AdminSidebar({
                       href={item.href}
                       onClick={onMobileClose}
                       className={cn(
-                        "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                        "block px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
                         isActive
-                          ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                          : "text-foreground/70 hover:bg-accent hover:text-foreground"
+                          ? "bg-[#E4E4E7] text-[#18181B] font-semibold shadow-2xs"
+                          : "text-[#52525B] hover:text-[#18181B] hover:bg-black/5"
                       )}
                     >
-                      <item.icon className="h-3.5 w-3.5" />
-                      <span>{item.title}</span>
+                      {item.title}
                     </Link>
                   );
                 })}
@@ -151,39 +150,56 @@ export default function AdminSidebar({
         </div>
       </div>
 
-      {/* Customer Storefront Link */}
-      <div className="pt-4 border-t border-border">
-        <Link
-          href="/"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition"
-        >
-          <Store className="h-4 w-4" />
-          {!collapsed && (
-            <div className="flex items-center justify-between w-full">
-              <span>Customer Storefront</span>
-              <ChevronRight className="h-3.5 w-3.5" />
+      {/* Bottom Section: Pure White Promo Card & Profile */}
+      <div className="space-y-3 pt-2">
+        {/* Unlock Everything Promo Card (Pure White Background) */}
+        <div className="rounded-2xl border border-[#E4E4E7] bg-white p-4 shadow-sm space-y-2">
+          <h4 className="font-extrabold text-xs text-[#18181B] font-integral">
+            Unlock Everything
+          </h4>
+          <p className="text-[11px] text-[#52525B] leading-relaxed">
+            Get instant access to all premium dashboards, templates, and UI components. Pay once, use forever in unlimited projects.
+          </p>
+          <button
+            type="button"
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-black text-white py-2.5 text-xs font-semibold hover:bg-black/85 transition shadow-xs cursor-pointer"
+          >
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Get Full Access</span>
+          </button>
+        </div>
+
+        {/* User Profile Bar */}
+        <div className="flex items-center justify-between p-1.5 px-2 rounded-xl hover:bg-black/5 transition">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-white font-integral text-xs font-bold shrink-0">
+              AD 
             </div>
-          )}
-        </Link>
+            <div className="flex flex-col truncate">
+              <span className="font-semibold text-xs text-[#18181B] truncate">Admin User</span>
+              <span className="text-[10px] text-[#71717A] truncate">admin@shop.co</span>
+            </div>  
+          </div>
+          <button type="button" className="text-[#71717A] hover:text-[#18181B] p-1 rounded-md cursor-pointer">
+            <MoreVertical className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
 
   return (
     <>
-      <aside
-        className={cn(
-          "hidden md:flex flex-col bg-card border-r border-border transition-all duration-300 min-h-screen sticky top-0",
-          collapsed ? "w-20" : "w-64"
-        )}
-      >
+      {/* 100% Fixed Sticky Desktop Sidebar */}
+      <aside className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 z-30 border-r border-[#E4E4E7] overflow-y-auto bg-[#F4F4F5]">
         {sidebarContent}
       </aside>
 
+      {/* Mobile Drawer */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={onMobileClose} />
-          <aside className="fixed inset-y-0 left-0 w-72 bg-card shadow-2xl z-50 animate-in slide-in-from-left">
+          <aside className="fixed inset-y-0 left-0 w-72 shadow-2xl z-50 animate-in slide-in-from-left h-full overflow-y-auto bg-[#F4F4F5]">
             {sidebarContent}
           </aside>
         </div>
