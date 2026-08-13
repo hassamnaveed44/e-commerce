@@ -317,7 +317,7 @@ export default function ProductListPage() {
               placeholder="Search products..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-56 h-8 pl-3 pr-3 rounded-lg bg-card border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
+              className="w-60 h-10 pl-3 pr-3 rounded-lg bg-gray-150 border border-border text-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
             />
           </div>
 
@@ -330,9 +330,9 @@ export default function ProductListPage() {
                 setCategoryMenuOpen(false);
                 setPriceMenuOpen(false);
               }}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-dashed border-border bg-card text-xs font-medium text-foreground hover:bg-muted transition cursor-pointer"
+              className="flex items-center gap-1.5 h-10 px-3 rounded-lg border  border-border bg-card text-md font-medium font-satoshi text-foreground hover:bg-muted transition cursor-pointer"
             >
-              <PlusCircle className="h-3.5 w-3.5 text-muted-foreground" />
+              <PlusCircle className="h-4 w-4 text-foreground" />
               <span>Status {statusFilter !== "All" && `(${statusFilter})`}</span>
             </button>
 
@@ -365,9 +365,9 @@ export default function ProductListPage() {
                 setStatusMenuOpen(false);
                 setPriceMenuOpen(false);
               }}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-dashed border-border bg-card text-xs font-medium text-foreground hover:bg-muted transition cursor-pointer"
+              className="flex items-center gap-1.5 h-10 px-3 rounded-lg border  border-border bg-card text-md font-medium text-foreground hover:bg-muted transition cursor-pointer"
             >
-              <PlusCircle className="h-3.5 w-3.5 text-muted-foreground" />
+              <PlusCircle className="h-4 w-4 text-foreground" />
               <span>Category {categoryFilter !== "All" && `(${categoryFilter})`}</span>
             </button>
 
@@ -400,9 +400,9 @@ export default function ProductListPage() {
                 setStatusMenuOpen(false);
                 setCategoryMenuOpen(false);
               }}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:bg-muted transition cursor-pointer"
+              className="flex items-center gap-1.5 h-10 w-45 px-3 rounded-lg border border-border bg-card text-md font-medium text-foreground hover:bg-muted transition cursor-pointer"
             >
-              <span>Price: {priceFilter === "All" ? "$100-$200" : priceFilter}</span>
+              <span className="text-foreground">Price: {priceFilter === "All" ? "$100-$200" : priceFilter}</span>
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             </button>
 
@@ -440,7 +440,7 @@ export default function ProductListPage() {
       </div>
 
       {/* 4️⃣ PRODUCTS TABLE CARD */}
-      <Card className="bg-card border-border overflow-hidden shadow-xs">
+      <Card className="bg-gray-150 border-border overflow-hidden shadow-xs">
         <div className="overflow-x-auto min-h-[480px]">
           <table className="w-full text-xs text-left">
             <thead>
