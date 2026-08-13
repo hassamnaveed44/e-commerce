@@ -5,26 +5,97 @@ html {
 }
 
 :root {
-  --background: #ffffff;
+  /* SHOP.CO Signature Crisp Light Theme */
+  --background: #F9FAFB;
   --foreground: #171717;
+
+  --card: #ffffff;
+  --card-foreground: #171717;
+
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+
+  /* SHOP.CO Pitch Black Brand Color */
+  --primary: #171717;
+  --primary-foreground: #ffffff;
+
+  /* SHOP.CO Soft Surfaces (#F0EEED / #F2F0F1) */
+  --secondary: #F0EEED;
+  --secondary-foreground: #171717;
+
+  --muted: #F3F4F6;
+  --muted-foreground: #737373;
+
+  --accent: #F0EEED;
+  --accent-foreground: #171717;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #ffffff;
+
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: #171717;
+  --radius: 0.85rem;
+}
+
+/* Dark Theme (Activated when you toggle dark mode) */
+.dark {
+  --background: #09090b;
+  --foreground: #f4f4f5;
+
+  --card: #121214;
+  --card-foreground: #f4f4f5;
+
+  --popover: #121214;
+  --popover-foreground: #f4f4f5;
+
+  --primary: #f4f4f5;
+  --primary-foreground: #09090b;
+
+  --secondary: #1c1c1f;
+  --secondary-foreground: #f4f4f5;
+
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
+
+  --accent: #1c1c1f;
+  --accent-foreground: #f4f4f5;
+
+  --destructive: #7f1d1d;
+  --destructive-foreground: #fef2f2;
+
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #d4d4d8;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
