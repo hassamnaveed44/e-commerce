@@ -1,87 +1,106 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@/lib/db";
+import { OrderStatus } from "@prisma/client";
 
+// POST /api/reviews - Add a review with Verified Purchase check
 export async function POST(req: NextRequest) {
   try {
+    const { userId: clerkId } = await auth();
     const body = await req.json();
-    const { productId, rating, comment, name } = body;
+    const { productId, rating, comment, customerName } = body;
 
     if (!productId || !rating || !comment) {
       return NextResponse.json(
-        { success: false, message: "Missing required fields" },
+        { success: false, message: "Missing required review fields" },
         { status: 400 }
       );
     }
 
-    // Check if authenticated user via Clerk
-    const { userId: clerkId } = await auth();
-    let dbUser = null;
-
+    // 1. Find or create user
+    let user = null;
     if (clerkId) {
-      dbUser = await prisma.user.findUnique({
-        where: { clerkId },
-      });
+      user = await prisma.user.findUnique({ where: { clerkId } });
     }
 
-    // If guest or user not synced yet, create a record with unique clerkId
-    if (!dbUser) {
-      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      const guestClerkId = clerkId || `guest_${uniqueSuffix}`;
-      const guestEmail = `${(name || "guest").toLowerCase().replace(/[^a-z0-9]/g, "")}_${uniqueSuffix}@guest.shop.co`;
-
-      dbUser = await prisma.user.create({
+    if (!user) {
+      const guestEmail = `reviewer_${Date.now()}@guest.shop.co`;
+      user = await prisma.user.create({
         data: {
-          clerkId: guestClerkId,
+          clerkId: clerkId || `guest_rev_${Date.now()}`,
           email: guestEmail,
-          fullName: name || "Verified Buyer",
+          fullName: customerName || "Anonymous Customer",
         },
       });
     }
 
-    // Create the review in database
-    const review = await prisma.review.create({
-      data: {
-        productId,
-        userId: dbUser.id,
-        rating: Number(rating),
-        comment,
-        isVerifiedPurchase: true,
-      },
-      include: {
-        user: {
-          select: { fullName: true },
+    // 2. Check if user is a Verified Buyer (has a non-cancelled order containing this product)
+    const verifiedOrder = await prisma.order.findFirst({
+      where: {
+        userId: user.id,
+        orderStatus: {
+          not: OrderStatus.CANCELLED,
+        },
+        items: {
+          some: {
+            variant: {
+              productId: productId,
+            },
+          },
         },
       },
     });
 
-    // Recalculate average rating on Product
-    const aggregates = await prisma.review.aggregate({
+    const isVerifiedPurchase = Boolean(verifiedOrder);
+
+    // 3. Create the Review
+    const review = await prisma.review.create({
+      data: {
+        productId,
+        userId: user.id,
+        rating: Number(rating),
+        comment,
+        isVerifiedPurchase,
+      },
+      include: {
+        user: {
+          select: {
+            fullName: true,
+          },
+        },
+      },
+    });
+
+    // 4. Recalculate and update product's averageRating in PostgreSQL
+    const aggregate = await prisma.review.aggregate({
       where: { productId },
       _avg: { rating: true },
     });
 
-    if (aggregates._avg.rating !== null) {
+    if (aggregate._avg.rating !== null) {
       await prisma.product.update({
         where: { id: productId },
-        data: { averageRating: Number(aggregates._avg.rating.toFixed(1)) },
+        data: {
+          averageRating: Number(aggregate._avg.rating.toFixed(1)),
+        },
       });
     }
 
     return NextResponse.json({
       success: true,
-      data: {
+      review: {
         id: review.id,
+        userName: review.user.fullName || customerName || "Customer",
         rating: review.rating,
         comment: review.comment,
-        createdAt: review.createdAt.toISOString(),
-        user: { fullName: review.user.fullName || name || "Verified Buyer" },
+        isVerifiedPurchase: review.isVerifiedPurchase,
+        date: review.createdAt.toISOString(),
       },
     });
   } catch (error) {
-    console.error("Error creating review:", error);
+    console.error("Create review error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to create review" },
+      { success: false, message: "Failed to submit review" },
       { status: 500 }
     );
   }
