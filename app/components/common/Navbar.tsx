@@ -11,6 +11,7 @@ import {
   ChevronDown,
   CircleUserRound,
 } from "lucide-react";
+import { useCart } from "@/context/CartContext";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -18,6 +19,7 @@ export default function Navbar() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
+  const { totalItemsCount } = useCart();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -45,7 +47,6 @@ export default function Navbar() {
   };
 
   const handleMouseLeave = () => {
-    // 200ms grace period so moving mouse to items won't close it abruptly
     timeoutRef.current = setTimeout(() => {
       setShopDropdownOpen(false);
     }, 200);
@@ -60,14 +61,14 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white">
+    <header className="sticky top-0 z-40 bg-white border-b border-black/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-10 h-16 md:h-24 flex items-center justify-between gap-4">
         {/* Left: Mobile Menu Trigger & Logo */}
         <div className="flex items-center space-x-3 lg:space-x-10">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Open Menu"
-            className="lg:hidden text-black focus:outline-none"
+            className="lg:hidden text-black focus:outline-none cursor-pointer"
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -170,7 +171,7 @@ export default function Navbar() {
           <button
             type="submit"
             aria-label="Search"
-            className="text-black/40 hover:text-black transition"
+            className="text-black/40 hover:text-black transition cursor-pointer"
           >
             <Search size={20} />
           </button>
@@ -183,26 +184,34 @@ export default function Navbar() {
           />
         </form>
 
-        {/* Right Icons: Search (Mobile), Cart, User */}
+        {/* Right Icons: Search (Mobile), Cart with Live Badge, User */}
         <div className="flex items-center space-x-3 md:space-x-4">
           <button
             onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
             aria-label="Open Search"
-            className="md:hidden text-black focus:outline-none"
+            className="md:hidden text-black focus:outline-none cursor-pointer"
           >
             <Search size={24} />
           </button>
+
+          {/* Cart Icon with Live Badge */}
           <Link
             href="/cart"
             aria-label="Cart"
-            className="text-black hover:opacity-80 transition"
+            className="text-black hover:opacity-80 transition relative p-1 cursor-pointer"
           >
             <ShoppingCart size={24} />
+            {totalItemsCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-black text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white animate-in zoom-in">
+                {totalItemsCount > 99 ? "99+" : totalItemsCount}
+              </span>
+            )}
           </Link>
+
           <Link
             href="/account"
             aria-label="Account"
-            className="text-black hover:opacity-80 transition"
+            className="text-black hover:opacity-80 transition cursor-pointer"
           >
             <CircleUserRound size={24} />
           </Link>
@@ -237,7 +246,7 @@ export default function Navbar() {
             <div>
               <button
                 onClick={() => setShopDropdownOpen(!shopDropdownOpen)}
-                className="w-full flex items-center justify-between hover:opacity-80 transition pb-2 border-b border-black/5 text-left"
+                className="w-full flex items-center justify-between hover:opacity-80 transition pb-2 border-b border-black/5 text-left cursor-pointer"
               >
                 <span>Shop</span>
                 <ChevronDown

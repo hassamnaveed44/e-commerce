@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { Star, Check, Plus, Minus } from "lucide-react";
+import { Star, Check, Plus, Minus, ShoppingBag } from "lucide-react";
+import { useCart } from "@/context/CartContext";
 
 interface Variant {
   id: string;
@@ -15,8 +15,10 @@ interface Variant {
 interface ProductInfoProps {
   product: {
     id: string;
+    slug?: string;
     name: string;
     description: string;
+    images?: { url: string }[];
     price: number | string | { toString(): string };
     originalPrice?: number | string | { toString(): string } | null;
     discountPercent: number;
@@ -26,6 +28,9 @@ interface ProductInfoProps {
 }
 
 export default function ProductInfo({ product }: ProductInfoProps) {
+  const { addToCart } = useCart();
+  const [isAdded, setIsAdded] = useState(false);
+
   // Extract unique colors and sizes from variants
   const colorMap = new Map<string, { name: string; hex: string }>();
   const sizeSet = new Set<string>();
@@ -55,6 +60,39 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
   const increment = () => setQuantity((prev) => prev + 1);
   const decrement = () => setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
+
+  // Find matching variant based on selected color and size
+  const matchingVariant = product.variants?.find(
+    (v) =>
+      v.colorHex.toLowerCase() === selectedColor.toLowerCase() &&
+      v.size.toLowerCase() === selectedSize.toLowerCase()
+  ) || product.variants?.[0];
+
+  const handleAddToCart = async () => {
+    if (!matchingVariant) return;
+
+    const selectedColorObj = availableColors.find((c) => c.hex === selectedColor);
+    const imageUrl = product.images?.[0]?.url || "/images/product-1.png";
+
+    await addToCart({
+      variantId: matchingVariant.id,
+      quantity,
+      productId: product.id,
+      name: product.name,
+      slug: product.slug || product.id,
+      image: imageUrl,
+      size: selectedSize,
+      colorName: selectedColorObj?.name || matchingVariant.colorName || "Standard",
+      colorHex: selectedColor,
+      price,
+      originalPrice,
+      discountPercent: product.discountPercent,
+      stockQuantity: matchingVariant.stockQuantity,
+    });
+
+    setIsAdded(true);
+    setTimeout(() => setIsAdded(false), 2000);
+  };
 
   return (
     <div className="flex flex-col justify-between h-full w-full font-satoshi">
@@ -182,12 +220,25 @@ export default function ProductInfo({ product }: ProductInfoProps) {
           </button>
         </div>
 
-        <Link
-          href="/cart"
-          className="flex-1 bg-black text-white rounded-full py-3.5 sm:py-4 font-medium hover:bg-black/80 transition-colors text-center text-sm sm:text-base block"
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          className={`flex-1 rounded-full py-3.5 sm:py-4 font-medium transition-all text-center text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer ${
+            isAdded ? "bg-emerald-600 text-white" : "bg-black text-white hover:bg-black/80"
+          }`}
         >
-          Add to Cart
-        </Link>
+          {isAdded ? (
+            <>
+              <Check size={18} />
+              Added to Cart!
+            </>
+          ) : (
+            <>
+              <ShoppingBag size={18} />
+              Add to Cart
+            </>
+          )}
+        </button>
       </div>
     </div>
   );
