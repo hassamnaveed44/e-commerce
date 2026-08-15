@@ -9,6 +9,7 @@ interface ReviewItem {
   comment: string;
   createdAt: string;
   user: { fullName: string | null };
+  isVerifiedPurchase?: boolean;
 }
 
 interface ReviewModalProps {
@@ -45,16 +46,18 @@ export default function ReviewModal({
           productId,
           rating,
           comment,
-          name: name.trim() || "Verified Buyer",
+          name: name.trim() || "Customer",
+          customerName: name.trim() || "Customer",
         }),
       });
 
       const json = await res.json();
+      const newReview = json.data || json.review;
 
-      if (json.success && json.data) {
+      if (res.ok && json.success && newReview) {
         setIsSubmitted(true);
         setTimeout(() => {
-          onSuccess(json.data);
+          onSuccess(newReview);
           setIsSubmitted(false);
           setIsSubmitting(false);
           setName("");

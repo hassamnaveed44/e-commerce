@@ -8,11 +8,12 @@ export async function POST(req: NextRequest) {
   try {
     const { userId: clerkId } = await auth();
     const body = await req.json();
-    const { productId, rating, comment, customerName } = body;
+    const { productId, rating, comment } = body;
+    const authorName = body.name || body.customerName || "Customer";
 
     if (!productId || !rating || !comment) {
       return NextResponse.json(
-        { success: false, message: "Missing required review fields" },
+        { success: false, message: "Please select a star rating and enter a review message." },
         { status: 400 }
       );
     }
@@ -29,12 +30,12 @@ export async function POST(req: NextRequest) {
         data: {
           clerkId: clerkId || `guest_rev_${Date.now()}`,
           email: guestEmail,
-          fullName: customerName || "Anonymous Customer",
+          fullName: authorName,
         },
       });
     }
 
-    // 2. Check if user is a Verified Buyer (has a non-cancelled order containing this product)
+    // 2. Check if user is a Verified Buyer (has a completed/processing order containing this product)
     const verifiedOrder = await prisma.order.findFirst({
       where: {
         userId: user.id,
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     const isVerifiedPurchase = Boolean(verifiedOrder);
 
-    // 3. Create the Review
+    // 3. Create the Review in PostgreSQL
     const review = await prisma.review.create({
       data: {
         productId,
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 4. Recalculate and update product's averageRating in PostgreSQL
+    // 4. Recalculate and update product's averageRating
     const aggregate = await prisma.review.aggregate({
       where: { productId },
       _avg: { rating: true },
@@ -86,21 +87,26 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const formattedReview = {
+      id: review.id,
+      rating: review.rating,
+      comment: review.comment,
+      createdAt: review.createdAt.toISOString(),
+      isVerifiedPurchase: review.isVerifiedPurchase,
+      user: {
+        fullName: review.user?.fullName || authorName,
+      },
+    };
+
     return NextResponse.json({
       success: true,
-      review: {
-        id: review.id,
-        userName: review.user.fullName || customerName || "Customer",
-        rating: review.rating,
-        comment: review.comment,
-        isVerifiedPurchase: review.isVerifiedPurchase,
-        date: review.createdAt.toISOString(),
-      },
+      data: formattedReview,
+      review: formattedReview,
     });
   } catch (error) {
     console.error("Create review error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to submit review" },
+      { success: false, message: "Failed to submit review. Please try again." },
       { status: 500 }
     );
   }
