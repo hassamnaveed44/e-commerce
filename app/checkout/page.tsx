@@ -8,6 +8,7 @@ import { CreditCard, Truck, Banknote, Loader2, AlertCircle } from "lucide-react"
 import { useCart } from "@/context/CartContext";
 import { useUser } from "@clerk/nextjs";
 
+// Hydration-safe client check
 const emptySubscribe = () => () => {};
 function useIsClient() {
   return useSyncExternalStore(
@@ -68,11 +69,16 @@ export default function CheckoutPage() {
         promoCode: promoCode || undefined,
         items: cartItems.map((i) => ({
           variantId: i.variantId,
+          name: i.name,
+          price: i.price,
           quantity: i.quantity,
         })),
       };
 
-      const res = await fetch("/api/orders", {
+      // Route to Stripe checkout for CARD payments, or internal orders API for COD
+      const endpoint = paymentMethod === "CARD" ? "/api/checkout/stripe" : "/api/orders";
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -81,7 +87,7 @@ export default function CheckoutPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setErrorMessage(data.message || "Failed to place order.");
+        setErrorMessage(data.message || "Failed to process order.");
         setIsSubmitting(false);
         return;
       }
@@ -89,7 +95,13 @@ export default function CheckoutPage() {
       // Clear local cart
       clearCart();
 
-      // Redirect to Order Confirmation page
+      // If Card payment, redirect to Stripe Hosted Checkout URL
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      // If COD, redirect to Order Confirmation page
       router.push(`/order-confirmation?orderId=${data.orderId}`);
     } catch (err: unknown) {
       console.error("Checkout error:", err);
@@ -99,6 +111,7 @@ export default function CheckoutPage() {
     }
   };
 
+  // Wait for client mount to prevent any SSR vs LocalStorage hydration mismatch
   if (!isClient || isLoading) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center font-satoshi">
@@ -306,7 +319,7 @@ export default function CheckoutPage() {
                     <CreditCard size={22} className="text-black" />
                     <div className="text-left">
                       <p className="font-bold text-sm text-black">Credit / Debit Card</p>
-                      <p className="text-xs text-black/60">Secure online card payment</p>
+                      <p className="text-xs text-black/60">Secure checkout powered by Stripe</p>
                     </div>
                   </div>
                   <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === "CARD" ? "border-black" : "border-black/30"}`}>
@@ -381,8 +394,10 @@ export default function CheckoutPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 size={18} className="animate-spin" />
-                    Placing Order...
+                    Processing...
                   </>
+                ) : paymentMethod === "CARD" ? (
+                  `Pay with Card • $${total.toFixed(2)}`
                 ) : (
                   `Place Order • $${total.toFixed(2)}`
                 )}
