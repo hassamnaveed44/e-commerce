@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -13,11 +13,22 @@ import {
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
+// Hydration-safe client check using standard React 19 API
+const emptySubscribe = () => () => {};
+function useIsClient() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+}
+
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [shopDropdownOpen, setShopDropdownOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const isClient = useIsClient();
   const router = useRouter();
   const { totalItemsCount } = useCart();
 
@@ -184,7 +195,7 @@ export default function Navbar() {
           />
         </form>
 
-        {/* Right Icons: Search (Mobile), Cart with Live Badge, User */}
+        {/* Right Icons: Search (Mobile), Cart with Hydration-Safe Badge, User */}
         <div className="flex items-center space-x-3 md:space-x-4">
           <button
             onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
@@ -194,14 +205,14 @@ export default function Navbar() {
             <Search size={24} />
           </button>
 
-          {/* Cart Icon with Live Badge */}
+          {/* Cart Icon with Hydration-Safe Badge */}
           <Link
             href="/cart"
             aria-label="Cart"
             className="text-black hover:opacity-80 transition relative p-1 cursor-pointer"
           >
             <ShoppingCart size={24} />
-            {totalItemsCount > 0 && (
+            {isClient && totalItemsCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-black text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white animate-in zoom-in">
                 {totalItemsCount > 99 ? "99+" : totalItemsCount}
               </span>
@@ -242,7 +253,6 @@ export default function Navbar() {
       {mobileMenuOpen && (
         <div className="lg:hidden absolute top-full left-0 w-full bg-white border-b border-black/10 shadow-md py-6 px-6 transition-all z-50">
           <nav className="flex flex-col space-y-4 text-base text-black font-satoshi">
-            {/* Mobile Shop Accordion */}
             <div>
               <button
                 onClick={() => setShopDropdownOpen(!shopDropdownOpen)}
