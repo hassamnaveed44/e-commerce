@@ -1,47 +1,95 @@
 "use client";
 
 import { useState } from "react";
-import { Star, X, CheckCircle2 } from "lucide-react";
+import { Star, X, CheckCircle2, Loader2 } from "lucide-react";
 
-interface ReviewModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: (review: { name: string; rating: number; comment: string }) => void;
+interface ReviewItem {
+  id: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  user: { fullName: string | null };
 }
 
-export default function ReviewModal({ isOpen, onClose, onSuccess }: ReviewModalProps) {
+interface ReviewModalProps {
+  productId: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: (review: ReviewItem) => void;
+}
+
+export default function ReviewModal({
+  productId,
+  isOpen,
+  onClose,
+  onSuccess,
+}: ReviewModalProps) {
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
   const [name, setName] = useState("");
   const [comment, setComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
-    setTimeout(() => {
-      onSuccess({ name, rating, comment });
-      setIsSubmitted(false);
-      setName("");
-      setComment("");
-      onClose();
-    }, 1200);
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId,
+          rating,
+          comment,
+          name: name.trim() || "Verified Buyer",
+        }),
+      });
+
+      const json = await res.json();
+
+      if (json.success && json.data) {
+        setIsSubmitted(true);
+        setTimeout(() => {
+          onSuccess(json.data);
+          setIsSubmitted(false);
+          setIsSubmitting(false);
+          setName("");
+          setComment("");
+          onClose();
+        }, 1000);
+      } else {
+        alert(json.message || "Failed to submit review");
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error submitting review");
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
       <div className="bg-white rounded-[24px] max-w-lg w-full p-6 sm:p-8 border border-black/10 shadow-2xl relative font-satoshi">
-        <button onClick={onClose} className="absolute top-5 right-5 text-black/40 hover:text-black cursor-pointer">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-5 right-5 text-black/40 hover:text-black cursor-pointer"
+        >
           <X size={20} />
         </button>
 
         {isSubmitted ? (
           <div className="text-center py-8 space-y-3">
             <CheckCircle2 size={48} className="mx-auto text-emerald-600" />
-            <h3 className="text-xl font-bold text-black">Review Submitted!</h3>
-            <p className="text-sm text-black/60">Thank you for sharing your feedback with the community.</p>
+            <h3 className="text-xl font-bold text-black font-integral">Review Submitted!</h3>
+            <p className="text-sm text-black/60">
+              Thank you for sharing your feedback. Your review is now live!
+            </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -81,7 +129,7 @@ export default function ReviewModal({ isOpen, onClose, onSuccess }: ReviewModalP
               <input
                 required
                 type="text"
-                placeholder="e.g. Samantha D."
+                placeholder="e.g. Alex M."
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-[#F0F0F0] rounded-full px-4 py-3 text-sm text-black outline-none"
@@ -102,9 +150,17 @@ export default function ReviewModal({ isOpen, onClose, onSuccess }: ReviewModalP
 
             <button
               type="submit"
-              className="w-full bg-black text-white rounded-full py-3.5 text-sm font-medium hover:bg-black/80 transition cursor-pointer"
+              disabled={isSubmitting}
+              className="w-full bg-black text-white rounded-full py-3.5 text-sm font-medium hover:bg-black/80 transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              Post Review
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Saving Review...
+                </>
+              ) : (
+                "Post Review"
+              )}
             </button>
           </form>
         )}
