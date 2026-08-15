@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import StoreWrapper from "@/app/components/common/StoreWrapper";
 
@@ -13,10 +14,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="overflow-x-hidden bg-white min-h-screen flex flex-col">
-        <StoreWrapper>{children}</StoreWrapper>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body className="overflow-x-hidden bg-white min-h-screen flex flex-col">
+          <StoreWrapper>{children}</StoreWrapper>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
