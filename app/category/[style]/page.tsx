@@ -8,31 +8,68 @@ export const dynamic = "force-dynamic";
 
 export default async function CategoryPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ style: string }>;
+  searchParams: Promise<{
+    category?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    color?: string;
+    size?: string;
+    sort?: string;
+    page?: string;
+  }>;
 }) {
   const { style } = await params;
+  const search = await searchParams;
 
-  // Query products for this category slug
+  const currentCategoryParam = search.category;
+  const normalizedStyle = style?.toLowerCase() || "casual";
+  const isStyleOnly = ["casual", "formal", "party", "gym"].includes(normalizedStyle);
+
+  // If search.category is explicitly provided, prioritize it. Otherwise check if route param is a category.
+  const activeCategory = currentCategoryParam || (!isStyleOnly ? normalizedStyle : undefined);
+
+  const minPrice = search.minPrice !== undefined ? Number(search.minPrice) : undefined;
+  const maxPrice = search.maxPrice !== undefined ? Number(search.maxPrice) : undefined;
+  const color = search.color;
+  const size = search.size;
+  const sort = (search.sort as any) || "popular";
+  const page = search.page ? Number(search.page) : 1;
+
+  // Query products for this category slug and filters
   const result = await getProducts({
-    categorySlug: style.toLowerCase(),
+    categorySlug: activeCategory,
+    minPrice,
+    maxPrice,
+    color,
+    size,
+    sort,
+    page,
     limit: 12,
   });
 
-  // Fallback to all products if specific category filter returns 0 (e.g. "casual")
-  const productsToDisplay =
-    result.products.length > 0
-      ? result.products
-      : (await getProducts({ limit: 12 })).products;
+  // Serialize products for Client Components (converting Decimal & Date to plain numbers/primitives)
+  const serializedProducts = result.products.map((p) => ({
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    images: p.images.map((img) => ({ url: img.url })),
+    price: Number(p.price),
+    originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
+    discountPercent: p.discountPercent,
+    averageRating: p.averageRating,
+  }));
 
-  const formattedCategory = style
-    ? style.charAt(0).toUpperCase() + style.slice(1)
-    : "Casual";
+  const displayCategoryName = activeCategory
+    ? activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)
+    : style.charAt(0).toUpperCase() + style.slice(1);
 
   return (
     <main className="min-h-screen bg-white">
       {/* Category Breadcrumb */}
-      <Breadcrumb categoryName={formattedCategory} />
+      <Breadcrumb categoryName={displayCategoryName} />
 
       {/* Main Category Content Area */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-10 pb-16 pt-2">
@@ -43,14 +80,15 @@ export default async function CategoryPage({
           {/* Right Product Grid Area + Pagination */}
           <div className="flex-1 w-full">
             <ProductGrid
-              categoryName={formattedCategory}
-              products={productsToDisplay}
+              categoryName={displayCategoryName}
+              products={serializedProducts}
               totalCount={result.totalCount}
             />
-            <Pagination />
+            {result.totalPages > 1 && <Pagination />}
           </div>
         </div>
       </section>
     </main>
   );
 }
+

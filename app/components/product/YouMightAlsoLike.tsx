@@ -68,11 +68,11 @@ export default function YouMightAlsoLike({ products }: { products: Product[] }) 
                     ${originalPrice}
                   </span>
                 )}
-                {product.discountPercent && product.discountPercent > 0 && (
+                {product.discountPercent !== undefined && product.discountPercent > 0 ? (
                   <span className="bg-[#FF3333]/10 text-[#FF3333] text-xs font-semibold px-2.5 py-0.5 rounded-full">
                     -{product.discountPercent}%
                   </span>
-                )}
+                ) : null}
               </div>
             </Link>
           );

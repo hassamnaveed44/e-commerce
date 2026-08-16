@@ -17,15 +17,11 @@ export async function GET(req: NextRequest) {
       ? Number(searchParams.get("maxPrice"))
       : undefined;
 
+    const color = searchParams.get("color") || undefined;
+    const size = searchParams.get("size") || undefined;
     const sortParam = searchParams.get("sort");
 
-    const sort: ProductSort =
-      sortParam === "oldest" ||
-      sortParam === "price-low" ||
-      sortParam === "price-high"
-        ? sortParam
-        : "newest";
-
+    const sort = (sortParam as any) || "newest";
     const search = searchParams.get("search") || undefined;
 
     const page = searchParams.get("page")
@@ -34,18 +30,18 @@ export async function GET(req: NextRequest) {
 
     const limit = searchParams.get("limit")
       ? parseInt(searchParams.get("limit")!, 10)
-      : 8;
+      : 12;
 
     const result = await getProducts({
       categorySlug,
       minPrice,
       maxPrice,
+      color,
+      size,
       search,
       page,
       limit,
-      ...(sort ? { sort } : {}),
-    } as Parameters<typeof getProducts>[0] & {
-      sort?: ProductSort;
+      sort,
     });
 
     return NextResponse.json({

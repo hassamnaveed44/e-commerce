@@ -5,7 +5,9 @@ export interface GetProductsParams {
   categorySlug?: string;
   minPrice?: number;
   maxPrice?: number;
-  sort?: "price-asc" | "price-desc" | "rating-desc" | "newest";
+  sort?: "price-asc" | "price-desc" | "price-low" | "price-high" | "rating-desc" | "popular" | "newest" | "oldest";
+  color?: string;
+  size?: string;
   search?: string;
   page?: number;
   limit?: number;
@@ -28,6 +30,8 @@ export async function getProducts(params: GetProductsParams = {}) {
     minPrice,
     maxPrice,
     sort = "newest",
+    color,
+    size,
     search,
     page = 1,
     limit = 8,
@@ -41,15 +45,48 @@ export async function getProducts(params: GetProductsParams = {}) {
   };
 
   if (categorySlug) {
-    where.category = {
-      slug: categorySlug,
-    };
+    const normalizedSlug = categorySlug.toLowerCase().trim();
+    const isStyleOnly = ["casual", "formal", "party", "gym"].includes(normalizedSlug);
+
+    if (!isStyleOnly) {
+      const singular = normalizedSlug.endsWith("s") ? normalizedSlug.slice(0, -1) : normalizedSlug;
+      const plural = normalizedSlug.endsWith("s") ? normalizedSlug : `${normalizedSlug}s`;
+      const possibleTerms = Array.from(new Set([normalizedSlug, singular, plural]));
+
+      where.category = {
+        OR: [
+          { slug: { in: possibleTerms } },
+          { name: { in: possibleTerms, mode: "insensitive" } },
+        ],
+      };
+    }
   }
 
   if (minPrice !== undefined || maxPrice !== undefined) {
     where.price = {};
     if (minPrice !== undefined) where.price.gte = minPrice;
     if (maxPrice !== undefined) where.price.lte = maxPrice;
+  }
+
+  if (color) {
+    where.variants = {
+      ...(where.variants || {}),
+      some: {
+        OR: [
+          { colorHex: { equals: color, mode: "insensitive" } },
+          { colorName: { equals: color, mode: "insensitive" } },
+        ],
+      },
+    };
+  }
+
+  if (size) {
+    where.variants = {
+      ...(where.variants || {}),
+      some: {
+        size: { equals: size, mode: "insensitive" },
+      },
+    };
   }
 
   if (search) {
@@ -61,9 +98,10 @@ export async function getProducts(params: GetProductsParams = {}) {
 
   // Build order by
   let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: "desc" };
-  if (sort === "price-asc") orderBy = { price: "asc" };
-  if (sort === "price-desc") orderBy = { price: "desc" };
-  if (sort === "rating-desc") orderBy = { averageRating: "desc" };
+  if (sort === "price-asc" || sort === "price-low") orderBy = { price: "asc" };
+  if (sort === "price-desc" || sort === "price-high") orderBy = { price: "desc" };
+  if (sort === "rating-desc" || sort === "popular") orderBy = { averageRating: "desc" };
+  if (sort === "oldest") orderBy = { createdAt: "asc" };
 
   const [products, totalCount] = await Promise.all([
     prisma.product.findMany({
@@ -111,3 +149,44 @@ export async function getProductBySlugOrId(identifier: string) {
     },
   });
 }
+
+export async function getRecommendedProducts(
+  currentProductId: string,
+  categorySlug?: string,
+  limit = 4
+) {
+  let relatedProducts: Awaited<ReturnType<typeof getProducts>>["products"] = [];
+
+  if (categorySlug) {
+    const categoryResponse = await getProducts({
+      categorySlug,
+      limit: limit + 2,
+    });
+    relatedProducts = categoryResponse.products.filter(
+      (p) => p.id !== currentProductId && p.slug !== currentProductId
+    );
+  }
+
+  // Backfill if fewer than limit products found in the same category
+  if (relatedProducts.length < limit) {
+    const existingIds = new Set([
+      currentProductId,
+      ...relatedProducts.map((p) => p.id),
+      ...relatedProducts.map((p) => p.slug),
+    ]);
+
+    const fallbackResponse = await getProducts({
+      sort: "rating-desc",
+      limit: limit * 3,
+    });
+
+    const additional = fallbackResponse.products.filter(
+      (p) => !existingIds.has(p.id) && !existingIds.has(p.slug)
+    );
+
+    relatedProducts = [...relatedProducts, ...additional];
+  }
+
+  return relatedProducts.slice(0, limit);
+}
+

@@ -17,14 +17,31 @@ export default clerkMiddleware(async (auth, req) => {
 
   // 1. Admin route protection: must be authenticated and have ADMIN role
   if (isAdminRoute(req)) {
+    const isApiRoute = req.nextUrl.pathname.startsWith("/api/admin");
+
     if (!userId) {
+      if (isApiRoute) {
+        return NextResponse.json(
+          { error: "Unauthorized: Please log in to access admin endpoints." },
+          { status: 401 }
+        );
+      }
       const signInUrl = new URL("/login", req.url);
       signInUrl.searchParams.set("redirect_url", req.url);
       return NextResponse.redirect(signInUrl);
     }
 
-    const role = (sessionClaims?.metadata as { role?: string })?.role;
+    const role =
+      (sessionClaims?.metadata as { role?: string })?.role ||
+      (sessionClaims?.publicMetadata as { role?: string })?.role;
+
     if (role !== "ADMIN") {
+      if (isApiRoute) {
+        return NextResponse.json(
+          { error: "Forbidden: Admin privileges required." },
+          { status: 403 }
+        );
+      }
       // If not an admin, redirect to storefront home
       return NextResponse.redirect(new URL("/", req.url));
     }

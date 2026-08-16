@@ -4,7 +4,7 @@ import ProductImages from "@/app/components/product/ProductImages";
 import ProductInfo from "@/app/components/product/ProductInfo";
 import Tabs from "@/app/components/product/Tabs";
 import YouMightAlsoLike from "@/app/components/product/YouMightAlsoLike";
-import { getProductBySlugOrId, getProducts } from "@/services/product.service";
+import { getProductBySlugOrId, getProducts, getRecommendedProducts } from "@/services/product.service";
 
 export const dynamic = "force-dynamic";
 
@@ -20,25 +20,23 @@ export default async function ProductPage({
     notFound();
   }
 
-  // Fetch related products from same category
-  const relatedResponse = await getProducts({
-    categorySlug: product.category?.slug,
-    limit: 5,
-  });
+  // Fetch 4 dynamic recommendations (same category first, backfilling with other active products)
+  const rawRecommendations = await getRecommendedProducts(
+    product.id,
+    product.category?.slug,
+    4
+  );
 
-  // Filter out the current product from recommendations
-  const relatedProducts = relatedResponse.products
-    .filter((p) => p.id !== product.id && p.slug !== product.slug)
-    .map((p) => ({
-      id: p.id,
-      slug: p.slug,
-      name: p.name,
-      images: p.images,
-      price: Number(p.price),
-      originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
-      discountPercent: p.discountPercent,
-      averageRating: p.averageRating,
-    }));
+  const relatedProducts = rawRecommendations.map((p) => ({
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    images: p.images,
+    price: Number(p.price),
+    originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
+    discountPercent: p.discountPercent,
+    averageRating: p.averageRating,
+  }));
 
   // Serialize product for Client Components (converting Decimal & Date)
   const serializedProduct = {
