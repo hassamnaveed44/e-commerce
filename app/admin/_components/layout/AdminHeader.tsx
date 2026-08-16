@@ -693,10 +693,15 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
 
       {/* 👥 Staff Access Requests & Approvals Modal */}
       {isStaffModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="w-full max-w-2xl bg-card border border-border shadow-2xl rounded-2xl p-5 sm:p-6 space-y-5 max-h-[88vh] flex flex-col text-left font-satoshi">
+        <div
+          className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsStaffModalOpen(false);
+          }}
+        >
+          <div className="w-full max-w-2xl my-auto bg-card border border-border shadow-2xl rounded-2xl p-5 sm:p-6 space-y-5 max-h-[85vh] flex flex-col text-left font-satoshi relative z-10 animate-in fade-in zoom-in-95">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-border pb-4">
+            <div className="flex items-center justify-between border-b border-border pb-4 shrink-0">
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-bold text-foreground font-sans">Authorized Staff & Access Requests</h2>
