@@ -20,7 +20,9 @@ import {
   CheckCircle2,
   Clock,
   Truck,
-  XCircle,
+  Check,
+  Sparkles,
+  Info,
 } from "lucide-react";
 
 interface HeaderProps {
@@ -53,9 +55,52 @@ interface SearchResults {
   }[];
 }
 
+interface NotificationItem {
+  id: string;
+  title: string;
+  description: string;
+  time: string;
+  type: "order" | "inventory" | "system";
+  read: boolean;
+  link?: string;
+}
+
+const INITIAL_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: "notif-1",
+    title: "New Order #ORD-232733-8195",
+    description: "hassam naveed placed an order for $520.00",
+    time: "10m ago",
+    type: "order",
+    read: false,
+    link: "/admin/orders",
+  },
+  {
+    id: "notif-2",
+    title: "Order #ORD-135635-2331 Processing",
+    description: "Payment method: COD ($212.00)",
+    time: "1h ago",
+    type: "order",
+    read: false,
+    link: "/admin/orders",
+  },
+  {
+    id: "notif-3",
+    title: "Database Sync Active",
+    description: "Neon PostgreSQL connected with live real-time sync",
+    time: "2h ago",
+    type: "system",
+    read: true,
+  },
+];
+
 function subscribe(callback: () => void) {
   window.addEventListener("storage", callback);
-  return () => window.removeEventListener("storage", callback);
+  window.addEventListener("theme-change", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("theme-change", callback);
+  };
 }
 
 function getThemeSnapshot() {
@@ -74,11 +119,22 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [results, setResults] = useState<SearchResults>({ orders: [], products: [], customers: [] });
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResults>({ orders: [], products: [], customers: [] });
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Notification state
+  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifContainerRef = useRef<HTMLDivElement>(null);
+
+  // Palette Customizer state
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const paletteContainerRef = useRef<HTMLDivElement>(null);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const toggleTheme = () => {
     if (document.documentElement.classList.contains("dark")) {
@@ -89,6 +145,19 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
       localStorage.setItem("theme", "dark");
     }
     window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new Event("theme-change"));
+  };
+
+  const setThemeMode = (mode: "light" | "dark") => {
+    if (mode === "dark") {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new Event("theme-change"));
   };
 
   // Keyboard shortcut (⌘k / Ctrl+k) to focus search
@@ -97,10 +166,12 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         inputRef.current?.focus();
-        setIsOpen(true);
+        setIsSearchOpen(true);
       }
       if (e.key === "Escape") {
-        setIsOpen(false);
+        setIsSearchOpen(false);
+        setIsNotifOpen(false);
+        setIsPaletteOpen(false);
       }
     };
 
@@ -108,11 +179,17 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Click outside to close search dropdown
+  // Click outside listener for all popups
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
+        setIsSearchOpen(false);
+      }
+      if (notifContainerRef.current && !notifContainerRef.current.contains(e.target as Node)) {
+        setIsNotifOpen(false);
+      }
+      if (paletteContainerRef.current && !paletteContainerRef.current.contains(e.target as Node)) {
+        setIsPaletteOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -122,24 +199,24 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
   // Debounced search query
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setResults({ orders: [], products: [], customers: [] });
-      setIsLoading(false);
+      setSearchResults({ orders: [], products: [], customers: [] });
+      setIsSearching(false);
       return;
     }
 
     const timer = setTimeout(async () => {
-      setIsLoading(true);
+      setIsSearching(true);
       try {
         const res = await fetch(`/api/admin/search?q=${encodeURIComponent(searchQuery.trim())}`);
         const data = await res.json();
         if (data.success && data.results) {
-          setResults(data.results);
-          setIsOpen(true);
+          setSearchResults(data.results);
+          setIsSearchOpen(true);
         }
       } catch (err) {
         console.error("Search fetch error:", err);
       } finally {
-        setIsLoading(false);
+        setIsSearching(false);
       }
     }, 200);
 
@@ -147,16 +224,30 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
   }, [searchQuery]);
 
   const hasResults =
-    results.orders.length > 0 || results.products.length > 0 || results.customers.length > 0;
+    searchResults.orders.length > 0 || searchResults.products.length > 0 || searchResults.customers.length > 0;
 
   const handleSelectResult = (url: string) => {
-    setIsOpen(false);
+    setIsSearchOpen(false);
     setSearchQuery("");
     router.push(url);
   };
 
+  const markAllNotificationsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const handleNotificationClick = (item: NotificationItem) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
+    );
+    if (item.link) {
+      setIsNotifOpen(false);
+      router.push(item.link);
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-border bg-card/95 px-4 sm:px-6 backdrop-blur-md transition-colors duration-200">
+    <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-border bg-card/95 px-4 sm:px-6 backdrop-blur-md transition-colors duration-200 font-satoshi">
       {/* Left: Sidebar Toggle Icon + Divider + Functional Search Bar */}
       <div className="flex items-center gap-3.5 flex-1 max-w-xl">
         {/* Sidebar Toggle Icon */}
@@ -182,7 +273,7 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => {
-                if (searchQuery.trim() || hasResults) setIsOpen(true);
+                if (searchQuery.trim() || hasResults) setIsSearchOpen(true);
               }}
               placeholder="Search orders, products, customers..."
               className="w-full h-8 pl-9 pr-14 rounded-lg bg-card border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring transition-colors"
@@ -192,7 +283,7 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
                 type="button"
                 onClick={() => {
                   setSearchQuery("");
-                  setIsOpen(false);
+                  setIsSearchOpen(false);
                 }}
                 className="absolute right-8 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
               >
@@ -204,7 +295,7 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
               type="button"
               onClick={() => {
                 inputRef.current?.focus();
-                setIsOpen(true);
+                setIsSearchOpen(true);
               }}
               className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-[10px] font-mono text-muted-foreground bg-muted border border-border px-1.5 py-0.5 rounded cursor-pointer hover:text-foreground"
             >
@@ -214,9 +305,9 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
           </div>
 
           {/* Search Dropdown Popup */}
-          {isOpen && (
+          {isSearchOpen && (
             <div className="absolute top-full left-0 mt-2 w-full min-w-[320px] sm:min-w-[420px] bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 font-satoshi">
-              {isLoading ? (
+              {isSearching ? (
                 <div className="p-4 text-center text-muted-foreground text-xs flex items-center justify-center gap-2">
                   <Loader2 size={14} className="animate-spin text-primary" />
                   <span>Searching database...</span>
@@ -228,13 +319,13 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
               ) : hasResults ? (
                 <div className="max-h-[380px] overflow-y-auto divide-y divide-border text-xs">
                   {/* Orders Category */}
-                  {results.orders.length > 0 && (
+                  {searchResults.orders.length > 0 && (
                     <div className="p-2">
                       <p className="px-2 py-1 text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
                         <ShoppingBag size={12} /> Orders
                       </p>
                       <div className="space-y-0.5 mt-1">
-                        {results.orders.map((order) => (
+                        {searchResults.orders.map((order) => (
                           <button
                             key={order.id}
                             type="button"
@@ -256,13 +347,13 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
                   )}
 
                   {/* Products Category */}
-                  {results.products.length > 0 && (
+                  {searchResults.products.length > 0 && (
                     <div className="p-2">
                       <p className="px-2 py-1 text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
                         <Package size={12} /> Products
                       </p>
                       <div className="space-y-0.5 mt-1">
-                        {results.products.map((p) => (
+                        {searchResults.products.map((p) => (
                           <button
                             key={p.id}
                             type="button"
@@ -284,13 +375,13 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
                   )}
 
                   {/* Customers Category */}
-                  {results.customers.length > 0 && (
+                  {searchResults.customers.length > 0 && (
                     <div className="p-2">
                       <p className="px-2 py-1 text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
                         <User size={12} /> Customers
                       </p>
                       <div className="space-y-0.5 mt-1">
-                        {results.customers.map((c) => (
+                        {searchResults.customers.map((c) => (
                           <div
                             key={c.id}
                             className="px-2.5 py-1.5 rounded-lg flex items-center justify-between text-muted-foreground"
@@ -355,8 +446,8 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
         </div>
       </div>
 
-      {/* Right: Get Pro + Bell + Theme Toggle + Palette + Divider + User Avatar */}
-      <div className="flex items-center gap-4 sm:gap-5">
+      {/* Right: Get Pro + Bell (Notifications) + Theme Toggle + Palette + Divider + User Avatar */}
+      <div className="flex items-center gap-3.5 sm:gap-4">
         {/* Get Pro Link */}
         <button
           type="button"
@@ -365,21 +456,96 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
           Get Pro
         </button>
 
-        {/* Notification Bell with Red Dot */}
-        <button
-          type="button"
-          className="relative text-muted-foreground hover:text-foreground transition cursor-pointer"
-          title="Notifications"
-        >
-          <Bell className="h-4 w-4" />
-          <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive" />
-        </button>
+        {/* 🔔 Functional Notification Bell with Dropdown */}
+        <div ref={notifContainerRef} className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setIsNotifOpen(!isNotifOpen);
+              setIsPaletteOpen(false);
+            }}
+            className="relative text-muted-foreground hover:text-foreground transition cursor-pointer p-1 rounded-md"
+            title="Notifications"
+          >
+            <Bell className="h-4 w-4" />
+            {unreadCount > 0 && (
+              <span className="absolute 0.5 top-0.5 right-0.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-card" />
+            )}
+          </button>
+
+          {/* Notifications Dropdown */}
+          {isNotifOpen && (
+            <div className="absolute right-0 top-full mt-2 w-80 bg-card border border-border rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95">
+              <div className="p-3.5 border-b border-border flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-xs text-foreground">Notifications</h3>
+                  <p className="text-[10px] text-muted-foreground">
+                    {unreadCount} unread store alerts
+                  </p>
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={markAllNotificationsRead}
+                    className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
+                  >
+                    Mark all read
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-72 overflow-y-auto divide-y divide-border">
+                {notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    onClick={() => handleNotificationClick(n)}
+                    className={`p-3 text-xs transition cursor-pointer hover:bg-muted/50 flex items-start gap-2.5 ${
+                      !n.read ? "bg-muted/30" : ""
+                    }`}
+                  >
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                        n.type === "order"
+                          ? "bg-sky-50 text-sky-600 dark:bg-sky-950/50 dark:text-sky-400"
+                          : "bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
+                      }`}
+                    >
+                      {n.type === "order" ? <ShoppingBag size={13} /> : <Info size={13} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="font-bold text-foreground text-xs truncate">{n.title}</p>
+                        <span className="text-[10px] text-muted-foreground shrink-0">{n.time}</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">
+                        {n.description}
+                      </p>
+                    </div>
+                    {!n.read && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0 mt-1.5" />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-2.5 border-t border-border bg-muted/20 text-center">
+                <Link
+                  href="/admin/orders"
+                  onClick={() => setIsNotifOpen(false)}
+                  className="text-[11px] font-semibold text-foreground hover:underline"
+                >
+                  View all order activity →
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* 🌙 / ☀️ Dark & Light Theme Switcher */}
         <button
           type="button"
           onClick={toggleTheme}
-          className="text-muted-foreground hover:text-foreground transition cursor-pointer"
+          className="text-muted-foreground hover:text-foreground transition cursor-pointer p-1 rounded-md"
           title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
           {isDark ? (
@@ -389,20 +555,70 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
           )}
         </button>
 
-        {/* Palette / Customizer Icon */}
-        <button
-          type="button"
-          className="text-muted-foreground hover:text-foreground transition cursor-pointer hidden sm:block"
-          title="Customize Theme"
-        >
-          <Palette className="h-4 w-4" />
-        </button>
+        {/* 🎨 Functional Theme & Palette Customizer */}
+        <div ref={paletteContainerRef} className="relative hidden sm:block">
+          <button
+            type="button"
+            onClick={() => {
+              setIsPaletteOpen(!isPaletteOpen);
+              setIsNotifOpen(false);
+            }}
+            className="text-muted-foreground hover:text-foreground transition cursor-pointer p-1 rounded-md"
+            title="Theme Settings & Palette"
+          >
+            <Palette className="h-4 w-4" />
+          </button>
+
+          {/* Palette Popup */}
+          {isPaletteOpen && (
+            <div className="absolute right-0 top-full mt-2 w-64 bg-card border border-border rounded-2xl shadow-xl p-3.5 z-50 animate-in fade-in zoom-in-95">
+              <h3 className="font-bold text-xs text-foreground mb-1">Theme Customizer</h3>
+              <p className="text-[11px] text-muted-foreground mb-3">
+                Customize appearance mode
+              </p>
+
+              {/* Mode Switcher */}
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setThemeMode("light")}
+                  className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition ${
+                    !isDark
+                      ? "border-black dark:border-white bg-muted text-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <Sun size={14} className="text-amber-500" />
+                  <span>Light</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setThemeMode("dark")}
+                  className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition ${
+                    isDark
+                      ? "border-white dark:border-white bg-muted text-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <Moon size={14} className="text-sky-400" />
+                  <span>Dark</span>
+                </button>
+              </div>
+
+              <div className="pt-2.5 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>Synchronized with Sidebar</span>
+                <Check size={12} className="text-emerald-500" />
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Thin Vertical Separator */}
         <div className="h-4 w-px bg-border shrink-0" />
 
         {/* User Profile Avatar */}
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold font-integral shadow-sm shrink-0 cursor-pointer overflow-hidden border border-border">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-bold font-integral shadow-sm shrink-0 cursor-pointer overflow-hidden border border-border">
           AD
         </div>
       </div>
