@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
+import {
+  findPendingRequestForUser,
+  createAccessRequest,
+  getAllAccessRequests,
+  updateAccessRequestStatus,
+} from "@/services/access-request.service";
 
 // 1. Submit Request for Admin Access (Any authenticated user)
 export async function POST(req: NextRequest) {
@@ -65,10 +71,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: "You already have admin privileges" });
     }
 
-    // Check if request already pending
-    const existingRequest = await prisma.adminAccessRequest.findFirst({
-      where: { userId: dbUser.id, status: "PENDING" },
-    });
+    // Check if request already pending using resilient service
+    const existingRequest = await findPendingRequestForUser(dbUser.id);
 
     if (existingRequest) {
       return NextResponse.json({
@@ -78,14 +82,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const newRequest = await prisma.adminAccessRequest.create({
-      data: {
-        userId: dbUser.id,
-        email: dbUser.email,
-        name: dbUser.fullName || fullName || dbUser.email.split("@")[0],
-        reason,
-        status: "PENDING",
-      },
+    const newRequest = await createAccessRequest({
+      userId: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.fullName || fullName || dbUser.email.split("@")[0],
+      reason,
     });
 
     return NextResponse.json({
@@ -93,9 +94,12 @@ export async function POST(req: NextRequest) {
       message: "Access request submitted! The Admin can now approve your account.",
       request: newRequest,
     });
-  } catch (error) {
-    console.error("Submit access request error:", error);
-    return NextResponse.json({ error: "Failed to submit access request" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Submit access request error details:", error);
+    return NextResponse.json(
+      { error: error?.message || "Failed to submit access request" },
+      { status: 500 }
+    );
   }
 }
 
@@ -108,14 +112,7 @@ export async function GET(req: NextRequest) {
     }
 
     const [requests, allUsers] = await Promise.all([
-      prisma.adminAccessRequest.findMany({
-        orderBy: { createdAt: "desc" },
-        include: {
-          user: {
-            select: { id: true, email: true, fullName: true, role: true, createdAt: true },
-          },
-        },
-      }),
+      getAllAccessRequests(),
       prisma.user.findMany({
         select: { id: true, email: true, fullName: true, role: true, createdAt: true },
         orderBy: [{ role: "asc" }, { createdAt: "desc" }],
@@ -132,7 +129,7 @@ export async function GET(req: NextRequest) {
       allUsers,
       authorizedAdmins,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Get access requests error:", error);
     return NextResponse.json({ error: "Failed to fetch access requests" }, { status: 500 });
   }
@@ -153,39 +150,27 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Action is required" }, { status: 400 });
     }
 
-    if (action === "APPROVE" && requestId) {
-      const request = await prisma.adminAccessRequest.findUnique({
-        where: { id: requestId },
-        include: { user: true },
-      });
-
-      if (!request) {
-        return NextResponse.json({ error: "Request not found" }, { status: 404 });
+    if (action === "APPROVE" && (requestId || targetUserId)) {
+      if (requestId) {
+        await updateAccessRequestStatus(requestId, "APPROVED");
       }
 
-      // Upgrade user to ADMIN and mark request APPROVED
-      await prisma.$transaction([
-        prisma.user.update({
-          where: { id: request.userId },
+      const userIdToPromote = targetUserId;
+      if (userIdToPromote) {
+        await prisma.user.update({
+          where: { id: userIdToPromote },
           data: { role: "ADMIN" },
-        }),
-        prisma.adminAccessRequest.update({
-          where: { id: requestId },
-          data: { status: "APPROVED" },
-        }),
-      ]);
+        });
+      }
 
       return NextResponse.json({
         success: true,
-        message: `Approved ${request.email} as Admin! They can now access the dashboard immediately.`,
+        message: "User approved as Admin! They now have full access to the dashboard.",
       });
     }
 
     if (action === "REJECT" && requestId) {
-      await prisma.adminAccessRequest.update({
-        where: { id: requestId },
-        data: { status: "REJECTED" },
-      });
+      await updateAccessRequestStatus(requestId, "REJECTED");
 
       return NextResponse.json({
         success: true,
@@ -227,7 +212,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     return NextResponse.json({ error: "Invalid action or parameters" }, { status: 400 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Process access request error:", error);
     return NextResponse.json({ error: "Failed to process access request" }, { status: 500 });
   }

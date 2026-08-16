@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { findPendingRequestForUser } from "@/services/access-request.service";
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,12 +29,6 @@ export async function GET(req: NextRequest) {
           ...(email ? [{ email }] : []),
         ],
       },
-      include: {
-        adminAccessRequests: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
-      },
     });
 
     if (!dbUser && email) {
@@ -44,28 +39,16 @@ export async function GET(req: NextRequest) {
           fullName: fullName || email.split("@")[0],
           role: email === "hassamnaveed44@gmail.com" ? "ADMIN" : "CUSTOMER",
         },
-        include: {
-          adminAccessRequests: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-          },
-        },
       });
     } else if (dbUser && dbUser.clerkId !== userId) {
       dbUser = await prisma.user.update({
         where: { id: dbUser.id },
         data: { clerkId: userId, ...(fullName ? { fullName } : {}) },
-        include: {
-          adminAccessRequests: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-          },
-        },
       });
     }
 
     const isAdmin = dbUser?.role === "ADMIN" || email === "hassamnaveed44@gmail.com";
-    const latestRequest = dbUser?.adminAccessRequests?.[0];
+    const latestRequest = dbUser ? await findPendingRequestForUser(dbUser.id) : null;
     const hasPendingRequest = latestRequest?.status === "PENDING";
 
     return NextResponse.json({
@@ -81,14 +64,14 @@ export async function GET(req: NextRequest) {
         fullName: dbUser?.fullName || fullName || "User",
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Check access error:", error);
     return NextResponse.json({
       authenticated: false,
       isAdmin: false,
       role: "GUEST",
       pendingRequest: false,
-      error: "Failed to verify access",
+      error: error?.message || "Failed to verify access",
     });
   }
 }

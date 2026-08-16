@@ -76,6 +76,18 @@ export default function AdminAuthGate({ children }: { children: React.ReactNode 
       const data = await res.json();
       if (data.success) {
         setToastMessage("Access request submitted to admin!");
+        setDbAccess((prev) => ({
+          authenticated: true,
+          isAdmin: false,
+          role: "CUSTOMER",
+          hasPendingRequest: true,
+          latestRequestStatus: "PENDING",
+          user: prev?.user || {
+            id: "",
+            email: userEmail,
+            fullName: clerkUser?.fullName || "Staff",
+          },
+        }));
         checkDbAccess();
       } else {
         alert(data.error || "Failed to submit request");
