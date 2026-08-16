@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -9,20 +9,20 @@ import {
   AlertOctagon,
   CheckCircle2,
   Search,
-  Filter,
   RefreshCw,
   Plus,
   Minus,
-  Save,
-  ArrowRight,
   TrendingDown,
+  ChevronDown,
+  ChevronRight,
+  Package,
   Layers,
   ArrowUpRight,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-interface InventoryItem {
+interface InventoryVariant {
   id: string;
   productId: string;
   productName: string;
@@ -55,8 +55,24 @@ interface Category {
   slug: string;
 }
 
+interface GroupedProduct {
+  productId: string;
+  productName: string;
+  productSlug: string;
+  productImage: string;
+  categoryName: string;
+  dressStyle: string;
+  price: number;
+  isActive: boolean;
+  totalStock: number;
+  variants: InventoryVariant[];
+  hasLowStock: boolean;
+  hasCriticalStock: boolean;
+  hasOutOfStock: boolean;
+}
+
 export default function InventoryPage() {
-  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [items, setItems] = useState<InventoryVariant[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [overview, setOverview] = useState<InventoryOverview>({
     totalUnits: 0,
@@ -71,6 +87,8 @@ export default function InventoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
+  const [viewMode, setViewMode] = useState<"GROUPED" | "FLAT">("GROUPED");
+  const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
 
   // Local draft stock edits: { [variantId]: number }
   const [stockDrafts, setStockDrafts] = useState<Record<string, number>>({});
@@ -97,13 +115,15 @@ export default function InventoryPage() {
 
       if (data.success) {
         setItems(data.items || []);
-        setOverview(data.overview || {
-          totalUnits: 0,
-          totalVariants: 0,
-          lowStockCount: 0,
-          criticalStockCount: 0,
-          outOfStockCount: 0,
-        });
+        setOverview(
+          data.overview || {
+            totalUnits: 0,
+            totalVariants: 0,
+            lowStockCount: 0,
+            criticalStockCount: 0,
+            outOfStockCount: 0,
+          }
+        );
         setCategories(data.categories || []);
       }
     } catch (err) {
@@ -117,6 +137,77 @@ export default function InventoryPage() {
   useEffect(() => {
     fetchInventory();
   }, [statusFilter, selectedCategory]);
+
+  const toggleExpand = (productId: string) => {
+    setExpandedProductIds((prev) => ({
+      ...prev,
+      [productId]: !prev[productId],
+    }));
+  };
+
+  const expandAll = () => {
+    const allExpanded: Record<string, boolean> = {};
+    groupedProducts.forEach((p) => {
+      allExpanded[p.productId] = true;
+    });
+    setExpandedProductIds(allExpanded);
+  };
+
+  const collapseAll = () => {
+    setExpandedProductIds({});
+  };
+
+  // Group items by product
+  const groupedProducts = useMemo(() => {
+    const map = new Map<string, GroupedProduct>();
+
+    for (const item of items) {
+      if (!map.has(item.productId)) {
+        map.set(item.productId, {
+          productId: item.productId,
+          productName: item.productName,
+          productSlug: item.productSlug,
+          productImage: item.productImage,
+          categoryName: item.categoryName,
+          dressStyle: item.dressStyle || "Casual",
+          price: item.price,
+          isActive: item.isActive,
+          totalStock: 0,
+          variants: [],
+          hasLowStock: false,
+          hasCriticalStock: false,
+          hasOutOfStock: false,
+        });
+      }
+
+      const prod = map.get(item.productId)!;
+      prod.totalStock += item.stockQuantity;
+      prod.variants.push(item);
+
+      if (item.stockLevel === "LOW") prod.hasLowStock = true;
+      if (item.stockLevel === "CRITICAL") prod.hasCriticalStock = true;
+      if (item.stockLevel === "OUT_OF_STOCK") prod.hasOutOfStock = true;
+    }
+
+    return Array.from(map.values());
+  }, [items]);
+
+  const filteredGrouped = useMemo(() => {
+    if (!searchQuery) return groupedProducts;
+    const q = searchQuery.toLowerCase();
+    return groupedProducts.filter(
+      (p) =>
+        p.productName.toLowerCase().includes(q) ||
+        p.categoryName.toLowerCase().includes(q) ||
+        p.dressStyle.toLowerCase().includes(q) ||
+        p.variants.some(
+          (v) =>
+            v.sku.toLowerCase().includes(q) ||
+            v.size.toLowerCase().includes(q) ||
+            v.colorName.toLowerCase().includes(q)
+        )
+    );
+  }, [groupedProducts, searchQuery]);
 
   const handleStockDraftChange = (variantId: string, value: number) => {
     setStockDrafts((prev) => ({
@@ -150,7 +241,6 @@ export default function InventoryPage() {
 
       const data = await res.json();
       if (data.success) {
-        // Update local items state
         setItems((prev) =>
           prev.map((item) => {
             if (item.id === variantId) {
@@ -170,14 +260,13 @@ export default function InventoryPage() {
           })
         );
 
-        // Clear draft
         setStockDrafts((prev) => {
           const next = { ...prev };
           delete next[variantId];
           return next;
         });
 
-        showToast("Stock quantity updated!");
+        showToast("Variant stock updated in database!");
       } else {
         alert(data.error || "Failed to update stock");
       }
@@ -189,43 +278,31 @@ export default function InventoryPage() {
     }
   };
 
-  const filteredItems = items.filter((item) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      item.productName.toLowerCase().includes(q) ||
-      item.sku.toLowerCase().includes(q) ||
-      item.size.toLowerCase().includes(q) ||
-      item.colorName.toLowerCase().includes(q) ||
-      item.categoryName.toLowerCase().includes(q)
-    );
-  });
-
   const getStockBadge = (level: "OK" | "LOW" | "CRITICAL" | "OUT_OF_STOCK", qty: number) => {
     switch (level) {
       case "OUT_OF_STOCK":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-gray-900 text-white dark:bg-gray-100 dark:text-black shadow-2xs">
-            <AlertOctagon size={12} /> Out of Stock (0)
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-900 text-white dark:bg-gray-100 dark:text-black">
+            <AlertOctagon size={11} /> Out of Stock (0)
           </span>
         );
       case "CRITICAL":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-900 shadow-2xs">
-            <AlertTriangle size={12} className="animate-pulse" /> Critical ({qty} left)
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-900">
+            <AlertTriangle size={11} className="animate-pulse" /> Critical ({qty} left)
           </span>
         );
       case "LOW":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-900 shadow-2xs">
-            <TrendingDown size={12} /> Low Stock ({qty} left)
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-900">
+            <TrendingDown size={11} /> Low Stock ({qty} left)
           </span>
         );
       case "OK":
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 shadow-2xs">
-            <CheckCircle2 size={12} /> In Stock ({qty})
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
+            <CheckCircle2 size={11} /> In Stock ({qty})
           </span>
         );
     }
@@ -248,7 +325,7 @@ export default function InventoryPage() {
             Inventory & Stock Tracking
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Real-time variant replenishment, low-stock threshold alerts, and instant adjustments
+            Manage your {groupedProducts.length} catalog products ({overview.totalVariants} size & color variants)
           </p>
         </div>
 
@@ -274,20 +351,20 @@ export default function InventoryPage() {
 
       {/* KPI Metric Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Units */}
+        {/* Total Products & Units */}
         <Card className="p-5 bg-card border-border shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Total Units in Stock</span>
+            <span className="text-xs font-medium text-muted-foreground">Catalog Products</span>
             <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300 flex items-center justify-center">
-              <Boxes size={16} />
+              <Package size={16} />
             </div>
           </div>
           <div className="mt-3">
             <span className="text-2xl font-bold font-sans text-foreground">
-              {overview.totalUnits.toLocaleString()}
+              {groupedProducts.length} Products
             </span>
             <p className="text-xs text-muted-foreground mt-1">
-              Across {overview.totalVariants} active product variants
+              {overview.totalUnits.toLocaleString()} total units across {overview.totalVariants} variants
             </p>
           </div>
         </Card>
@@ -307,10 +384,10 @@ export default function InventoryPage() {
           </div>
           <div className="mt-3">
             <span className={`text-2xl font-bold font-sans ${overview.lowStockCount > 0 ? "text-amber-600" : "text-foreground"}`}>
-              {overview.lowStockCount}
+              {overview.lowStockCount} Variants
             </span>
             <p className="text-xs text-muted-foreground mt-1">
-              {overview.lowStockCount > 0 ? "Click to filter low stock items" : "No low stock warnings"}
+              {overview.lowStockCount > 0 ? "Click to filter low stock items" : "All variants well stocked"}
             </p>
           </div>
         </Card>
@@ -330,10 +407,10 @@ export default function InventoryPage() {
           </div>
           <div className="mt-3">
             <span className={`text-2xl font-bold font-sans ${overview.criticalStockCount > 0 ? "text-rose-600" : "text-foreground"}`}>
-              {overview.criticalStockCount}
+              {overview.criticalStockCount} Variants
             </span>
             <p className="text-xs text-muted-foreground mt-1">
-              {overview.criticalStockCount > 0 ? "Urgent reorder recommended" : "Zero critical items"}
+              {overview.criticalStockCount > 0 ? "Urgent restock needed" : "Zero critical items"}
             </p>
           </div>
         </Card>
@@ -353,20 +430,20 @@ export default function InventoryPage() {
           </div>
           <div className="mt-3">
             <span className="text-2xl font-bold font-sans text-foreground">
-              {overview.outOfStockCount}
+              {overview.outOfStockCount} Variants
             </span>
             <p className="text-xs text-muted-foreground mt-1">
-              {overview.outOfStockCount > 0 ? "Unavailable for customer checkout" : "All variants available"}
+              {overview.outOfStockCount > 0 ? "Unavailable for checkout" : "All variants in stock"}
             </p>
           </div>
         </Card>
       </div>
 
-      {/* Toolbar & Filter Bar */}
+      {/* Toolbar & Filter Controls */}
       <Card className="p-4 bg-card border-border shadow-xs space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
           {/* Search */}
-          <div className="sm:col-span-6 relative">
+          <div className="sm:col-span-5 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <input
               type="text"
@@ -377,7 +454,7 @@ export default function InventoryPage() {
             />
           </div>
 
-          {/* Status Tabs / Dropdown */}
+          {/* Status Filter */}
           <div className="sm:col-span-3">
             <select
               value={statusFilter}
@@ -393,7 +470,7 @@ export default function InventoryPage() {
           </div>
 
           {/* Category Filter */}
-          <div className="sm:col-span-3">
+          <div className="sm:col-span-2">
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
@@ -407,51 +484,305 @@ export default function InventoryPage() {
               ))}
             </select>
           </div>
+
+          {/* View Mode Toggle */}
+          <div className="sm:col-span-2 flex items-center justify-end gap-1 border-l border-border pl-3">
+            <button
+              type="button"
+              onClick={() => setViewMode("GROUPED")}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer border ${
+                viewMode === "GROUPED"
+                  ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs"
+                  : "bg-muted/40 text-muted-foreground hover:text-foreground border-border"
+              }`}
+              title="Group by Product (1 row per product)"
+            >
+              📦 Grouped
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("FLAT")}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer border ${
+                viewMode === "FLAT"
+                  ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs"
+                  : "bg-muted/40 text-muted-foreground hover:text-foreground border-border"
+              }`}
+              title="View all individual size/color variants"
+            >
+              📄 Flat List
+            </button>
+          </div>
         </div>
 
-        {/* Quick Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border">
-          <span className="text-[11px] font-semibold text-muted-foreground mr-1">Quick Filters:</span>
-          {[
-            { label: "All Items", value: "ALL" },
-            { label: "⚠️ Low Stock (≤ 10)", value: "LOW_STOCK" },
-            { label: "🚨 Critical (≤ 5)", value: "CRITICAL" },
-            { label: "⬛ Out of Stock", value: "OUT_OF_STOCK" },
-            { label: "🟢 In Stock", value: "OK" },
-          ].map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => setStatusFilter(tab.value)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer border ${
-                statusFilter === tab.value
-                  ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-semibold shadow-xs"
-                  : "bg-muted/40 hover:bg-muted text-foreground border-border"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* Quick Filter Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-muted-foreground mr-1">Filter By:</span>
+            {[
+              { label: "All Items", value: "ALL" },
+              { label: "⚠️ Low Stock (≤ 10)", value: "LOW_STOCK" },
+              { label: "🚨 Critical (≤ 5)", value: "CRITICAL" },
+              { label: "⬛ Out of Stock", value: "OUT_OF_STOCK" },
+              { label: "🟢 In Stock", value: "OK" },
+            ].map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => setStatusFilter(tab.value)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer border ${
+                  statusFilter === tab.value
+                    ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-semibold shadow-xs"
+                    : "bg-muted/40 hover:bg-muted text-foreground border-border"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {viewMode === "GROUPED" && (
+            <div className="flex items-center gap-2 text-xs">
+              <button
+                type="button"
+                onClick={expandAll}
+                className="text-muted-foreground hover:text-foreground font-medium underline cursor-pointer"
+              >
+                Expand All
+              </button>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={collapseAll}
+                className="text-muted-foreground hover:text-foreground font-medium underline cursor-pointer"
+              >
+                Collapse All
+              </button>
+            </div>
+          )}
         </div>
       </Card>
 
-      {/* Inventory Table */}
-      <Card className="p-4 sm:p-6 bg-card border-border shadow-xs">
-        {isLoading ? (
-          <div className="space-y-4 py-8">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-14 bg-muted/60 rounded-xl animate-pulse" />
-            ))}
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="py-16 text-center text-muted-foreground">
-            <Boxes size={40} className="mx-auto mb-3 opacity-40" />
-            <p className="text-sm font-semibold text-foreground">No inventory items match your filter</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Try resetting your search query or status filter.
-            </p>
-          </div>
-        ) : (
+      {/* Main Content Area */}
+      {isLoading ? (
+        <div className="space-y-4 py-8">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-20 bg-muted/60 rounded-2xl animate-pulse" />
+          ))}
+        </div>
+      ) : viewMode === "GROUPED" ? (
+        /* 📦 GROUPED VIEW: 1 Row / Card Per Product */
+        <div className="space-y-3">
+          {filteredGrouped.length === 0 ? (
+            <Card className="py-16 text-center text-muted-foreground bg-card border-border">
+              <Boxes size={40} className="mx-auto mb-3 opacity-40" />
+              <p className="text-sm font-semibold text-foreground">No products match your search</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Try resetting your search query or status filter.
+              </p>
+            </Card>
+          ) : (
+            filteredGrouped.map((prod) => {
+              const isExpanded = expandedProductIds[prod.productId] || false;
+
+              return (
+                <Card
+                  key={prod.productId}
+                  className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs transition hover:border-black/20"
+                >
+                  {/* Product Header Row */}
+                  <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card">
+                    {/* Left: Image & Name */}
+                    <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                      <Link
+                        href={`/admin/products/${prod.productId}`}
+                        className="relative w-12 h-12 rounded-xl bg-muted overflow-hidden shrink-0 border border-border block hover:opacity-80 transition"
+                      >
+                        <Image src={prod.productImage} alt={prod.productName} fill className="object-cover" />
+                      </Link>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/admin/products/${prod.productId}`}
+                            className="font-bold text-foreground hover:underline text-sm truncate"
+                          >
+                            {prod.productName}
+                          </Link>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-muted text-foreground shrink-0">
+                            {prod.dressStyle}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Category: <span className="font-semibold text-foreground">{prod.categoryName}</span> · Base Price: ${prod.price}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right: Summary Pills & Accordion Trigger */}
+                    <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border">
+                      <div className="text-left sm:text-right">
+                        <div className="flex items-center gap-1.5 sm:justify-end">
+                          <span className="text-sm font-bold font-sans text-foreground">
+                            {prod.totalStock} Units
+                          </span>
+                          {prod.hasCriticalStock ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                              🚨 Critical
+                            </span>
+                          ) : prod.hasLowStock ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                              ⚠️ Low Stock
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                              ✓ Good
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          {prod.variants.length} {prod.variants.length === 1 ? "size/color variant" : "sizes & color variants"}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleExpand(prod.productId)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs font-semibold transition cursor-pointer ${
+                          isExpanded
+                            ? "bg-black text-white dark:bg-white dark:text-black shadow-xs"
+                            : "bg-muted/40 hover:bg-muted text-foreground"
+                        }`}
+                      >
+                        <span>{isExpanded ? "Hide Variants" : "Manage Variants"}</span>
+                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Accordion: Inner Variant Table & Stock Adjusters */}
+                  {isExpanded && (
+                    <div className="border-t border-border bg-muted/20 p-4 sm:p-5 animate-in fade-in slide-in-from-top-1">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-border text-muted-foreground">
+                              <th className="pb-2.5 font-semibold">Size</th>
+                              <th className="pb-2.5 font-semibold">Color</th>
+                              <th className="pb-2.5 font-semibold">SKU</th>
+                              <th className="pb-2.5 font-semibold">Stock Status</th>
+                              <th className="pb-2.5 font-semibold text-center">Quick Stock Adjuster</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {prod.variants.map((v) => {
+                              const draftStock = stockDrafts[v.id] !== undefined ? stockDrafts[v.id] : v.stockQuantity;
+                              const hasChanges = draftStock !== v.stockQuantity;
+                              const isUpdating = updatingIds[v.id] || false;
+
+                              return (
+                                <tr key={v.id} className="hover:bg-muted/40 transition">
+                                  {/* Size */}
+                                  <td className="py-3 font-bold text-foreground">{v.size}</td>
+
+                                  {/* Color */}
+                                  <td className="py-3">
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="w-3 h-3 rounded-full border border-black/20 shrink-0"
+                                        style={{ backgroundColor: v.colorHex }}
+                                      />
+                                      <span className="text-foreground font-medium">{v.colorName}</span>
+                                    </div>
+                                  </td>
+
+                                  {/* SKU */}
+                                  <td className="py-3 font-mono text-[11px] text-muted-foreground font-semibold">
+                                    {v.sku}
+                                  </td>
+
+                                  {/* Status */}
+                                  <td className="py-3">{getStockBadge(v.stockLevel, v.stockQuantity)}</td>
+
+                                  {/* Quick Stock Adjuster */}
+                                  <td className="py-3">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeltaChange(v.id, v.stockQuantity, -5)}
+                                        className="w-6 h-6 rounded bg-card hover:bg-muted text-foreground text-[10px] font-bold flex items-center justify-center transition cursor-pointer border border-border"
+                                        title="Subtract 5 units"
+                                      >
+                                        -5
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeltaChange(v.id, v.stockQuantity, -1)}
+                                        className="w-6 h-6 rounded bg-card hover:bg-muted text-foreground text-xs font-bold flex items-center justify-center transition cursor-pointer border border-border"
+                                        title="Subtract 1 unit"
+                                      >
+                                        <Minus size={11} />
+                                      </button>
+
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={draftStock}
+                                        onChange={(e) => handleStockDraftChange(v.id, Number(e.target.value))}
+                                        className={`w-14 h-7 text-center rounded-lg border text-xs font-bold focus:outline-none transition-colors ${
+                                          hasChanges
+                                            ? "border-black dark:border-white bg-amber-50 dark:bg-amber-950/40 text-foreground"
+                                            : "border-border bg-card text-foreground"
+                                        }`}
+                                      />
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeltaChange(v.id, v.stockQuantity, 1)}
+                                        className="w-6 h-6 rounded bg-card hover:bg-muted text-foreground text-xs font-bold flex items-center justify-center transition cursor-pointer border border-border"
+                                        title="Add 1 unit"
+                                      >
+                                        <Plus size={11} />
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeltaChange(v.id, v.stockQuantity, 10)}
+                                        className="w-6 h-6 rounded bg-card hover:bg-muted text-foreground text-[10px] font-bold flex items-center justify-center transition cursor-pointer border border-border"
+                                        title="Add 10 units"
+                                      >
+                                        +10
+                                      </button>
+
+                                      {hasChanges && (
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          disabled={isUpdating}
+                                          onClick={() => handleSaveStock(v.id, v.stockQuantity)}
+                                          className="h-7 px-2.5 rounded-lg text-xs font-bold bg-black text-white dark:bg-white dark:text-black cursor-pointer animate-in fade-in"
+                                        >
+                                          {isUpdating ? "Saving..." : "Save"}
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              );
+            })
+          )}
+        </div>
+      ) : (
+        /* 📄 FLAT VIEW: Detailed table of all variants */
+        <Card className="p-4 sm:p-6 bg-card border-border shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
@@ -465,14 +796,13 @@ export default function InventoryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredItems.map((item) => {
+                {items.map((item) => {
                   const draftStock = stockDrafts[item.id] !== undefined ? stockDrafts[item.id] : item.stockQuantity;
                   const hasChanges = draftStock !== item.stockQuantity;
                   const isUpdating = updatingIds[item.id] || false;
 
                   return (
                     <tr key={item.id} className="hover:bg-muted/40 transition">
-                      {/* Product Thumbnail & Variant */}
                       <td className="py-3.5 pr-3">
                         <div className="flex items-center gap-3">
                           <Link
@@ -503,44 +833,33 @@ export default function InventoryPage() {
                         </div>
                       </td>
 
-                      {/* SKU */}
                       <td className="py-3.5 font-mono text-[11px] text-muted-foreground font-semibold">
                         {item.sku}
                       </td>
 
-                      {/* Category & Style */}
                       <td className="py-3.5 text-muted-foreground">
                         <span className="font-medium text-foreground">{item.categoryName}</span>
                         <span className="block text-[10px] text-muted-foreground">{item.dressStyle}</span>
                       </td>
 
-                      {/* Status Badge */}
                       <td className="py-3.5">{getStockBadge(item.stockLevel, item.stockQuantity)}</td>
 
-                      {/* Inline Stock Adjuster */}
                       <td className="py-3.5">
                         <div className="flex items-center justify-center gap-1.5">
-                          {/* Quick decrement -5 */}
                           <button
                             type="button"
                             onClick={() => handleDeltaChange(item.id, item.stockQuantity, -5)}
                             className="w-6 h-6 rounded bg-muted/60 hover:bg-muted text-foreground text-[10px] font-bold flex items-center justify-center transition cursor-pointer border border-border"
-                            title="Subtract 5 units"
                           >
                             -5
                           </button>
-
-                          {/* Decrement -1 */}
                           <button
                             type="button"
                             onClick={() => handleDeltaChange(item.id, item.stockQuantity, -1)}
                             className="w-6 h-6 rounded bg-muted/60 hover:bg-muted text-foreground text-xs font-bold flex items-center justify-center transition cursor-pointer border border-border"
-                            title="Subtract 1 unit"
                           >
                             <Minus size={11} />
                           </button>
-
-                          {/* Direct stock input */}
                           <input
                             type="number"
                             min="0"
@@ -552,28 +871,20 @@ export default function InventoryPage() {
                                 : "border-border bg-card text-foreground"
                             }`}
                           />
-
-                          {/* Increment +1 */}
                           <button
                             type="button"
                             onClick={() => handleDeltaChange(item.id, item.stockQuantity, 1)}
                             className="w-6 h-6 rounded bg-muted/60 hover:bg-muted text-foreground text-xs font-bold flex items-center justify-center transition cursor-pointer border border-border"
-                            title="Add 1 unit"
                           >
                             <Plus size={11} />
                           </button>
-
-                          {/* Quick increment +10 */}
                           <button
                             type="button"
                             onClick={() => handleDeltaChange(item.id, item.stockQuantity, 10)}
                             className="w-6 h-6 rounded bg-muted/60 hover:bg-muted text-foreground text-[10px] font-bold flex items-center justify-center transition cursor-pointer border border-border"
-                            title="Add 10 units"
                           >
                             +10
                           </button>
-
-                          {/* Save Button (shows when changes are made) */}
                           {hasChanges && (
                             <Button
                               type="button"
@@ -588,7 +899,6 @@ export default function InventoryPage() {
                         </div>
                       </td>
 
-                      {/* Actions */}
                       <td className="py-3.5 text-right">
                         <Link href={`/admin/products/${item.productId}`}>
                           <Button
@@ -607,8 +917,8 @@ export default function InventoryPage() {
               </tbody>
             </table>
           </div>
-        )}
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }
