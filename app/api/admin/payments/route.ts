@@ -5,11 +5,7 @@ import { prisma } from "@/lib/db";
 // Dynamic exchange rates relative to USD
 const EXCHANGE_RATES: Record<string, number> = {
   USD: 1.0,
-  EUR: 0.92,
-  GBP: 0.79,
-  JPY: 155.2,
-  CAD: 1.37,
-  AUD: 1.52,
+  PKR: 279.0,
 };
 
 export async function GET(req: NextRequest) {
@@ -103,7 +99,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Dynamic Multi-Currency Balances
+    // Dynamic Multi-Currency Balances (USD & PKR)
     const balances = [
       {
         currency: "USD",
@@ -114,20 +110,12 @@ export async function GET(req: NextRequest) {
         raw: totalRevenueUSD,
       },
       {
-        currency: "EUR",
-        label: "eu EUR",
-        flag: "🇪🇺",
-        amount: (totalRevenueUSD * EXCHANGE_RATES.EUR).toLocaleString("en-US", { minimumFractionDigits: 2 }),
-        symbol: "€",
-        raw: totalRevenueUSD * EXCHANGE_RATES.EUR,
-      },
-      {
-        currency: "GBP",
-        label: "GB GBP",
-        flag: "🇬🇧",
-        amount: (totalRevenueUSD * EXCHANGE_RATES.GBP).toLocaleString("en-US", { minimumFractionDigits: 2 }),
-        symbol: "£",
-        raw: totalRevenueUSD * EXCHANGE_RATES.GBP,
+        currency: "PKR",
+        label: "pk PKR",
+        flag: "🇵🇰",
+        amount: (totalRevenueUSD * EXCHANGE_RATES.PKR).toLocaleString("en-US", { minimumFractionDigits: 2 }),
+        symbol: "₨",
+        raw: totalRevenueUSD * EXCHANGE_RATES.PKR,
       },
     ];
 
@@ -137,16 +125,15 @@ export async function GET(req: NextRequest) {
         lastUpdated: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
         overview: {
           totalRevenueUSD,
+          totalRevenuePKR: totalRevenueUSD * EXCHANGE_RATES.PKR,
           successfulRevenueUSD,
           pendingSettlementUSD,
           totalTransactions: orders.length,
         },
         balances,
         exchangeRates: [
-          { pair: "EUR / USD", rate: (1 / EXCHANGE_RATES.EUR).toFixed(4), change: "+0.24%", positive: true },
-          { pair: "GBP / USD", rate: (1 / EXCHANGE_RATES.GBP).toFixed(4), change: "-0.12%", positive: false },
-          { pair: "USD / JPY", rate: EXCHANGE_RATES.JPY.toFixed(2), change: "+0.51%", positive: true },
-          { pair: "USD / CAD", rate: EXCHANGE_RATES.CAD.toFixed(4), change: "+0.08%", positive: true },
+          { pair: "USD / PKR", rate: EXCHANGE_RATES.PKR.toFixed(2), change: "+0.15%", positive: true },
+          { pair: "PKR / USD", rate: (1 / EXCHANGE_RATES.PKR).toFixed(6), change: "-0.15%", positive: false },
         ],
         transactions: filteredTransactions,
       },

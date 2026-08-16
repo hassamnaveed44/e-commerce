@@ -16,6 +16,7 @@ import {
   CreditCard,
   Building,
   Layers,
+  Calculator,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,24 +50,21 @@ interface PaymentTransaction {
 }
 
 const currencies = [
-  { code: "EUR", label: "eu EUR", rate: 0.92 },
-  { code: "USD", label: "us USD", rate: 1.0 },
-  { code: "GBP", label: "GB GBP", rate: 0.79 },
-  { code: "JPY", label: "JP JPY", rate: 155.2 },
-  { code: "CAD", label: "CA CAD", rate: 1.37 },
-  { code: "AUD", label: "AU AUD", rate: 1.52 },
+  { code: "USD", label: "us USD", symbol: "$", flag: "🇺🇸", rate: 1.0 },
+  { code: "PKR", label: "pk PKR", symbol: "₨", flag: "🇵🇰", rate: 279.0 },
 ];
 
 export default function PaymentDashboardPage() {
   const [balances, setBalances] = useState<PaymentBalance[]>([]);
   const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
   const [totalRevenueUSD, setTotalRevenueUSD] = useState(0);
+  const [totalRevenuePKR, setTotalRevenuePKR] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<string>("Just now");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const [sourceCurrency, setSourceCurrency] = useState("eu EUR");
-  const [targetCurrency, setTargetCurrency] = useState("us USD");
+  const [sourceCurrency, setSourceCurrency] = useState("us USD");
+  const [targetCurrency, setTargetCurrency] = useState("pk PKR");
   const [selectedPeriod, setSelectedPeriod] = useState("7D");
   const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
   const [targetDropdownOpen, setTargetDropdownOpen] = useState(false);
@@ -85,6 +83,7 @@ export default function PaymentDashboardPage() {
         setBalances(json.data.balances || []);
         setTransactions(json.data.transactions || []);
         setTotalRevenueUSD(json.data.overview?.totalRevenueUSD || 0);
+        setTotalRevenuePKR(json.data.overview?.totalRevenuePKR || 0);
         setLastUpdated(json.data.lastUpdated || new Date().toLocaleTimeString());
       }
     } catch (err) {
@@ -100,8 +99,9 @@ export default function PaymentDashboardPage() {
   }, []);
 
   const handleSwapCurrencies = () => {
+    const prevSource = sourceCurrency;
     setSourceCurrency(targetCurrency);
-    setTargetCurrency(sourceCurrency);
+    setTargetCurrency(prevSource);
   };
 
   // Live currency calculation
@@ -109,9 +109,15 @@ export default function PaymentDashboardPage() {
     const srcObj = currencies.find((c) => c.label === sourceCurrency) || currencies[0];
     const tgtObj = currencies.find((c) => c.label === targetCurrency) || currencies[1];
     const num = parseFloat(convertAmount) || 0;
+    
+    // Convert to USD then to Target
     const inUSD = num / srcObj.rate;
     const converted = inUSD * tgtObj.rate;
-    return converted.toFixed(2);
+    
+    return converted.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   };
 
   // Generate dynamic chart data/path based on selected period
@@ -161,9 +167,13 @@ export default function PaymentDashboardPage() {
                 Balances & Payouts
               </h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                Total funds in all merchant balances:{" "}
-                <span className="font-semibold text-foreground">
+                Total store funds:{" "}
+                <span className="font-bold text-foreground">
                   ${totalRevenueUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })} USD
+                </span>{" "}
+                <span className="text-muted-foreground">≈</span>{" "}
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  ₨ {totalRevenuePKR.toLocaleString("en-US", { minimumFractionDigits: 2 })} PKR
                 </span>
               </p>
             </div>
@@ -181,7 +191,7 @@ export default function PaymentDashboardPage() {
 
               <div className="hidden sm:block">
                 <Link href="/admin/payments/transactions">
-                  <Button size="sm" variant="outline" className="gap-1.5 text-xs rounded-xl h-9 border-border bg-card font-semibold">
+                  <Button size="sm" variant="outline" className="gap-1.5 text-xs rounded-xl h-9 border-border bg-card font-semibold cursor-pointer">
                     <span>View All Transactions</span>
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
@@ -190,12 +200,12 @@ export default function PaymentDashboardPage() {
             </div>
           </div>
 
-          {/* Verification Warning Alert Banner */}
+          {/* Gateway Status Banner */}
           <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900 text-amber-900 dark:text-amber-200 w-full">
             <div className="flex items-center gap-3">
               <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
               <p className="text-xs sm:text-sm font-medium">
-                Live gateway connected · Stripe Checkout & Cash on Delivery active
+                Live gateway connected · Stripe Checkout (USD) & Cash on Delivery (PKR/USD) active
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -205,41 +215,54 @@ export default function PaymentDashboardPage() {
             </div>
           </div>
 
-          {/* Currency Balance Cards Grid */}
+          {/* Currency Balance Cards Grid (USD & PKR Only) */}
           {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-24 bg-muted/60 rounded-2xl animate-pulse" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-28 bg-muted/60 rounded-2xl animate-pulse" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {balances.map((b) => (
-                <Card
-                  key={b.currency}
-                  className="hover:shadow-md transition-shadow cursor-pointer rounded-2xl border-border bg-card"
-                >
-                  <CardContent className="p-5 flex items-center justify-between">
-                    <div className="flex items-center gap-3.5">
-                      <span className="text-xs font-mono font-bold px-2.5 py-1.5 rounded-xl bg-muted text-foreground">
-                        {b.currency === "USD" ? "US" : b.currency === "EUR" ? "EU" : "GB"}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* US Dollar Card */}
+              <Card className="hover:shadow-md transition-shadow rounded-2xl border-border bg-card p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3.5">
+                    <span className="text-xs font-mono font-bold px-3 py-2 rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                      🇺🇸 USD
+                    </span>
+                    <div>
+                      <h3 className="text-2xl sm:text-3xl font-extrabold font-integral text-foreground">
+                        ${totalRevenueUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </h3>
+                      <span className="text-[11px] text-muted-foreground uppercase font-semibold">
+                        US Dollar Available Balance
                       </span>
-                      <div>
-                        <h3 className="text-xl sm:text-2xl font-extrabold font-integral text-foreground">
-                          {b.amount}{" "}
-                          <span className="text-xs font-normal text-muted-foreground">
-                            {b.currency}
-                          </span>
-                        </h3>
-                        <span className="text-[10px] text-muted-foreground uppercase font-semibold">
-                          Available Balance
-                        </span>
-                      </div>
                     </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                  <DollarSign className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </Card>
+
+              {/* Pakistani Rupee Card */}
+              <Card className="hover:shadow-md transition-shadow rounded-2xl border-border bg-card p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3.5">
+                    <span className="text-xs font-mono font-bold px-3 py-2 rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
+                      🇵🇰 PKR
+                    </span>
+                    <div>
+                      <h3 className="text-2xl sm:text-3xl font-extrabold font-integral text-emerald-600 dark:text-emerald-400">
+                        ₨ {totalRevenuePKR.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </h3>
+                      <span className="text-[11px] text-muted-foreground uppercase font-semibold">
+                        Pakistani Rupee Equivalent (1 USD = 279 PKR)
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </Card>
             </div>
           )}
 
@@ -247,16 +270,16 @@ export default function PaymentDashboardPage() {
           <Card className="rounded-2xl border-border bg-card pb-0">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
-                <CardTitle className="text-lg font-bold">Live Transactions</CardTitle>
+                <CardTitle className="text-lg font-bold">Live Order Transactions</CardTitle>
                 <CardDescription className="text-xs">
-                  Updated in real time from checkout orders
+                  Updated in real time from customer checkout orders
                 </CardDescription>
               </div>
               <Link href="/admin/payments/transactions">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-xs gap-1 hover:bg-transparent text-foreground font-semibold"
+                  className="text-xs gap-1 hover:bg-transparent text-foreground font-semibold cursor-pointer"
                 >
                   <span>View all</span>
                   <ChevronRight className="h-3.5 w-3.5" />
@@ -310,15 +333,20 @@ export default function PaymentDashboardPage() {
                           </div>
 
                           <div className="flex items-center gap-3">
-                            <span
-                              className={`font-bold font-integral text-xs ${
-                                txn.positive
-                                  ? "text-emerald-600 dark:text-emerald-400"
-                                  : "text-foreground"
-                              }`}
-                            >
-                              {txn.amount}
-                            </span>
+                            <div className="text-right">
+                              <span
+                                className={`font-bold font-integral text-xs ${
+                                  txn.positive
+                                    ? "text-emerald-600 dark:text-emerald-400"
+                                    : "text-foreground"
+                                }`}
+                              >
+                                {txn.amount}
+                              </span>
+                              <span className="block text-[10px] text-muted-foreground">
+                                ≈ ₨ {(txn.amountNumber * 279).toLocaleString("en-US", { minimumFractionDigits: 2 })} PKR
+                              </span>
+                            </div>
                             <Link href="/admin/orders">
                               <Button
                                 variant="outline"
@@ -355,13 +383,13 @@ export default function PaymentDashboardPage() {
             </Link>
           </div>
 
-          {/* Exchange Rates Interactive Card with Graph & Working Dropdowns */}
+          {/* Exchange Rates Interactive Card with Graph & Working USD / PKR Dropdowns */}
           <Card className="rounded-2xl border-border bg-card">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-sm font-semibold text-muted-foreground">
-                    Exchange rates
+                    Exchange Rates (USD / PKR)
                   </CardTitle>
                 </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
@@ -401,7 +429,7 @@ export default function PaymentDashboardPage() {
                           }}
                           className="flex w-full items-center justify-between px-2.5 py-1.5 text-xs text-foreground hover:bg-accent rounded-lg transition cursor-pointer"
                         >
-                          <span>{c.label}</span>
+                          <span>{c.flag} {c.label}</span>
                           {sourceCurrency === c.label && (
                             <Check className="h-3.5 w-3.5 text-primary" />
                           )}
@@ -447,7 +475,7 @@ export default function PaymentDashboardPage() {
                           }}
                           className="flex w-full items-center justify-between px-2.5 py-1.5 text-xs text-foreground hover:bg-accent rounded-lg transition cursor-pointer"
                         >
-                          <span>{c.label}</span>
+                          <span>{c.flag} {c.label}</span>
                           {targetCurrency === c.label && (
                             <Check className="h-3.5 w-3.5 text-primary" />
                           )}
@@ -496,15 +524,11 @@ export default function PaymentDashboardPage() {
                 </div>
               </div>
 
-              {/* Live Conversion Preview */}
+              {/* Live Conversion Rate Display */}
               <div className="p-3 bg-muted/40 rounded-xl border border-border text-xs flex items-center justify-between">
-                <span className="text-muted-foreground">Rate:</span>
+                <span className="text-muted-foreground">Current Rate:</span>
                 <span className="font-mono font-bold text-foreground">
-                  1 {sourceCurrency.split(" ")[1]} = {(
-                    (currencies.find((c) => c.label === targetCurrency)?.rate || 1) /
-                    (currencies.find((c) => c.label === sourceCurrency)?.rate || 1)
-                  ).toFixed(4)}{" "}
-                  {targetCurrency.split(" ")[1]}
+                  {sourceCurrency === "us USD" ? "1 USD = 279.00 PKR" : "1 PKR = 0.00358 USD"}
                 </span>
               </div>
 
@@ -512,13 +536,14 @@ export default function PaymentDashboardPage() {
               <div className="pt-2 space-y-2.5">
                 <Button
                   onClick={() => setConvertModalOpen(true)}
-                  className="w-full text-xs h-10 shadow-sm rounded-xl bg-black text-white dark:bg-white dark:text-black font-semibold cursor-pointer"
+                  className="w-full text-xs h-10 shadow-sm rounded-xl bg-black text-white dark:bg-white dark:text-black font-semibold cursor-pointer flex items-center justify-center gap-2"
                 >
-                  Convert Currencies
+                  <Calculator size={14} />
+                  <span>Convert Currencies (USD ⇄ PKR)</span>
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => alert(`Rate alerts active for ${sourceCurrency} / ${targetCurrency}`)}
+                  onClick={() => alert(`Rate alerts active for 1 USD = 279.00 PKR`)}
                   className="w-full text-xs h-10 gap-1.5 rounded-xl border-border bg-card font-semibold cursor-pointer"
                 >
                   <BarChart3 className="h-3.5 w-3.5 text-blue-500" />
@@ -530,46 +555,109 @@ export default function PaymentDashboardPage() {
         </div>
       </div>
 
-      {/* Currency Converter Modal */}
+      {/* Interactive USD <-> PKR Currency Converter Modal */}
       {convertModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <Card className="w-full max-w-sm bg-card border-border shadow-2xl rounded-2xl p-6 space-y-4">
+          <Card className="w-full max-w-md bg-card border-border shadow-2xl rounded-2xl p-6 space-y-5">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-sm text-foreground">Live Currency Calculator</h3>
+              <div>
+                <h3 className="font-bold text-base text-foreground font-sans">Currency Converter</h3>
+                <p className="text-xs text-muted-foreground">Convert live between US Dollar ($) and Pakistani Rupee (₨)</p>
+              </div>
               <button
                 type="button"
                 onClick={() => setConvertModalOpen(false)}
-                className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
+                className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
               >
-                <X size={14} />
+                <X size={15} />
               </button>
             </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-muted-foreground font-medium">Amount in {sourceCurrency}</label>
+            {/* Currency Swap Selector */}
+            <div className="flex items-center justify-between gap-2 p-2 bg-muted/40 rounded-xl border border-border">
+              <div className="flex-1 text-center font-bold text-xs text-foreground">
+                {sourceCurrency === "us USD" ? "🇺🇸 US Dollar (USD)" : "🇵🇰 Pakistani Rupee (PKR)"}
+              </div>
+              <button
+                type="button"
+                onClick={handleSwapCurrencies}
+                className="p-2 rounded-lg bg-card border border-border hover:bg-muted text-foreground transition cursor-pointer"
+                title="Swap Direction"
+              >
+                <ArrowUpDown size={14} />
+              </button>
+              <div className="flex-1 text-center font-bold text-xs text-foreground">
+                {targetCurrency === "pk PKR" ? "🇵🇰 Pakistani Rupee (PKR)" : "🇺🇸 US Dollar (USD)"}
+              </div>
+            </div>
+
+            {/* Input Amount */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground">
+                Enter Amount to Convert ({sourceCurrency.split(" ")[1]}):
+              </label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-muted-foreground text-sm">
+                  {sourceCurrency === "us USD" ? "$" : "₨"}
+                </span>
                 <input
                   type="number"
                   min="1"
                   value={convertAmount}
                   onChange={(e) => setConvertAmount(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-muted/40 border border-border text-sm font-bold text-foreground focus:outline-none mt-1"
+                  className="w-full h-11 pl-8 pr-4 rounded-xl bg-card border border-border text-base font-bold text-foreground focus:outline-none focus:border-ring"
+                  placeholder="Enter amount..."
                 />
               </div>
 
-              <div className="p-3.5 bg-muted/50 rounded-xl border border-border text-center">
-                <span className="text-[11px] text-muted-foreground uppercase font-semibold">Converted Total</span>
-                <p className="text-xl font-bold font-integral text-emerald-600 mt-1">
-                  {getConvertedResult()} {targetCurrency.split(" ")[1]}
-                </p>
+              {/* Quick Presets */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] text-muted-foreground font-medium mr-1">Quick:</span>
+                {sourceCurrency === "us USD" ? (
+                  [10, 50, 100, 250, 500, 1000].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setConvertAmount(String(amt))}
+                      className="px-2 py-0.5 rounded-md bg-muted hover:bg-muted/80 text-[11px] font-semibold text-foreground transition cursor-pointer border border-border"
+                    >
+                      ${amt}
+                    </button>
+                  ))
+                ) : (
+                  [5000, 10000, 25000, 50000, 100000].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setConvertAmount(String(amt))}
+                      className="px-2 py-0.5 rounded-md bg-muted hover:bg-muted/80 text-[11px] font-semibold text-foreground transition cursor-pointer border border-border"
+                    >
+                      ₨ {amt.toLocaleString()}
+                    </button>
+                  ))
+                )}
               </div>
+            </div>
+
+            {/* Converted Output Display */}
+            <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-900 text-center">
+              <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+                Converted Equivalent
+              </span>
+              <p className="text-2xl font-extrabold font-integral text-emerald-600 dark:text-emerald-400 mt-1">
+                {targetCurrency === "pk PKR" ? "₨ " : "$ "}
+                {getConvertedResult()} {targetCurrency.split(" ")[1]}
+              </p>
+              <span className="text-[11px] text-muted-foreground mt-0.5 block">
+                Exchange Rate: 1 USD = 279.00 PKR
+              </span>
             </div>
 
             <Button
               onClick={() => setConvertModalOpen(false)}
-              className="w-full text-xs font-semibold rounded-xl bg-black text-white dark:bg-white dark:text-black cursor-pointer"
+              className="w-full text-xs font-semibold rounded-xl bg-black text-white dark:bg-white dark:text-black cursor-pointer h-10"
             >
-              Done
+              Close Calculator
             </Button>
           </Card>
         </div>
