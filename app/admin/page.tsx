@@ -560,10 +560,10 @@ export default function EcommerceDashboardPage() {
 
           <div className="border-t border-border pt-4 mt-6">
             <Link
-              href="/admin/products"
+              href="/admin/reviews"
               className="text-xs font-semibold text-foreground hover:underline flex items-center justify-between"
             >
-              <span>Manage catalog reviews</span>
+              <span>Moderate customer reviews</span>
               <ArrowRight size={14} />
             </Link>
           </div>

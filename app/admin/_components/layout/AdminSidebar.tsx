@@ -54,8 +54,9 @@ export default function AdminSidebar({
       isDetail: true,
     },
     { title: "Inventory", href: "/admin/inventory" },
-    { title: "Add Product", href: "/admin/products/new" },
     { title: "Order List", href: "/admin/orders" },
+    { title: "Reviews", href: "/admin/reviews" },
+    { title: "Add Product", href: "/admin/products/new" },
   ];
 
   const paymentSubItems = [
