@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum PaymentMethod {
+  CARD
+  COD
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED_REFUSED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id              String      @id @default(uuid())
+  clerkId         String      @unique
+  email           String      @unique
+  fullName        String?
+  role            Role        @default(CUSTOMER)
+  codRefusalCount Int         @default(0)
+  isCodBlocked    Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  addresses       Address[]
+  orders          Order[]
+  cartItems       CartItem[]
+  reviews         Review[]
+  adminAccessRequests AdminAccessRequest[]
+}
+
+model AdminAccessRequest {
+  id        String   @id @default(uuid())
+  userId    String
+  email     String
+  name      String?
+  reason    String?
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([email])
+}
+
+model Address {
+  id            String   @id @default(uuid())
+  userId        String
+  streetAddress String
+  city          String
+  state         String
+  postalCode    String
+  country       String
+  phoneNumber   String
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders        Order[]
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  imageUrl  String?
+  products  Product[]
+}
+
+model Product {
+  id              String         @id @default(uuid())
+  categoryId      String
+  name            String
+  slug            String         @unique
+  description     String
+  price           Decimal        @db.Decimal(10, 2)
+  originalPrice   Decimal?       @db.Decimal(10, 2)
+  discountPercent Int            @default(0)
+  averageRating   Float          @default(0)
+  dressStyle      String         @default("Casual")
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  category        Category       @relation(fields: [categoryId], references: [id])
+  variants        ProductVariant[]
+  images          ProductImage[]
+  reviews         Review[]
+}
+
+model ProductVariant {
+  id            String      @id @default(uuid())
+  productId     String
+  size          String
+  colorName     String
+  colorHex      String
+  stockQuantity Int         @default(0)
+  sku           String      @unique
+
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  url       String
+  publicId  String?
+  isPrimary Boolean  @default(false)
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model CartItem {
+  id               String          @id @default(uuid())
+  userId           String?
+  sessionToken     String?
+  productVariantId String
+  quantity         Int             @default(1)
+  createdAt        DateTime        @default(now())
+
+  user             User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variant          ProductVariant  @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@index([sessionToken])
+  @@index([userId])
+}
+
+model Order {
+  id                 String         @id @default(uuid())
+  orderNumber        String         @unique
+  userId             String
+  shippingAddressId  String
+  subtotal           Decimal        @db.Decimal(10, 2)
+  deliveryFee        Decimal        @default(0) @db.Decimal(10, 2)
+  totalAmount        Decimal        @db.Decimal(10, 2)
+  paymentMethod      PaymentMethod
+  orderStatus        OrderStatus    @default(PENDING_PAYMENT)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  user               User           @relation(fields: [userId], references: [id])
+  shippingAddress    Address        @relation(fields: [shippingAddressId], references: [id])
+  items              OrderItem[]
+  payment            Payment?
+}
+
+model OrderItem {
+  id               String         @id @default(uuid())
+  orderId          String
+  productVariantId String
+  productName      String
+  unitPrice        Decimal        @db.Decimal(10, 2)
+  quantity         Int
+
+  order            Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant          ProductVariant @relation(fields: [productVariantId], references: [id])
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String        @unique
+  transactionId String?       @unique
+  paymentMethod String
+  status        PaymentStatus @default(PENDING)
+  amountPaid    Decimal       @db.Decimal(10, 2)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id                 String   @id @default(uuid())
+  productId          String
+  userId             String
+  rating             Int
+  comment            String
+  isVerifiedPurchase Boolean  @default(false)
+  createdAt          DateTime @default(now())
+
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

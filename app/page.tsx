@@ -3,23 +3,33 @@ import Brands from "@/app/components/home/Brands";
 import ProductSection from "@/app/components/home/ProductSection";
 import DressStyle from "./components/home/DressStyle";
 import Testimonials from "@/app/components/home/Testimonials";
+import { getProducts } from "@/services/product.service";
 
-// Sample mock data matching Figma specs
-const newArrivalsData = [
-  { id: 1, name: "T-shirt with Tape Details", image: "/images/product-1.png", price: 120, rating: 4.5 },
-  { id: 2, name: "Skinny Fit Jeans", image: "/images/product-2.png", price: 240, originalPrice: 260, discount: "-20%", rating: 3.5 },
-  { id: 3, name: "Checkered Shirt", image: "/images/product-3.png", price: 180, rating: 4.5 },
-  { id: 4, name: "Sleeve Striped T-shirt", image: "/images/product-4.png", price: 130, originalPrice: 160, discount: "-30%", rating: 4.5 },
-];
+export const dynamic = "force-dynamic";
 
-const topSellingData = [
-  { id: 5, name: "Vertical Striped Shirt", image: "/images/product-5.png", price: 212, originalPrice: 232, discount: "-20%", rating: 5.0 },
-  { id: 6, name: "Courage Graphic T-shirt", image: "/images/product-6.png", price: 145, rating: 4.0 },
-  { id: 7, name: "Loose Fit Bermuda Shorts", image: "/images/product-7.png", price: 80, rating: 3.0 },
-  { id: 8, name: "Faded Skinny Jeans", image: "/images/product-8.png", price: 210, rating: 4.5 },
-];
+type DbProduct = Awaited<ReturnType<typeof getProducts>>["products"][number];
 
-export default function Home() {
+export default async function Home() {
+  // Fetch real products from PostgreSQL
+  const [newArrivalsResponse, topSellingResponse] = await Promise.all([
+    getProducts({ sort: "newest", limit: 4 }),
+    getProducts({ sort: "rating-desc", limit: 4 }),
+  ]);
+
+  // Type-safe formatter function
+  const formatProduct = (p: DbProduct) => ({
+    id: p.slug || p.id,
+    name: p.name,
+    image: p.images[0]?.url || "/images/product-1.png",
+    price: Number(p.price),
+    originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
+    discount: p.discountPercent > 0 ? `-${p.discountPercent}%` : undefined,
+    rating: p.averageRating,
+  });
+
+  const newArrivalsData = newArrivalsResponse.products.map(formatProduct);
+  const topSellingData = topSellingResponse.products.map(formatProduct);
+
   return (
     <main>
       <Hero />
