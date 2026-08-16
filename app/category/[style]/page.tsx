@@ -26,10 +26,14 @@ export default async function CategoryPage({
 
   const currentCategoryParam = search.category;
   const normalizedStyle = style?.toLowerCase() || "casual";
-  const isStyleOnly = ["casual", "formal", "party", "gym"].includes(normalizedStyle);
+  const isAll = normalizedStyle === "all";
+  const isDressStyle = ["casual", "formal", "party", "gym"].includes(normalizedStyle);
 
-  // If search.category is explicitly provided, prioritize it. Otherwise check if route param is a category.
-  const activeCategory = currentCategoryParam || (!isStyleOnly ? normalizedStyle : undefined);
+  // If route param is a parent dress style (e.g. /category/formal), filter by dressStyle
+  const activeDressStyle = isDressStyle ? normalizedStyle : undefined;
+
+  // If search.category is provided (e.g. ?category=shirts) or route param is a direct garment type
+  const activeCategory = currentCategoryParam || (!isDressStyle && !isAll ? normalizedStyle : undefined);
 
   const minPrice = search.minPrice !== undefined ? Number(search.minPrice) : undefined;
   const maxPrice = search.maxPrice !== undefined ? Number(search.maxPrice) : undefined;
@@ -38,9 +42,10 @@ export default async function CategoryPage({
   const sort = (search.sort as any) || "popular";
   const page = search.page ? Number(search.page) : 1;
 
-  // Query products for this category slug and filters
+  // Query products for this dress style, category slug and filters
   const result = await getProducts({
     categorySlug: activeCategory,
+    dressStyle: activeDressStyle,
     minPrice,
     maxPrice,
     color,
@@ -62,7 +67,9 @@ export default async function CategoryPage({
     averageRating: p.averageRating,
   }));
 
-  const displayCategoryName = activeCategory
+  const displayCategoryName = isAll
+    ? "All Products"
+    : activeCategory
     ? activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)
     : style.charAt(0).toUpperCase() + style.slice(1);
 

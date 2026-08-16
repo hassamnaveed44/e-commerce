@@ -84,6 +84,7 @@ model Product {
   originalPrice   Decimal?       @db.Decimal(10, 2)
   discountPercent Int            @default(0)
   averageRating   Float          @default(0)
+  dressStyle      String         @default("Casual")
   isActive        Boolean        @default(true)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt

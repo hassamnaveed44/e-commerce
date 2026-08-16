@@ -360,9 +360,9 @@ export default function AdminProductsPage() {
                       {/* Product Name & Image */}
                       <td className="py-3.5 pr-3">
                         <div className="flex items-center gap-3">
-                          <div className="relative w-11 h-11 rounded-lg bg-muted overflow-hidden shrink-0 border border-border">
+                          <Link href={`/admin/products/${p.id}`} className="relative w-11 h-11 rounded-lg bg-muted overflow-hidden shrink-0 border border-border block hover:opacity-80 transition">
                             <Image src={p.image} alt={p.name} fill className="object-cover" />
-                          </div>
+                          </Link>
                           <div>
                             <Link
                               href={`/admin/products/${p.id}`}

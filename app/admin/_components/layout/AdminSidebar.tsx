@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -28,10 +28,31 @@ export default function AdminSidebar({
   const [ecommerceOpen, setEcommerceOpen] = useState(true);
   const [paymentOpen, setPaymentOpen] = useState(true);
 
+  const [firstProductId, setFirstProductId] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadFirstProduct() {
+      try {
+        const res = await fetch("/api/admin/products");
+        const data = await res.json();
+        if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+          setFirstProductId(data.products[0].id);
+        }
+      } catch (e) {
+        console.error("Sidebar load product error:", e);
+      }
+    }
+    loadFirstProduct();
+  }, []);
+
   const ecommerceSubItems = [
     { title: "Dashboard", href: "/admin" },
     { title: "Product List", href: "/admin/products" },
-    { title: "Product Detail", href: "/admin/products/PROD-1" },
+    {
+      title: "Product Detail",
+      href: firstProductId ? `/admin/products/${firstProductId}` : "/admin/products",
+      isDetail: true,
+    },
     { title: "Add Product", href: "/admin/products/new" },
     { title: "Order List", href: "/admin/orders" },
   ];
@@ -87,10 +108,15 @@ export default function AdminSidebar({
             {ecommerceOpen && (
               <div className="mt-1 ml-4 pl-2.5 border-l border-border space-y-0.5">
                 {ecommerceSubItems.map((item) => {
-                  const isActive = pathname === item.href;
+                  const isDetailActive =
+                    item.isDetail &&
+                    pathname.startsWith("/admin/products/") &&
+                    pathname !== "/admin/products/new" &&
+                    pathname !== "/admin/products";
+                  const isActive = pathname === item.href || isDetailActive;
                   return (
                     <Link
-                      key={item.href}
+                      key={item.title}
                       href={item.href}
                       onClick={onMobileClose}
                       className={cn(

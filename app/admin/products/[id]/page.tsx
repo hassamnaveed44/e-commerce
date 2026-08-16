@@ -98,8 +98,12 @@ export default function ProductDetailPage({
   const [originalPrice, setOriginalPrice] = useState<number | string>("");
   const [discountPercent, setDiscountPercent] = useState<number | string>("");
   const [categoryId, setCategoryId] = useState("");
+  const [dressStyle, setDressStyle] = useState("Casual");
   const [isActive, setIsActive] = useState(true);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [images, setImages] = useState<ProductImage[]>([]);
+  const [customImageUrl, setCustomImageUrl] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -116,7 +120,23 @@ export default function ProductDetailPage({
         ]);
 
         const prodData = await prodRes.json();
-        const catData = await catRes.json();
+        
+        let catList: Category[] = [];
+        try {
+          const catAdminRes = await fetch("/api/admin/categories");
+          const catAdminData = await catAdminRes.json();
+          if (catAdminData.success && Array.isArray(catAdminData.categories)) {
+            catList = catAdminData.categories;
+          } else {
+            const catData = await catRes.json();
+            catList = catData.categories || [];
+          }
+        } catch (e) {
+          const catData = await catRes.json();
+          catList = catData.categories || [];
+        }
+
+        setCategories(catList);
 
         if (prodData.success && prodData.product) {
           const p = prodData.product;
@@ -127,12 +147,10 @@ export default function ProductDetailPage({
           setOriginalPrice(p.originalPrice || "");
           setDiscountPercent(p.discountPercent || "");
           setCategoryId(p.categoryId);
+          setDressStyle(p.dressStyle || "Casual");
           setIsActive(p.isActive);
           setVariants(p.variants || []);
-        }
-
-        if (catData.success && catData.categories) {
-          setCategories(catData.categories);
+          setImages(p.images || [{ id: "1", url: "/images/product-1.png", isPrimary: true }]);
         }
       } catch (err) {
         console.error("Failed to load product detail:", err);
@@ -143,6 +161,94 @@ export default function ProductDetailPage({
 
     loadData();
   }, [productId]);
+
+  // Image Management
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success && data.url) {
+        const newImg: ProductImage = {
+          id: `new-${Date.now()}`,
+          url: data.url,
+          isPrimary: images.length === 0,
+        };
+        setImages((prev) => [
+          ...prev.map((img) => ({ ...img, isPrimary: false })),
+          { ...newImg, isPrimary: true },
+        ]);
+        setActiveImageIdx(images.length);
+        showToast("Image uploaded! Click 'Save Changes' to update store.");
+      } else {
+        alert(data.error || "Image upload failed");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Failed to upload image");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleAddPresetImage = (url: string) => {
+    const newImg: ProductImage = {
+      id: `img-${Date.now()}`,
+      url,
+      isPrimary: true,
+    };
+    setImages((prev) => [
+      ...prev.map((img) => ({ ...img, isPrimary: false })),
+      newImg,
+    ]);
+    setActiveImageIdx(images.length);
+    showToast("Hoodie image added as Primary! Click 'Save Changes'.");
+  };
+
+  const handleAddCustomImageUrl = () => {
+    if (!customImageUrl.trim()) return;
+    const newImg: ProductImage = {
+      id: `img-${Date.now()}`,
+      url: customImageUrl.trim(),
+      isPrimary: images.length === 0,
+    };
+    setImages((prev) => [...prev, newImg]);
+    setCustomImageUrl("");
+    setActiveImageIdx(images.length);
+  };
+
+  const handleSetPrimaryImage = (index: number) => {
+    setImages((prev) =>
+      prev.map((img, idx) => ({ ...img, isPrimary: idx === index }))
+    );
+    setActiveImageIdx(index);
+    showToast("Primary cover image updated! Click 'Save Changes'.");
+  };
+
+  const handleRemoveImage = (index: number) => {
+    if (images.length <= 1) {
+      alert("A product should have at least one image");
+      return;
+    }
+    setImages((prev) => {
+      const filtered = prev.filter((_, idx) => idx !== index);
+      if (filtered.length > 0 && !filtered.some((img) => img.isPrimary)) {
+        filtered[0].isPrimary = true;
+      }
+      return filtered;
+    });
+    setActiveImageIdx(0);
+  };
 
   const handleStockChange = (variantId: string, newQty: number) => {
     const safeQty = Math.max(0, newQty);
@@ -183,7 +289,12 @@ export default function ProductDetailPage({
         originalPrice: originalPrice ? Number(originalPrice) : null,
         discountPercent: discountPercent ? Number(discountPercent) : null,
         categoryId,
+        dressStyle,
         isActive,
+        images: images.map((img) => ({
+          url: img.url,
+          isPrimary: img.isPrimary,
+        })),
         variants: variants.map((v) => ({
           id: v.id.startsWith("new-") ? undefined : v.id,
           size: v.size,
@@ -226,8 +337,9 @@ export default function ProductDetailPage({
     );
   }
 
-  const images = product.images.length > 0 ? product.images : [{ id: "1", url: "/images/product-1.png", isPrimary: true }];
-  const currentImage = images[activeImageIdx] || images[0];
+  const currentImage =
+    images[activeImageIdx] ||
+    images[0] || { id: "1", url: "/images/product-1.png", isPrimary: true };
 
   return (
     <div className="space-y-6 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 font-satoshi">
@@ -294,36 +406,157 @@ export default function ProductDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column (5 cols): Media Gallery & Customer Reviews */}
         <div className="lg:col-span-5 space-y-6">
-          {/* Gallery Card */}
-          <Card className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-xs">
-            <div className="relative aspect-square rounded-xl bg-muted/40 overflow-hidden mb-3 border border-border">
+          {/* Gallery Card & Image Manager */}
+          <Card className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-foreground font-sans">
+                Product Media & Cover
+              </h2>
+              <span className="text-[10px] text-muted-foreground">
+                ★ Star = Primary Cover Image
+              </span>
+            </div>
+
+            {/* Main Preview Box */}
+            <div className="relative aspect-square rounded-xl bg-muted/40 overflow-hidden border border-border">
               <Image
                 src={currentImage.url}
                 alt={product.name}
                 fill
                 className="object-cover"
               />
+              {currentImage.isPrimary && (
+                <div className="absolute top-2.5 left-2.5 bg-black text-white dark:bg-white dark:text-black text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
+                  PRIMARY COVER
+                </div>
+              )}
             </div>
 
-            {/* Thumbnail Carousel */}
-            {images.length > 1 && (
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            {/* Thumbnail Carousel & Actions */}
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold text-foreground">
+                Gallery Images ({images.length})
+              </p>
+              <div className="flex items-center gap-2.5 overflow-x-auto pb-1">
                 {images.map((img, idx) => (
-                  <button
-                    key={img.id}
-                    type="button"
-                    onClick={() => setActiveImageIdx(idx)}
-                    className={`relative w-14 h-14 rounded-lg overflow-hidden border-2 shrink-0 cursor-pointer ${
+                  <div
+                    key={img.id || idx}
+                    className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 shrink-0 group ${
                       activeImageIdx === idx
                         ? "border-black dark:border-white shadow-xs"
-                        : "border-border opacity-70 hover:opacity-100"
+                        : "border-border opacity-80 hover:opacity-100"
                     }`}
                   >
-                    <Image src={img.url} alt={`Thumbnail ${idx}`} fill className="object-cover" />
-                  </button>
+                    <Image
+                      src={img.url}
+                      alt={`Thumbnail ${idx}`}
+                      fill
+                      className="object-cover cursor-pointer"
+                      onClick={() => setActiveImageIdx(idx)}
+                    />
+
+                    {/* Action overlay */}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSetPrimaryImage(idx)}
+                        className={`p-1 rounded-full text-[10px] shadow cursor-pointer ${
+                          img.isPrimary
+                            ? "bg-amber-400 text-black"
+                            : "bg-white/80 hover:bg-white text-black"
+                        }`}
+                        title="Set as primary storefront cover"
+                      >
+                        <Star size={11} fill={img.isPrimary ? "currentColor" : "none"} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(idx)}
+                        className="p-1 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-[10px] shadow cursor-pointer"
+                        title="Remove image"
+                      >
+                        <X size={11} />
+                      </button>
+                    </div>
+
+                    {img.isPrimary && (
+                      <div className="absolute bottom-1 right-1 bg-amber-400 text-black p-0.5 rounded-full shadow-xs">
+                        <Star size={8} fill="currentColor" />
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
-            )}
+            </div>
+
+            {/* Quick Store Presets */}
+            <div className="pt-2 border-t border-border space-y-1.5">
+              <label className="block text-[11px] font-semibold text-foreground">
+                Quick Preset Images:
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleAddPresetImage("/images/product-8.png")}
+                  className="px-2.5 py-1 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-[11px] font-semibold transition cursor-pointer flex items-center gap-1"
+                >
+                  <span>🧥 Set Hoodie Image</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddPresetImage("/images/product-1.png")}
+                  className="px-2.5 py-1 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-[11px] font-medium transition cursor-pointer flex items-center gap-1"
+                >
+                  <span>👕 Set T-Shirt Image</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddPresetImage("/images/product-2.png")}
+                  className="px-2.5 py-1 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-[11px] font-medium transition cursor-pointer flex items-center gap-1"
+                >
+                  <span>👖 Set Jeans Image</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Upload or Add URL */}
+            <div className="pt-2 border-t border-border space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Paste image URL (e.g. /images/product-8.png)"
+                  value={customImageUrl}
+                  onChange={(e) => setCustomImageUrl(e.target.value)}
+                  className="flex-1 h-8 rounded-lg border border-border bg-card px-2.5 text-xs text-foreground focus:outline-none focus:border-ring"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddCustomImageUrl}
+                  className="h-8 rounded-lg text-xs font-semibold cursor-pointer"
+                >
+                  Add URL
+                </Button>
+              </div>
+
+              <div>
+                <input
+                  type="file"
+                  id="detail-file-upload"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="detail-file-upload"
+                  className="w-full py-2 px-3 border border-dashed border-border hover:border-foreground/50 rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold text-foreground bg-muted/20 hover:bg-muted/40 transition cursor-pointer"
+                >
+                  <UploadCloud size={14} className="text-muted-foreground" />
+                  <span>{isUploading ? "Uploading..." : "Upload photo from your computer"}</span>
+                </label>
+              </div>
+            </div>
           </Card>
 
           {/* Customer Reviews Section */}
@@ -435,15 +668,69 @@ export default function ProductDetailPage({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              {/* Parent Category & Garment Subcategory Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                {/* Parent Category (Dress Style) */}
                 <div>
                   <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Category
+                    Parent Category (Dress Style)
                   </label>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {["Casual", "Formal", "Party", "Gym"].map((style) => (
+                      <button
+                        key={style}
+                        type="button"
+                        onClick={() => setDressStyle(style)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition cursor-pointer border ${
+                          dressStyle.toLowerCase() === style.toLowerCase()
+                            ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-semibold shadow-xs"
+                            : "bg-muted/40 hover:bg-muted text-foreground border-border"
+                        }`}
+                      >
+                        {style}
+                      </button>
+                    ))}
+                  </div>
+                  <select
+                    value={dressStyle}
+                    onChange={(e) => setDressStyle(e.target.value)}
+                    className="w-full h-9 rounded-xl border border-border bg-card px-3 text-xs text-foreground focus:outline-none cursor-pointer"
+                  >
+                    {["Casual", "Formal", "Party", "Gym"].map((style) => (
+                      <option key={style} value={style}>
+                        {style}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Garment Subcategory */}
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">
+                    Subcategory (Garment Type)
+                  </label>
+                  {categories.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {categories.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setCategoryId(c.id)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition cursor-pointer border ${
+                            categoryId === c.id
+                              ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-semibold shadow-xs"
+                              : "bg-muted/40 hover:bg-muted text-foreground border-border"
+                          }`}
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <select
                     value={categoryId}
                     onChange={(e) => setCategoryId(e.target.value)}
-                    className="w-full h-9 rounded-xl border border-border bg-card px-3 text-xs text-foreground focus:outline-none"
+                    className="w-full h-9 rounded-xl border border-border bg-card px-3 text-xs text-foreground focus:outline-none cursor-pointer"
                   >
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -452,23 +739,24 @@ export default function ProductDetailPage({
                     ))}
                   </select>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Visibility
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setIsActive(!isActive)}
-                    className={`w-full h-9 rounded-xl text-xs font-semibold border transition cursor-pointer ${
-                      isActive
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
-                        : "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400"
-                    }`}
-                  >
-                    {isActive ? "✓ Active (Public in Store)" : "✕ Hidden (Draft)"}
-                  </button>
-                </div>
+              {/* Visibility Status */}
+              <div className="pt-1">
+                <label className="block text-xs font-semibold text-foreground mb-1.5">
+                  Visibility Status
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsActive(!isActive)}
+                  className={`w-full sm:w-auto px-4 h-9 rounded-xl text-xs font-semibold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    isActive
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
+                      : "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400"
+                  }`}
+                >
+                  {isActive ? "✓ Active (Public in Store)" : "✕ Hidden (Draft)"}
+                </button>
               </div>
             </div>
           </Card>

@@ -55,6 +55,7 @@ export default function AddProductPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [dressStyle, setDressStyle] = useState("Casual");
   const [categories, setCategories] = useState<Category[]>([]);
   const [price, setPrice] = useState("");
   const [originalPrice, setOriginalPrice] = useState("");
@@ -76,7 +77,7 @@ export default function AddProductPage() {
       colorName: "Black",
       colorHex: "#000000",
       stockQuantity: 25,
-      sku: "PROD-MED-BLK",
+      sku: `SKU-${Math.floor(1000 + Math.random() * 9000)}-M`,
     },
     {
       id: "v2",
@@ -84,7 +85,7 @@ export default function AddProductPage() {
       colorName: "Black",
       colorHex: "#000000",
       stockQuantity: 20,
-      sku: "PROD-LRG-BLK",
+      sku: `SKU-${Math.floor(1000 + Math.random() * 9000)}-L`,
     },
   ]);
 
@@ -97,13 +98,31 @@ export default function AddProductPage() {
   useEffect(() => {
     async function loadCategories() {
       try {
-        const res = await fetch("/api/admin/products");
-        const data = await res.json();
-        if (data.success && data.categories) {
+        // Try dedicated admin categories endpoint first
+        let res = await fetch("/api/admin/categories");
+        let data = await res.json();
+        
+        if (data.success && Array.isArray(data.categories) && data.categories.length > 0) {
           setCategories(data.categories);
-          if (data.categories.length > 0) {
-            setCategoryId(data.categories[0].id);
-          }
+          setCategoryId((prev) => prev || data.categories[0].id);
+          return;
+        }
+
+        // Fallback to public categories API
+        res = await fetch("/api/categories");
+        data = await res.json();
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+          setCategories(data.data);
+          setCategoryId((prev) => prev || data.data[0].id);
+          return;
+        }
+
+        // Fallback to admin products endpoint
+        res = await fetch("/api/admin/products");
+        data = await res.json();
+        if (data.success && Array.isArray(data.categories) && data.categories.length > 0) {
+          setCategories(data.categories);
+          setCategoryId((prev) => prev || data.categories[0].id);
         }
       } catch (err) {
         console.error("Failed to load categories:", err);
@@ -222,6 +241,7 @@ export default function AddProductPage() {
         name: name.trim(),
         description: description.trim(),
         categoryId,
+        dressStyle,
         price: Number(price),
         originalPrice: originalPrice ? Number(originalPrice) : null,
         discountPercent: discountPercent ? Number(discountPercent) : null,
@@ -589,27 +609,95 @@ export default function AddProductPage() {
 
             {/* Right Column (4 cols): Category, Pricing & Status */}
             <div className="lg:col-span-4 space-y-6">
-              {/* Category & Status Card */}
+              {/* Category & Organization Card */}
               <Card className="rounded-2xl border border-border shadow-xs bg-card">
                 <CardHeader>
-                  <CardTitle className="text-base font-bold font-sans">Organization</CardTitle>
+                  <CardTitle className="text-base font-bold font-sans">Organization & Style</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Parent Category (Dress Style) */}
                   <div>
                     <label className="block text-xs font-semibold text-foreground mb-1.5">
-                      Category *
+                      Parent Category (Dress Style) *
                     </label>
+                    <div className="flex flex-wrap gap-1.5 mb-2.5">
+                      {["Casual", "Formal", "Party", "Gym"].map((style) => {
+                        const isSelected = dressStyle.toLowerCase() === style.toLowerCase();
+                        return (
+                          <button
+                            key={style}
+                            type="button"
+                            onClick={() => setDressStyle(style)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer border ${
+                              isSelected
+                                ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs font-semibold"
+                                : "bg-muted/40 hover:bg-muted text-foreground border-border"
+                            }`}
+                          >
+                            {style}
+                          </button>
+                        );
+                      })}
+                    </div>
                     <select
-                      value={categoryId}
-                      onChange={(e) => setCategoryId(e.target.value)}
-                      className="w-full h-10 rounded-xl border border-border bg-card px-3 text-xs text-foreground focus:outline-none"
+                      value={dressStyle}
+                      onChange={(e) => setDressStyle(e.target.value)}
+                      className="w-full h-10 rounded-xl border border-border bg-card px-3 pr-8 text-xs text-foreground focus:outline-none focus:border-ring transition-colors cursor-pointer"
                     >
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
+                      {["Casual", "Formal", "Party", "Gym"].map((style) => (
+                        <option key={style} value={style}>
+                          {style}
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* Garment Subcategory */}
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                      Subcategory (Garment Type) *
+                    </label>
+
+                    {/* Quick Category Chips / Pills */}
+                    {categories.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2.5">
+                        {categories.map((c) => {
+                          const isSelected = categoryId === c.id;
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => setCategoryId(c.id)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer border ${
+                                isSelected
+                                  ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs font-semibold"
+                                  : "bg-muted/40 hover:bg-muted text-foreground border-border"
+                              }`}
+                            >
+                              {c.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Category Dropdown */}
+                    <div className="relative">
+                      <select
+                        value={categoryId}
+                        onChange={(e) => setCategoryId(e.target.value)}
+                        className="w-full h-10 rounded-xl border border-border bg-card px-3 pr-8 text-xs text-foreground focus:outline-none focus:border-ring transition-colors cursor-pointer"
+                      >
+                        <option value="" disabled>
+                          -- Choose a Category --
+                        </option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
                   <div>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import StoreWrapper from "@/app/components/common/StoreWrapper";
@@ -17,7 +18,9 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <head>
-          <script
+          <Script
+            id="theme-initializer"
+            strategy="beforeInteractive"
             dangerouslySetInnerHTML={{
               __html: `
                 (function() {

@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
       slug: p.slug,
       price: Number(p.price),
       image: p.images[0]?.url || "/images/product-1.png",
-      url: `/admin/products`,
+      url: `/admin/products/${p.id}`,
     }));
 
     const formattedCustomers = users.map((u) => ({

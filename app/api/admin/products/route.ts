@@ -84,6 +84,7 @@ export async function GET(req: NextRequest) {
         priceNum: Number(p.price),
         originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
         discountPercent: p.discountPercent || null,
+        dressStyle: p.dressStyle || "Casual",
         category: p.category.name,
         categoryId: p.categoryId,
         categorySlug: p.category.slug,
@@ -135,6 +136,7 @@ export async function POST(req: NextRequest) {
       originalPrice,
       discountPercent,
       categoryId,
+      dressStyle = "Casual",
       isActive = true,
       images = [],
       variants = [],
@@ -171,6 +173,7 @@ export async function POST(req: NextRequest) {
           originalPrice: originalPrice ? Number(originalPrice) : null,
           discountPercent: discountPercent ? Number(discountPercent) : 0,
           categoryId,
+          dressStyle: dressStyle.trim(),
           isActive: Boolean(isActive),
           averageRating: 5.0,
         },
@@ -196,20 +199,46 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // 3. Create Product Variants
+      // 3. Create Product Variants with guaranteed unique SKUs
+      const usedSkus = new Set<string>();
+
       if (Array.isArray(variants) && variants.length > 0) {
-        await tx.productVariant.createMany({
-          data: variants.map((v: { size: string; colorName?: string; colorHex?: string; stockQuantity?: number; sku?: string }) => ({
-            productId: product.id,
-            size: v.size || "Standard",
-            colorName: v.colorName || "Default",
-            colorHex: v.colorHex || "#000000",
-            stockQuantity: Number(v.stockQuantity ?? 10),
-            sku: v.sku || `${product.slug.slice(0, 4).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`,
-          })),
-        });
+        for (const [idx, v] of variants.entries()) {
+          const sizeCode = (v.size || "STD").slice(0, 3).toUpperCase();
+          const baseSku = (v.sku?.trim() || `${product.slug.slice(0, 4).toUpperCase()}-${sizeCode}`).toUpperCase();
+          
+          let candidateSku = baseSku;
+          let counter = 1;
+
+          // Check if candidate SKU already exists in DB or in current batch
+          while (
+            usedSkus.has(candidateSku) ||
+            (await tx.productVariant.findUnique({ where: { sku: candidateSku } }))
+          ) {
+            candidateSku = `${baseSku}-${Math.floor(1000 + Math.random() * 9000)}`;
+            counter++;
+            if (counter > 10) break;
+          }
+
+          usedSkus.add(candidateSku);
+
+          await tx.productVariant.create({
+            data: {
+              productId: product.id,
+              size: v.size || "Standard",
+              colorName: v.colorName || "Default",
+              colorHex: v.colorHex || "#000000",
+              stockQuantity: Number(v.stockQuantity ?? 10),
+              sku: candidateSku,
+            },
+          });
+        }
       } else {
         // Default variant
+        const defaultBaseSku = `${product.slug.slice(0, 4).toUpperCase()}-STD`;
+        const existing = await tx.productVariant.findUnique({ where: { sku: defaultBaseSku } });
+        const defaultFinalSku = existing ? `${defaultBaseSku}-${Math.floor(1000 + Math.random() * 9000)}` : defaultBaseSku;
+
         await tx.productVariant.create({
           data: {
             productId: product.id,
@@ -217,7 +246,7 @@ export async function POST(req: NextRequest) {
             colorName: "Default",
             colorHex: "#000000",
             stockQuantity: 20,
-            sku: `${product.slug.slice(0, 4).toUpperCase()}-STD`,
+            sku: defaultFinalSku,
           },
         });
       }

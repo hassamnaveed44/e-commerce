@@ -194,8 +194,9 @@ export default function FiltersSidebar() {
     setPriceRange({ min: 0, max: 250 });
     setSelectedColor(null);
     setSelectedSize(null);
+    setSelectedDressStyle(null);
     startTransition(() => {
-      router.push(pathname, { scroll: false });
+      router.push("/category/all", { scroll: false });
     });
   };
 

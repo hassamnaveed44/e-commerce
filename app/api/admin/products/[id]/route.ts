@@ -47,6 +47,7 @@ export async function GET(
         price: Number(product.price),
         originalPrice: product.originalPrice ? Number(product.originalPrice) : null,
         discountPercent: product.discountPercent,
+        dressStyle: product.dressStyle || "Casual",
         categoryId: product.categoryId,
         categoryName: product.category.name,
         categorySlug: product.category.slug,
@@ -113,6 +114,7 @@ export async function PATCH(
       originalPrice,
       discountPercent,
       categoryId,
+      dressStyle,
       isActive,
       variants,
       images,
@@ -128,6 +130,7 @@ export async function PATCH(
       if (originalPrice !== undefined) updateData.originalPrice = originalPrice ? Number(originalPrice) : null;
       if (discountPercent !== undefined) updateData.discountPercent = discountPercent ? Number(discountPercent) : 0;
       if (categoryId !== undefined) updateData.categoryId = categoryId;
+      if (dressStyle !== undefined) updateData.dressStyle = dressStyle.trim();
       if (isActive !== undefined) updateData.isActive = Boolean(isActive);
 
       const prod = await tx.product.update({

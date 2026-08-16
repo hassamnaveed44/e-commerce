@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 
 export interface GetProductsParams {
   categorySlug?: string;
+  dressStyle?: string;
   minPrice?: number;
   maxPrice?: number;
   sort?: "price-asc" | "price-desc" | "price-low" | "price-high" | "rating-desc" | "popular" | "newest" | "oldest";
@@ -27,6 +28,7 @@ export async function getCategories() {
 export async function getProducts(params: GetProductsParams = {}) {
   const {
     categorySlug,
+    dressStyle,
     minPrice,
     maxPrice,
     sort = "newest",
@@ -44,22 +46,27 @@ export async function getProducts(params: GetProductsParams = {}) {
     isActive: true,
   };
 
-  if (categorySlug) {
+  // Filter by Parent Category / Dress Style (Casual, Formal, Party, Gym)
+  if (dressStyle && dressStyle.toLowerCase() !== "all") {
+    where.dressStyle = {
+      equals: dressStyle,
+      mode: "insensitive",
+    };
+  }
+
+  // Filter by Subcategory / Garment Type (T-Shirts, Shorts, Shirts, Hoodies, Jeans)
+  if (categorySlug && categorySlug.toLowerCase() !== "all") {
     const normalizedSlug = categorySlug.toLowerCase().trim();
-    const isStyleOnly = ["casual", "formal", "party", "gym"].includes(normalizedSlug);
+    const singular = normalizedSlug.endsWith("s") ? normalizedSlug.slice(0, -1) : normalizedSlug;
+    const plural = normalizedSlug.endsWith("s") ? normalizedSlug : `${normalizedSlug}s`;
+    const possibleTerms = Array.from(new Set([normalizedSlug, singular, plural]));
 
-    if (!isStyleOnly) {
-      const singular = normalizedSlug.endsWith("s") ? normalizedSlug.slice(0, -1) : normalizedSlug;
-      const plural = normalizedSlug.endsWith("s") ? normalizedSlug : `${normalizedSlug}s`;
-      const possibleTerms = Array.from(new Set([normalizedSlug, singular, plural]));
-
-      where.category = {
-        OR: [
-          { slug: { in: possibleTerms } },
-          { name: { in: possibleTerms, mode: "insensitive" } },
-        ],
-      };
-    }
+    where.category = {
+      OR: [
+        { slug: { in: possibleTerms } },
+        { name: { in: possibleTerms, mode: "insensitive" } },
+      ],
+    };
   }
 
   if (minPrice !== undefined || maxPrice !== undefined) {
