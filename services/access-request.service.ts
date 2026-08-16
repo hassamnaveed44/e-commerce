@@ -19,11 +19,12 @@ export interface AccessRequestRecord {
   };
 }
 
-export async function findPendingRequestForUser(userId: string): Promise<AccessRequestRecord | null> {
+export async function findLatestRequestForUser(userId: string): Promise<AccessRequestRecord | null> {
   try {
     if ((prisma as any).adminAccessRequest?.findFirst) {
       const res = await (prisma as any).adminAccessRequest.findFirst({
-        where: { userId, status: "PENDING" },
+        where: { userId },
+        orderBy: { createdAt: "desc" },
       });
       if (res) return res;
     }
@@ -35,15 +36,21 @@ export async function findPendingRequestForUser(userId: string): Promise<AccessR
     const rows = await prisma.$queryRaw<AccessRequestRecord[]>`
       SELECT id, "userId", email, name, reason, status, "createdAt", "updatedAt"
       FROM "AdminAccessRequest"
-      WHERE "userId" = ${userId} AND status = 'PENDING'
+      WHERE "userId" = ${userId}
       ORDER BY "createdAt" DESC
       LIMIT 1
     `;
     return rows[0] || null;
   } catch (err) {
-    console.error("SQL findPendingRequest error:", err);
+    console.error("SQL findLatestRequest error:", err);
     return null;
   }
+}
+
+export async function findPendingRequestForUser(userId: string): Promise<AccessRequestRecord | null> {
+  const latest = await findLatestRequestForUser(userId);
+  if (latest && latest.status === "PENDING") return latest;
+  return null;
 }
 
 export async function createAccessRequest(data: {

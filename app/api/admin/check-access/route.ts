@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { findPendingRequestForUser } from "@/services/access-request.service";
+import { findLatestRequestForUser } from "@/services/access-request.service";
 
 export async function GET(req: NextRequest) {
   try {
@@ -48,15 +48,18 @@ export async function GET(req: NextRequest) {
     }
 
     const isAdmin = dbUser?.role === "ADMIN" || email === "hassamnaveed44@gmail.com";
-    const latestRequest = dbUser ? await findPendingRequestForUser(dbUser.id) : null;
+    const latestRequest = dbUser ? await findLatestRequestForUser(dbUser.id) : null;
     const hasPendingRequest = latestRequest?.status === "PENDING";
+    const isRejected = latestRequest?.status === "REJECTED";
 
     return NextResponse.json({
       authenticated: true,
       isAdmin,
       role: dbUser?.role || "CUSTOMER",
       hasPendingRequest,
+      isRejected,
       latestRequestStatus: latestRequest?.status || null,
+      latestRequestDate: latestRequest?.createdAt || null,
       user: {
         id: dbUser?.id || userId,
         clerkId: userId,
