@@ -28,6 +28,7 @@ interface CartContextType {
   deliveryFee: number;
   totalPrice: number;
   isLoading: boolean;
+  isHydrated: boolean;
   promoCode: string;
   promoDiscountPercent: number;
   applyPromoCode: (code: string) => boolean;
@@ -53,27 +54,31 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY = "shopco_cart_cache";
+const USER_CACHE_KEY = "shopco_cart_cache";
+const GUEST_CART_KEY = "shopco_guest_cart";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { user, isLoaded } = useUser();
 
-  // Lazy state initialization from localStorage avoids synchronous setState in useEffect
-  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
-        return cached ? JSON.parse(cached) : [];
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  });
-
+  // Consistent initial state for SSR and initial hydration render
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [promoCode, setPromoCode] = useState("");
   const [promoDiscountPercent, setPromoDiscountPercent] = useState(0);
+
+  // Read initial cache on client mount
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(USER_CACHE_KEY);
+      if (cached) {
+        setCartItems(JSON.parse(cached));
+      }
+    } catch {
+      // Ignore cache parse error
+    }
+    setIsHydrated(true);
+  }, []);
 
   // Fetch cart from server
   const fetchServerCart = useCallback(async () => {
@@ -82,7 +87,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const json = await res.json();
       if (json.success && Array.isArray(json.items)) {
         setCartItems(json.items);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(json.items));
+        localStorage.setItem(USER_CACHE_KEY, JSON.stringify(json.items));
       }
     } catch (err) {
       console.error("Failed to load server cart:", err);
@@ -98,11 +103,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const syncWithUser = async () => {
       if (user) {
         try {
-          const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
-          const localItems: CartItem[] = cached ? JSON.parse(cached) : [];
+          const guestCached = localStorage.getItem(GUEST_CART_KEY);
+          const guestItems: CartItem[] = guestCached ? JSON.parse(guestCached) : [];
 
-          if (localItems.length > 0) {
-            const syncPayload = localItems.map((i) => ({
+          if (guestItems.length > 0) {
+            const syncPayload = guestItems.map((i) => ({
               variantId: i.variantId,
               quantity: i.quantity,
             }));
@@ -113,9 +118,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               body: JSON.stringify({ items: syncPayload }),
             });
             const json = await res.json();
+            // Clear guest items after successful sync
+            localStorage.removeItem(GUEST_CART_KEY);
             if (json.success && Array.isArray(json.items)) {
               setCartItems(json.items);
-              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(json.items));
+              localStorage.setItem(USER_CACHE_KEY, JSON.stringify(json.items));
               return;
             }
           }
@@ -161,7 +168,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         };
         updated = [newItem, ...prev];
       }
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+      localStorage.setItem(USER_CACHE_KEY, JSON.stringify(updated));
+      if (!user) {
+        localStorage.setItem(GUEST_CART_KEY, JSON.stringify(updated));
+      }
       return updated;
     });
 
@@ -177,7 +187,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const json = await res.json();
       if (json.success && Array.isArray(json.items)) {
         setCartItems(json.items);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(json.items));
+        localStorage.setItem(USER_CACHE_KEY, JSON.stringify(json.items));
+        if (!user) {
+          localStorage.setItem(GUEST_CART_KEY, JSON.stringify(json.items));
+        }
       }
     } catch (err) {
       console.error("Add to cart API failed:", err);
@@ -194,16 +207,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (newQty <= 0) {
       setCartItems((prev) => {
         const updated = prev.filter((i) => i.id !== cartItemId);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+        localStorage.setItem(USER_CACHE_KEY, JSON.stringify(updated));
+        if (!user) localStorage.setItem(GUEST_CART_KEY, JSON.stringify(updated));
         return updated;
       });
       await fetch(`/api/cart?id=${cartItemId}`, { method: "DELETE" });
     } else {
       setCartItems((prev) => {
         const updated = prev.map((i) =>
-          i.id === cartItemId ? { ...i, quantity: Math.min(newQty, i.stockQuantity) } : i
+          i.id === cartItemId ? { ...i, quantity: Math.min(newQty, item.stockQuantity) } : i
         );
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+        localStorage.setItem(USER_CACHE_KEY, JSON.stringify(updated));
+        if (!user) localStorage.setItem(GUEST_CART_KEY, JSON.stringify(updated));
         return updated;
       });
 
@@ -218,7 +233,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const removeItem = async (cartItemId: string) => {
     setCartItems((prev) => {
       const updated = prev.filter((i) => i.id !== cartItemId);
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+      localStorage.setItem(USER_CACHE_KEY, JSON.stringify(updated));
+      if (!user) localStorage.setItem(GUEST_CART_KEY, JSON.stringify(updated));
       return updated;
     });
 
@@ -231,7 +247,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = () => {
     setCartItems([]);
-    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    localStorage.removeItem(USER_CACHE_KEY);
+    localStorage.removeItem(GUEST_CART_KEY);
   };
 
   const applyPromoCode = (code: string) => {
@@ -265,6 +282,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         deliveryFee,
         totalPrice,
         isLoading,
+        isHydrated,
         promoCode,
         promoDiscountPercent,
         applyPromoCode,

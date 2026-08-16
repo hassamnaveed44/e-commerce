@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 
@@ -17,7 +17,7 @@ export interface AdminAuthResult {
 
 /**
  * Validates whether the current request is authenticated as an ADMIN.
- * Checks both Clerk session metadata and database User.role.
+ * Checks Clerk session metadata, Clerk user API, and database User.role.
  */
 export async function requireAdmin(): Promise<AdminAuthResult> {
   const { userId, sessionClaims } = await auth();
@@ -33,11 +33,23 @@ export async function requireAdmin(): Promise<AdminAuthResult> {
   }
 
   // 1. Check Clerk sessionClaims metadata
-  const sessionRole =
+  let sessionRole =
     (sessionClaims?.metadata as { role?: string })?.role ||
-    (sessionClaims?.publicMetadata as { role?: string })?.role;
+    (sessionClaims?.publicMetadata as { role?: string })?.role ||
+    (sessionClaims?.public_metadata as { role?: string })?.role;
 
-  // 2. Check Database record for User
+  // 2. Check Clerk API if session claims didn't have role
+  if (!sessionRole) {
+    try {
+      const client = await clerkClient();
+      const user = await client.users.getUser(userId);
+      sessionRole = (user.publicMetadata as { role?: string })?.role;
+    } catch {
+      // Fall through to DB check
+    }
+  }
+
+  // 3. Check Database record for User
   const dbUser = await prisma.user.findUnique({
     where: { clerkId: userId },
     select: { id: true, clerkId: true, email: true, fullName: true, role: true },

@@ -15,6 +15,7 @@ export default function OrderSummary() {
     promoDiscountPercent,
     applyPromoCode,
     cartItems,
+    isHydrated,
   } = useCart();
 
   const [inputCode, setInputCode] = useState("");
@@ -33,7 +34,7 @@ export default function OrderSummary() {
     }
   };
 
-  const isCartEmpty = cartItems.length === 0;
+  const isCartEmpty = !isHydrated || cartItems.length === 0;
 
   return (
     <div className="border border-black/10 rounded-[20px] p-5 sm:p-6 bg-white font-satoshi shadow-xs">

@@ -1,4 +1,4 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 // Define protected route patterns
@@ -31,9 +31,21 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.redirect(signInUrl);
     }
 
-    const role =
+    let role =
       (sessionClaims?.metadata as { role?: string })?.role ||
-      (sessionClaims?.publicMetadata as { role?: string })?.role;
+      (sessionClaims?.publicMetadata as { role?: string })?.role ||
+      (sessionClaims?.public_metadata as { role?: string })?.role;
+
+    // Fallback: If JWT session token does not have publicMetadata yet, fetch from Clerk API
+    if (!role) {
+      try {
+        const client = await clerkClient();
+        const user = await client.users.getUser(userId);
+        role = (user.publicMetadata as { role?: string })?.role;
+      } catch (err) {
+        console.error("Middleware Clerk user fetch error:", err);
+      }
+    }
 
     if (role !== "ADMIN") {
       if (isApiRoute) {

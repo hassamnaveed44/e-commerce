@@ -6,9 +6,9 @@ import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
 export default function CartItemsList() {
-  const { cartItems, updateQuantity, removeItem, isLoading } = useCart();
+  const { cartItems, updateQuantity, removeItem, isLoading, isHydrated } = useCart();
 
-  if (isLoading && cartItems.length === 0) {
+  if (!isHydrated || (isLoading && cartItems.length === 0)) {
     return (
       <div className="border border-black/10 rounded-[20px] p-8 bg-white text-center font-satoshi animate-pulse">
         <p className="text-black/40">Loading your cart items...</p>
