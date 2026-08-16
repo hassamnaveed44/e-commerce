@@ -53,6 +53,7 @@ export default function AdminSidebar({
       href: firstProductId ? `/admin/products/${firstProductId}` : "/admin/products",
       isDetail: true,
     },
+    { title: "Inventory", href: "/admin/inventory" },
     { title: "Add Product", href: "/admin/products/new" },
     { title: "Order List", href: "/admin/orders" },
   ];

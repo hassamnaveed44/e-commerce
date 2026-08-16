@@ -413,7 +413,7 @@ export default function EcommerceDashboardPage() {
           </div>
           <div className="border-t border-border pt-2.5 mt-3">
             <Link
-              href="/admin/products"
+              href="/admin/inventory"
               className="w-full flex items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground transition"
             >
               <span>Manage stock</span>
@@ -432,10 +432,10 @@ export default function EcommerceDashboardPage() {
               <span>Low Inventory Attention Needed</span>
             </div>
             <Link
-              href="/admin/products"
+              href="/admin/inventory?status=LOW_STOCK"
               className="text-xs font-semibold text-rose-700 hover:underline flex items-center gap-1"
             >
-              <span>View in Catalog</span>
+              <span>View in Inventory</span>
               <ArrowRight size={12} />
             </Link>
           </div>
