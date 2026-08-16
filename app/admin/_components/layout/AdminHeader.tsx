@@ -23,6 +23,7 @@ import {
   Check,
   Sparkles,
   Info,
+  UserCheck,
 } from "lucide-react";
 
 interface HeaderProps {
@@ -133,6 +134,52 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
   // Palette Customizer state
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const paletteContainerRef = useRef<HTMLDivElement>(null);
+
+  // Staff Access Requests & Approvals State
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [pendingStaffCount, setPendingStaffCount] = useState(0);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [authorizedStaff, setAuthorizedStaff] = useState<any[]>([]);
+
+  const fetchStaffData = async () => {
+    try {
+      const res = await fetch("/api/admin/access-requests");
+      const data = await res.json();
+      if (data.success) {
+        setPendingStaffCount(data.pendingCount || 0);
+        setPendingRequests((data.requests || []).filter((r: any) => r.status === "PENDING"));
+        setAuthorizedStaff(data.authorizedAdmins || []);
+      }
+    } catch (e) {
+      console.error("Fetch staff requests error:", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchStaffData();
+    const interval = setInterval(fetchStaffData, 15000); // Polling every 15s
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleAccessAction = async (requestId: string | null, targetUserId: string | null, action: string) => {
+    try {
+      const res = await fetch("/api/admin/access-requests", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId, targetUserId, action }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message);
+        fetchStaffData();
+      } else {
+        alert(data.error || "Action failed");
+      }
+    } catch (e) {
+      console.error("Action error:", e);
+      alert("Error performing action");
+    }
+  };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -541,6 +588,23 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
           )}
         </div>
 
+        {/* 👥 Staff Access Requests & Approvals Button */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsStaffModalOpen(true)}
+            className="text-muted-foreground hover:text-foreground transition cursor-pointer p-1 rounded-md relative"
+            title="Manage Authorized Staff & Access Requests"
+          >
+            <UserCheck className="h-4 w-4" />
+            {pendingStaffCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-600 text-[9px] font-bold text-white shadow-xs animate-pulse">
+                {pendingStaffCount}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* 🌙 / ☀️ Dark & Light Theme Switcher */}
         <button
           type="button"
@@ -618,10 +682,149 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
         <div className="h-4 w-px bg-border shrink-0" />
 
         {/* User Profile Avatar */}
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-bold font-integral shadow-sm shrink-0 cursor-pointer overflow-hidden border border-border">
+        <div
+          onClick={() => setIsStaffModalOpen(true)}
+          className="flex h-7 w-7 items-center justify-center rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-bold font-integral shadow-sm shrink-0 cursor-pointer overflow-hidden border border-border"
+          title="Admin Staff Management"
+        >
           AD
         </div>
       </div>
+
+      {/* 👥 Staff Access Requests & Approvals Modal */}
+      {isStaffModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="w-full max-w-2xl bg-card border border-border shadow-2xl rounded-2xl p-5 sm:p-6 space-y-5 max-h-[88vh] flex flex-col text-left font-satoshi">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-foreground font-sans">Authorized Staff & Access Requests</h2>
+                  {pendingStaffCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                      {pendingStaffCount} Pending
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Authorize store staff with 1 click without ever opening Clerk dashboard
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsStaffModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="space-y-5 overflow-y-auto flex-1 pr-1">
+              {/* Section 1: Pending Access Requests */}
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2.5">
+                  Pending Access Requests ({pendingRequests.length})
+                </h3>
+                {pendingRequests.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-muted/30 border border-border text-center text-xs text-muted-foreground">
+                    No pending staff access requests at the moment.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {pendingRequests.map((req) => (
+                      <div
+                        key={req.id}
+                        className="p-3.5 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-xs text-foreground">{req.name || req.email}</span>
+                            <span className="text-[10px] text-muted-foreground">({req.email})</span>
+                          </div>
+                          {req.reason && (
+                            <p className="text-[11px] text-muted-foreground mt-0.5 italic">
+                              &ldquo;{req.reason}&rdquo;
+                            </p>
+                          )}
+                          <span className="text-[10px] text-muted-foreground">
+                            Requested on {new Date(req.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleAccessAction(req.id, req.userId, "APPROVE")}
+                            className="px-3 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black text-xs font-bold hover:opacity-90 transition cursor-pointer shadow-2xs"
+                          >
+                            ✓ Approve as Admin
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAccessAction(req.id, req.userId, "REJECT")}
+                            className="px-3 py-1.5 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Section 2: Active Authorized Staff */}
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2.5">
+                  Current Active Admins ({authorizedStaff.length})
+                </h3>
+                <div className="divide-y divide-border border rounded-xl bg-card overflow-hidden">
+                  {authorizedStaff.map((staff) => (
+                    <div key={staff.id} className="p-3.5 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-foreground">{staff.fullName || staff.email.split("@")[0]}</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
+                            ADMIN
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground">{staff.email}</span>
+                      </div>
+
+                      <div>
+                        {staff.email === "hassamnaveed44@gmail.com" ? (
+                          <span className="text-[11px] text-muted-foreground font-semibold">Primary Owner</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleAccessAction(null, staff.id, "REVOKE")}
+                            className="px-2.5 py-1 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-semibold transition cursor-pointer"
+                          >
+                            Revoke Admin
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-border pt-3 flex items-center justify-between text-xs text-muted-foreground">
+              <span>All changes take effect immediately in database</span>
+              <button
+                type="button"
+                onClick={() => setIsStaffModalOpen(false)}
+                className="px-4 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black font-semibold text-xs cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

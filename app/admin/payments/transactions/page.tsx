@@ -2,7 +2,17 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Download, ArrowLeft, RefreshCw, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import {
+  Search,
+  Download,
+  ArrowLeft,
+  RefreshCw,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  RotateCcw,
+  ChevronDown,
+} from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -10,6 +20,7 @@ import { Button } from "@/components/ui/button";
 interface PaymentTransaction {
   id: string;
   orderNumber: string;
+  paymentId: string | null;
   date: string;
   timestamp: string;
   title: string;
@@ -31,6 +42,7 @@ export default function PaymentTransactionsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
   const fetchTransactions = async (isRefresh = false) => {
     if (isRefresh) setIsRefreshing(true);
@@ -54,6 +66,38 @@ export default function PaymentTransactionsPage() {
   useEffect(() => {
     fetchTransactions();
   }, []);
+
+  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+    setUpdatingOrderId(orderId);
+    try {
+      const res = await fetch("/api/admin/payments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTransactions((prev) =>
+          prev.map((t) =>
+            t.id === orderId
+              ? {
+                  ...t,
+                  status: newStatus,
+                  positive: newStatus === "Completed",
+                }
+              : t
+          )
+        );
+      } else {
+        alert(data.error || "Failed to update status");
+      }
+    } catch (err) {
+      console.error("Update status error:", err);
+      alert("Error updating payment status");
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
 
   const handleExportCSV = () => {
     if (transactions.length === 0) return;
@@ -95,14 +139,23 @@ export default function PaymentTransactionsPage() {
       statusFilter === "all" ||
       (statusFilter === "completed" && t.status === "Completed") ||
       (statusFilter === "pending" && t.status === "Pending") ||
+      (statusFilter === "refunded" && t.status === "Refunded") ||
       (statusFilter === "cancelled" && t.status === "Cancelled");
 
     return matchesSearch && matchesStatus;
   });
 
+  const completedRevenueUSD = transactions
+    .filter((t) => t.status === "Completed")
+    .reduce((sum, t) => sum + t.amountNumber, 0);
+
+  const pendingRevenueUSD = transactions
+    .filter((t) => t.status === "Pending")
+    .reduce((sum, t) => sum + t.amountNumber, 0);
+
   return (
-    <div className="space-y-6 w-full max-w-full overflow-x-hidden pb-12 font-satoshi">
-      {/* Top Header */}
+    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-satoshi">
+      {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link href="/admin/payments">
@@ -111,16 +164,16 @@ export default function PaymentTransactionsPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold font-integral uppercase text-foreground">
-              Transactions Ledger
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-              Live ledger of customer order payments and merchant settlements
+            <h1 className="text-2xl font-bold font-integral uppercase text-foreground">Transaction Ledger</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Available Completed Balance:{" "}
+              <strong className="text-foreground">${completedRevenueUSD.toFixed(2)} USD</strong> (≈ ₨{" "}
+              {(completedRevenueUSD * 279).toLocaleString("en-US", { minimumFractionDigits: 2 })} PKR)
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={() => fetchTransactions(true)}
@@ -132,10 +185,10 @@ export default function PaymentTransactionsPage() {
           </button>
 
           <Button
-            variant="outline"
-            size="sm"
             onClick={handleExportCSV}
-            className="gap-1.5 text-xs rounded-xl h-9 border-border bg-card font-semibold cursor-pointer"
+            size="sm"
+            variant="outline"
+            className="gap-1.5 text-xs rounded-xl h-9 border-border bg-card font-semibold cursor-pointer shadow-2xs"
           >
             <Download className="h-3.5 w-3.5" />
             <span>Export CSV</span>
@@ -143,12 +196,45 @@ export default function PaymentTransactionsPage() {
         </div>
       </div>
 
-      {/* Main Table Card */}
-      <Card className="rounded-2xl border-border bg-card shadow-xs">
-        <CardHeader className="flex flex-col lg:flex-row lg:items-center lg:justify-between pb-4 gap-4">
+      {/* Summary Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="p-4 rounded-2xl border-border bg-card shadow-2xs">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase">Available (Completed)</span>
+          <p className="text-xl sm:text-2xl font-extrabold font-sans text-foreground mt-1">
+            ${completedRevenueUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          </p>
+          <span className="text-[10px] text-muted-foreground">
+            ≈ ₨ {(completedRevenueUSD * 279).toLocaleString("en-US", { minimumFractionDigits: 2 })} PKR
+          </span>
+        </Card>
+
+        <Card className="p-4 rounded-2xl border-border bg-card shadow-2xs">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase">Pending Clearance</span>
+          <p className="text-xl sm:text-2xl font-extrabold font-sans text-muted-foreground mt-1">
+            ${pendingRevenueUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          </p>
+          <span className="text-[10px] text-muted-foreground">
+            ≈ ₨ {(pendingRevenueUSD * 279).toLocaleString("en-US", { minimumFractionDigits: 2 })} PKR
+          </span>
+        </Card>
+
+        <Card className="p-4 rounded-2xl border-border bg-card shadow-2xs">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase">Total Orders</span>
+          <p className="text-xl sm:text-2xl font-extrabold font-sans text-foreground mt-1">
+            {transactions.length}
+          </p>
+          <span className="text-[10px] text-muted-foreground">All time customer transactions</span>
+        </Card>
+      </div>
+
+      {/* Transactions Table Card */}
+      <Card className="rounded-2xl border-border bg-card shadow-2xs overflow-hidden">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-4">
           <div>
             <CardTitle className="text-base font-bold">All Records ({filteredTxns.length})</CardTitle>
-            <CardDescription className="text-xs">Live records from connected payment gateways</CardDescription>
+            <CardDescription className="text-xs">
+              Live records from connected payment gateways (Click status to change)
+            </CardDescription>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -208,7 +294,7 @@ export default function PaymentTransactionsPage() {
                     <TableHead className="py-3 px-6 font-semibold">Date</TableHead>
                     <TableHead className="py-3 px-6 font-semibold">Description & Channel</TableHead>
                     <TableHead className="py-3 px-6 font-semibold">Customer</TableHead>
-                    <TableHead className="py-3 px-6 font-semibold">Status</TableHead>
+                    <TableHead className="py-3 px-6 font-semibold">Status (Click to Change)</TableHead>
                     <TableHead className="py-3 px-6 font-semibold text-right">Amount</TableHead>
                   </tr>
                 </TableHeader>
@@ -231,24 +317,39 @@ export default function PaymentTransactionsPage() {
                         <span className="block text-[11px] text-muted-foreground">{t.customerEmail}</span>
                       </TableCell>
 
+                      {/* Interactive Status Changer Cell */}
                       <TableCell className="py-3.5 px-6">
-                        {t.status === "Completed" ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
-                            <CheckCircle2 size={11} /> Completed
-                          </span>
-                        ) : t.status === "Pending" ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-900">
-                            <Clock size={11} /> Pending
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
-                            <AlertCircle size={11} /> Cancelled
-                          </span>
-                        )}
+                        <div className="relative inline-block">
+                          <select
+                            value={t.status}
+                            disabled={updatingOrderId === t.id}
+                            onChange={(e) => handleUpdateStatus(t.id, e.target.value)}
+                            className={`appearance-none text-xs font-semibold pl-2.5 pr-7 py-1 rounded-full border transition cursor-pointer focus:outline-none ${
+                              t.status === "Completed"
+                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900"
+                                : t.status === "Pending"
+                                ? "bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-900"
+                                : t.status === "Refunded"
+                                ? "bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border-purple-200 dark:border-purple-900"
+                                : "bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border-rose-200 dark:border-rose-900"
+                            }`}
+                          >
+                            <option value="Completed">✓ Completed</option>
+                            <option value="Pending">⏳ Pending</option>
+                            <option value="Refunded">↺ Refunded</option>
+                            <option value="Cancelled">✕ Cancelled</option>
+                          </select>
+                          <ChevronDown className="h-3 w-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+                        </div>
                       </TableCell>
 
-                      <TableCell className="py-3.5 px-6 text-right font-bold font-sans text-xs text-emerald-600 dark:text-emerald-400">
-                        {t.amount}
+                      <TableCell className="py-3.5 px-6 text-right font-bold font-sans text-xs text-foreground">
+                        <span className={t.positive ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}>
+                          {t.amount}
+                        </span>
+                        <span className="block text-[10px] text-muted-foreground">
+                          ≈ ₨ {(t.amountNumber * 279).toLocaleString("en-US", { minimumFractionDigits: 2 })} PKR
+                        </span>
                       </TableCell>
                     </TableRow>
                   ))}

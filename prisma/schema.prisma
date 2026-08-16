@@ -48,6 +48,23 @@ model User {
   orders          Order[]
   cartItems       CartItem[]
   reviews         Review[]
+  adminAccessRequests AdminAccessRequest[]
+}
+
+model AdminAccessRequest {
+  id        String   @id @default(uuid())
+  userId    String
+  email     String
+  name      String?
+  reason    String?
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([email])
 }
 
 model Address {

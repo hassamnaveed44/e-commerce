@@ -1,4 +1,4 @@
-import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 // Define protected route patterns
@@ -13,9 +13,9 @@ const isAdminRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  const { userId, sessionClaims } = await auth();
+  const { userId } = await auth();
 
-  // 1. Admin route protection: must be authenticated and have ADMIN role
+  // 1. Admin route protection: Must be logged in
   if (isAdminRoute(req)) {
     const isApiRoute = req.nextUrl.pathname.startsWith("/api/admin");
 
@@ -31,32 +31,10 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.redirect(signInUrl);
     }
 
-    let role =
-      (sessionClaims?.metadata as { role?: string })?.role ||
-      (sessionClaims?.publicMetadata as { role?: string })?.role ||
-      (sessionClaims?.public_metadata as { role?: string })?.role;
-
-    // Fallback: If JWT session token does not have publicMetadata yet, fetch from Clerk API
-    if (!role) {
-      try {
-        const client = await clerkClient();
-        const user = await client.users.getUser(userId);
-        role = (user.publicMetadata as { role?: string })?.role;
-      } catch (err) {
-        console.error("Middleware Clerk user fetch error:", err);
-      }
-    }
-
-    if (role !== "ADMIN") {
-      if (isApiRoute) {
-        return NextResponse.json(
-          { error: "Forbidden: Admin privileges required." },
-          { status: 403 }
-        );
-      }
-      // If not an admin, redirect to storefront home
-      return NextResponse.redirect(new URL("/", req.url));
-    }
+    // Authenticated users are allowed to reach /admin.
+    // The page-level AdminAuthGate will render the Staff Access Request screen for non-admins
+    // and the full Admin Dashboard for authorized administrators.
+    return NextResponse.next();
   }
 
   // 2. Customer protected routes (Account, Checkout)

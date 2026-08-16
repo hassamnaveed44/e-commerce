@@ -6,7 +6,7 @@ export default function TopBanner() {
     <div className="bg-black text-white text-xs md:text-sm py-2.5 px-4 relative z-50 flex items-center justify-center">
       <p className="text-center">
         Sign up and get 20% off to your first order.{" "}
-        <Link href="#" className="underline font-medium hover:opacity-80 transition">
+        <Link href="/register" className="underline font-medium hover:opacity-80 transition">
           Sign Up Now
         </Link>
       </p>
