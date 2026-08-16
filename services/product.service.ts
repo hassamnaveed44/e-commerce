@@ -110,20 +110,67 @@ export async function getProducts(params: GetProductsParams = {}) {
   if (sort === "rating-desc" || sort === "popular") orderBy = { averageRating: "desc" };
   if (sort === "oldest") orderBy = { createdAt: "asc" };
 
-  const [products, totalCount] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      orderBy,
-      skip,
-      take: limit,
-      include: {
-        category: true,
-        images: true,
-        variants: true,
-      },
-    }),
-    prisma.product.count({ where }),
-  ]);
+  let products: any[] = [];
+  let totalCount = 0;
+
+  try {
+    const result = await Promise.all([
+      prisma.product.findMany({
+        where,
+        orderBy,
+        skip,
+        take: limit,
+        include: {
+          category: true,
+          images: true,
+          variants: true,
+        },
+      }),
+      prisma.product.count({ where }),
+    ]);
+    products = result[0];
+    totalCount = result[1];
+  } catch (error) {
+    console.warn("Retrying with fallback filter for dressStyle:", error);
+    
+    // Fallback: If dev server running with stale client without dressStyle in schema
+    const fallbackWhere = { ...where };
+    const targetDressStyle = typeof fallbackWhere.dressStyle === "object"
+      ? (fallbackWhere.dressStyle as any)?.equals
+      : fallbackWhere.dressStyle;
+    
+    delete (fallbackWhere as any).dressStyle;
+
+    const DRESS_STYLE_MAPPING: Record<string, string[]> = {
+      casual: ["t-shirts", "hoodies", "jeans", "shorts", "shirts", "hoodie"],
+      formal: ["shirts", "jeans", "shirt"],
+      party: ["shirts", "t-shirts", "jeans", "shirt"],
+      gym: ["t-shirts", "hoodies", "shorts", "hoodie"],
+    };
+
+    if (!fallbackWhere.category && targetDressStyle && DRESS_STYLE_MAPPING[String(targetDressStyle).toLowerCase()]) {
+      fallbackWhere.category = {
+        slug: { in: DRESS_STYLE_MAPPING[String(targetDressStyle).toLowerCase()] },
+      };
+    }
+
+    const fallbackResult = await Promise.all([
+      prisma.product.findMany({
+        where: fallbackWhere,
+        orderBy,
+        skip,
+        take: limit,
+        include: {
+          category: true,
+          images: true,
+          variants: true,
+        },
+      }),
+      prisma.product.count({ where: fallbackWhere }),
+    ]);
+    products = fallbackResult[0];
+    totalCount = fallbackResult[1];
+  }
 
   return {
     products,

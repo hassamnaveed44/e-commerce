@@ -60,7 +60,7 @@ export default async function CategoryPage({
     id: p.id,
     name: p.name,
     slug: p.slug,
-    images: p.images.map((img) => ({ url: img.url })),
+    images: (p.images || []).map((img: { url: string }) => ({ url: img.url })),
     price: Number(p.price),
     originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
     discountPercent: p.discountPercent,
