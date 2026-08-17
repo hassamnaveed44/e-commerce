@@ -182,9 +182,10 @@ export async function POST(req: NextRequest) {
       // 2. Create Product Images
       if (Array.isArray(images) && images.length > 0) {
         await tx.productImage.createMany({
-          data: images.map((img: { url: string; isPrimary?: boolean }, index: number) => ({
+          data: images.map((img: { url: string; publicId?: string; isPrimary?: boolean }, index: number) => ({
             productId: product.id,
             url: img.url,
+            publicId: img.publicId || null,
             isPrimary: img.isPrimary !== undefined ? img.isPrimary : index === 0,
           })),
         });
