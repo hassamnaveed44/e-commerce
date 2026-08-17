@@ -46,27 +46,51 @@ export async function getProducts(params: GetProductsParams = {}) {
     isActive: true,
   };
 
-  // Filter by Parent Category / Dress Style (Casual, Formal, Party, Gym)
+  // Filter by Parent Category / Dress Style / Audience (Casual, Formal, Party, Gym, Men, Women, Kids)
+  const isGenderAudience = (val?: string) =>
+    val && ["men", "women", "kids", "unisex", "boys", "girls"].includes(val.toLowerCase());
+
   if (dressStyle && dressStyle.toLowerCase() !== "all") {
-    where.dressStyle = {
-      equals: dressStyle,
-      mode: "insensitive",
-    };
+    const normalized = dressStyle.toLowerCase().trim();
+    if (isGenderAudience(normalized)) {
+      where.OR = [
+        { dressStyle: { contains: normalized, mode: "insensitive" } },
+        { name: { contains: normalized, mode: "insensitive" } },
+        { description: { contains: normalized, mode: "insensitive" } },
+        { category: { slug: { contains: normalized, mode: "insensitive" } } },
+        { category: { name: { contains: normalized, mode: "insensitive" } } },
+      ];
+    } else {
+      where.dressStyle = {
+        equals: dressStyle,
+        mode: "insensitive",
+      };
+    }
   }
 
-  // Filter by Subcategory / Garment Type (T-Shirts, Shorts, Shirts, Hoodies, Jeans)
+  // Filter by Subcategory / Garment Type or Department
   if (categorySlug && categorySlug.toLowerCase() !== "all") {
     const normalizedSlug = categorySlug.toLowerCase().trim();
-    const singular = normalizedSlug.endsWith("s") ? normalizedSlug.slice(0, -1) : normalizedSlug;
-    const plural = normalizedSlug.endsWith("s") ? normalizedSlug : `${normalizedSlug}s`;
-    const possibleTerms = Array.from(new Set([normalizedSlug, singular, plural]));
+    if (isGenderAudience(normalizedSlug) && !where.OR) {
+      where.OR = [
+        { dressStyle: { contains: normalizedSlug, mode: "insensitive" } },
+        { name: { contains: normalizedSlug, mode: "insensitive" } },
+        { description: { contains: normalizedSlug, mode: "insensitive" } },
+        { category: { slug: { contains: normalizedSlug, mode: "insensitive" } } },
+        { category: { name: { contains: normalizedSlug, mode: "insensitive" } } },
+      ];
+    } else if (!isGenderAudience(normalizedSlug)) {
+      const singular = normalizedSlug.endsWith("s") ? normalizedSlug.slice(0, -1) : normalizedSlug;
+      const plural = normalizedSlug.endsWith("s") ? normalizedSlug : `${normalizedSlug}s`;
+      const possibleTerms = Array.from(new Set([normalizedSlug, singular, plural]));
 
-    where.category = {
-      OR: [
-        { slug: { in: possibleTerms } },
-        { name: { in: possibleTerms, mode: "insensitive" } },
-      ],
-    };
+      where.category = {
+        OR: [
+          { slug: { in: possibleTerms } },
+          { name: { in: possibleTerms, mode: "insensitive" } },
+        ],
+      };
+    }
   }
 
   if (minPrice !== undefined || maxPrice !== undefined) {
@@ -172,11 +196,59 @@ export async function getProducts(params: GetProductsParams = {}) {
     totalCount = fallbackResult[1];
   }
 
+  let minCatalogPrice = 0;
+  let maxCatalogPrice = 250;
+  let inStockSizes: string[] = [];
+  let inStockColors: string[] = [];
+
+  try {
+    const [agg, activeVariants] = await Promise.all([
+      prisma.product.aggregate({
+        where: { isActive: true },
+        _min: { price: true },
+        _max: { price: true },
+      }),
+      prisma.productVariant.findMany({
+        where: {
+          stockQuantity: { gt: 0 },
+          product: { isActive: true },
+        },
+        select: {
+          size: true,
+          colorHex: true,
+          colorName: true,
+        },
+      }),
+    ]);
+
+    if (agg._min.price !== null && agg._min.price !== undefined) {
+      minCatalogPrice = Math.floor(Number(agg._min.price));
+    }
+    if (agg._max.price !== null && agg._max.price !== undefined) {
+      maxCatalogPrice = Math.ceil(Number(agg._max.price));
+    }
+
+    inStockSizes = Array.from(new Set(activeVariants.map((v) => v.size)));
+    inStockColors = Array.from(
+      new Set(
+        activeVariants
+          .flatMap((v) => [v.colorHex.toLowerCase(), v.colorName.toLowerCase()])
+          .filter(Boolean)
+      )
+    );
+  } catch (e) {
+    console.warn("Price & variant aggregation fallback:", e);
+  }
+
   return {
     products,
     totalCount,
     currentPage: page,
     totalPages: Math.ceil(totalCount / limit),
+    minCatalogPrice,
+    maxCatalogPrice,
+    inStockSizes,
+    inStockColors,
   };
 }
 

@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams, useParams } from "next/navigation";
 import { ChevronRight, ChevronUp, SlidersHorizontal, Check, RotateCcw } from "lucide-react";
 
-const categories = ["T-shirts", "Shorts", "Shirts", "Hoodie", "Jeans"];
+const categories = ["T-shirts", "Shorts", "Shirts", "Hoodie", "Jeans", "Full Suits", "Pant Shirt", "Three Piece"];
 
 const colors = [
   { name: "Green", hex: "#00C12B" },
@@ -31,9 +31,17 @@ const sizes = [
   "4X-Large",
 ];
 
-const dressStyles = ["Casual", "Formal", "Party", "Gym"];
+const dressStyles = ["Casual", "Formal", "Party", "Gym", "Men", "Women", "Kids"];
 
-export default function FiltersSidebar() {
+interface FiltersSidebarProps {
+  inStockSizes?: string[];
+  inStockColors?: string[];
+}
+
+export default function FiltersSidebar({
+  inStockSizes = [],
+  inStockColors = [],
+}: FiltersSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -294,6 +302,8 @@ export default function FiltersSidebar() {
                   const value = Math.min(Number(e.target.value), priceRange.max - 10);
                   setPriceRange((prev) => ({ ...prev, min: value }));
                 }}
+                onMouseUp={() => pushFilters({ minPrice: priceRange.min, maxPrice: priceRange.max })}
+                onTouchEnd={() => pushFilters({ minPrice: priceRange.min, maxPrice: priceRange.max })}
                 className="absolute w-full h-1.5 opacity-0 cursor-pointer pointer-events-auto z-30"
               />
               <input
@@ -305,6 +315,8 @@ export default function FiltersSidebar() {
                   const value = Math.max(Number(e.target.value), priceRange.min + 10);
                   setPriceRange((prev) => ({ ...prev, max: value }));
                 }}
+                onMouseUp={() => pushFilters({ minPrice: priceRange.min, maxPrice: priceRange.max })}
+                onTouchEnd={() => pushFilters({ minPrice: priceRange.min, maxPrice: priceRange.max })}
                 className="absolute w-full h-1.5 opacity-0 cursor-pointer pointer-events-auto z-30"
               />
               <div
@@ -344,6 +356,11 @@ export default function FiltersSidebar() {
           <div className="grid grid-cols-5 gap-3.5 pt-1">
             {colors.map((color) => {
               const isSelected = selectedColor === color.hex || selectedColor === color.name;
+              const isInStock =
+                inStockColors.length === 0 ||
+                inStockColors.includes(color.hex.toLowerCase()) ||
+                inStockColors.includes(color.name.toLowerCase());
+
               return (
                 <button
                   key={color.name}
@@ -351,12 +368,14 @@ export default function FiltersSidebar() {
                   onClick={() => {
                     const newColor = isSelected ? null : color.hex;
                     setSelectedColor(newColor);
+                    pushFilters({ color: newColor });
                   }}
                   style={{ backgroundColor: color.hex }}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-transform hover:scale-105 cursor-pointer ${
+                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-transform hover:scale-105 cursor-pointer relative ${
                     color.border ? "border border-black/20" : ""
-                  }`}
+                  } ${!isInStock ? "opacity-45 ring-1 ring-dashed ring-gray-400" : ""}`}
                   aria-label={`Select color ${color.name}`}
+                  title={`${color.name}${!isInStock ? " (0 products available)" : ""}`}
                 >
                   {isSelected && (
                     <Check
@@ -365,6 +384,9 @@ export default function FiltersSidebar() {
                         color.hex === "#FFFFFF" ? "text-black" : "text-white"
                       } stroke-[3]`}
                     />
+                  )}
+                  {!isInStock && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full ring-1 ring-white" />
                   )}
                 </button>
               );
@@ -392,19 +414,28 @@ export default function FiltersSidebar() {
         {sizeOpen && (
           <div className="flex flex-wrap gap-2 pt-1">
             {sizes.map((size) => {
-              const isSelected = selectedSize === size;
+              const isSelected = selectedSize?.toLowerCase() === size.toLowerCase();
+              const isInStock =
+                inStockSizes.length === 0 ||
+                inStockSizes.some((s) => s.toLowerCase() === size.toLowerCase());
+
               return (
                 <button
                   key={size}
                   type="button"
                   onClick={() => {
-                    setSelectedSize(isSelected ? null : size);
+                    const newSize = isSelected ? null : size;
+                    setSelectedSize(newSize);
+                    pushFilters({ size: newSize });
                   }}
-                  className={`px-5 py-2.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
-                    isSelected
-                      ? "bg-black text-white"
-                      : "bg-[#F0F0F0] text-black/60 hover:bg-black/10"
+                  className={`px-4 sm:px-5 py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all cursor-pointer relative ${
+                    !isInStock
+                      ? "bg-gray-100 text-gray-400 line-through border border-dashed border-gray-300 opacity-60 hover:opacity-100"
+                      : isSelected
+                      ? "bg-black text-white shadow-xs"
+                      : "bg-[#F0F0F0] text-black/70 hover:bg-black/10"
                   }`}
+                  title={`${size}${!isInStock ? " (0 products available)" : ""}`}
                 >
                   {size}
                 </button>

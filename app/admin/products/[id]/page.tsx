@@ -676,7 +676,7 @@ export default function ProductDetailPage({
                     Parent Category (Dress Style)
                   </label>
                   <div className="flex flex-wrap gap-1 mb-2">
-                    {["Casual", "Formal", "Party", "Gym"].map((style) => (
+                    {["Casual", "Formal", "Party", "Gym", "Men", "Women", "Kids", "Unisex"].map((style) => (
                       <button
                         key={style}
                         type="button"
@@ -696,7 +696,7 @@ export default function ProductDetailPage({
                     onChange={(e) => setDressStyle(e.target.value)}
                     className="w-full h-9 rounded-xl border border-border bg-card px-3 text-xs text-foreground focus:outline-none cursor-pointer"
                   >
-                    {["Casual", "Formal", "Party", "Gym"].map((style) => (
+                    {["Casual", "Formal", "Party", "Gym", "Men", "Women", "Kids", "Unisex"].map((style) => (
                       <option key={style} value={style}>
                         {style}
                       </option>

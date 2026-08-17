@@ -621,7 +621,7 @@ export default function AddProductPage() {
                       Parent Category (Dress Style) *
                     </label>
                     <div className="flex flex-wrap gap-1.5 mb-2.5">
-                      {["Casual", "Formal", "Party", "Gym"].map((style) => {
+                      {["Casual", "Formal", "Party", "Gym", "Men", "Women", "Kids", "Unisex"].map((style) => {
                         const isSelected = dressStyle.toLowerCase() === style.toLowerCase();
                         return (
                           <button
@@ -644,7 +644,7 @@ export default function AddProductPage() {
                       onChange={(e) => setDressStyle(e.target.value)}
                       className="w-full h-10 rounded-xl border border-border bg-card px-3 pr-8 text-xs text-foreground focus:outline-none focus:border-ring transition-colors cursor-pointer"
                     >
-                      {["Casual", "Formal", "Party", "Gym"].map((style) => (
+                      {["Casual", "Formal", "Party", "Gym", "Men", "Women", "Kids", "Unisex"].map((style) => (
                         <option key={style} value={style}>
                           {style}
                         </option>

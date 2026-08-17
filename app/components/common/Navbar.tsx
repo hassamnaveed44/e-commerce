@@ -113,51 +113,102 @@ export default function Navbar() {
             </button>
 
             {shopDropdownOpen && (
-              <div className="absolute top-full left-0 pt-1 w-48 z-50">
-                <div className="bg-white border border-black/10 rounded-xl shadow-lg py-2">
-                  <Link
-                    href="/#new-arrivals"
-                    onClick={() => setShopDropdownOpen(false)}
-                    className="block px-4 py-2 text-sm text-black hover:bg-black/5 transition font-satoshi"
-                  >
-                    New Arrivals
-                  </Link>
-                  <Link
-                    href="/#top-selling"
-                    onClick={() => setShopDropdownOpen(false)}
-                    className="block px-4 py-2 text-sm text-black hover:bg-black/5 transition font-satoshi"
-                  >
-                    Top Selling
-                  </Link>
-                  <div className="border-t border-black/5 my-1" />
-                  <Link
-                    href="/category/casual"
-                    onClick={() => setShopDropdownOpen(false)}
-                    className="block px-4 py-2 text-sm text-black/70 hover:bg-black/5 hover:text-black transition font-satoshi"
-                  >
-                    Casual
-                  </Link>
-                  <Link
-                    href="/category/formal"
-                    onClick={() => setShopDropdownOpen(false)}
-                    className="block px-4 py-2 text-sm text-black/70 hover:bg-black/5 hover:text-black transition font-satoshi"
-                  >
-                    Formal
-                  </Link>
-                  <Link
-                    href="/category/party"
-                    onClick={() => setShopDropdownOpen(false)}
-                    className="block px-4 py-2 text-sm text-black/70 hover:bg-black/5 hover:text-black transition font-satoshi"
-                  >
-                    Party
-                  </Link>
-                  <Link
-                    href="/category/gym"
-                    onClick={() => setShopDropdownOpen(false)}
-                    className="block px-4 py-2 text-sm text-black/70 hover:bg-black/5 hover:text-black transition font-satoshi"
-                  >
-                    Gym
-                  </Link>
+              <div className="absolute top-full left-0 pt-2 w-[420px] z-50 animate-in fade-in zoom-in-95">
+                <div className="bg-white border border-black/10 rounded-2xl shadow-xl p-4 grid grid-cols-2 gap-4">
+                  {/* Column 1: Gender / Audience & Featured */}
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-3 pb-1 border-b border-black/5">
+                      Departments
+                    </p>
+                    <Link
+                      href="/category/men"
+                      onClick={() => setShopDropdownOpen(false)}
+                      className="flex items-center justify-between px-3 py-2 text-sm text-black font-semibold hover:bg-black/5 rounded-lg transition"
+                    >
+                      <span>Men's Collection</span>
+                      <span className="text-[10px] text-black/50 font-normal bg-black/5 px-2 py-0.5 rounded-full">New</span>
+                    </Link>
+                    <Link
+                      href="/category/women"
+                      onClick={() => setShopDropdownOpen(false)}
+                      className="flex items-center justify-between px-3 py-2 text-sm text-black font-semibold hover:bg-black/5 rounded-lg transition"
+                    >
+                      <span>Women's Collection</span>
+                      <span className="text-[10px] text-black/50 font-normal bg-black/5 px-2 py-0.5 rounded-full">Trending</span>
+                    </Link>
+                    <Link
+                      href="/category/kids"
+                      onClick={() => setShopDropdownOpen(false)}
+                      className="flex items-center justify-between px-3 py-2 text-sm text-black font-semibold hover:bg-black/5 rounded-lg transition"
+                    >
+                      <span>Kids Collection</span>
+                    </Link>
+                    
+                    <div className="pt-2 border-t border-black/5 space-y-1">
+                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-3 pb-1">
+                        Featured
+                      </p>
+                      <Link
+                        href="/#new-arrivals"
+                        onClick={() => setShopDropdownOpen(false)}
+                        className="block px-3 py-1.5 text-xs text-black/80 hover:bg-black/5 hover:text-black rounded-lg transition"
+                      >
+                        ⚡ New Arrivals
+                      </Link>
+                      <Link
+                        href="/#top-selling"
+                        onClick={() => setShopDropdownOpen(false)}
+                        className="block px-3 py-1.5 text-xs text-black/80 hover:bg-black/5 hover:text-black rounded-lg transition"
+                      >
+                        🔥 Top Selling
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* Column 2: Dress Styles & Garments */}
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-3 pb-1 border-b border-black/5">
+                      Dress Styles
+                    </p>
+                    <Link
+                      href="/category/casual"
+                      onClick={() => setShopDropdownOpen(false)}
+                      className="block px-3 py-2 text-sm text-black/80 hover:bg-black/5 hover:text-black rounded-lg transition font-medium"
+                    >
+                      Casual Wear
+                    </Link>
+                    <Link
+                      href="/category/formal"
+                      onClick={() => setShopDropdownOpen(false)}
+                      className="block px-3 py-2 text-sm text-black/80 hover:bg-black/5 hover:text-black rounded-lg transition font-medium"
+                    >
+                      Formal Wear
+                    </Link>
+                    <Link
+                      href="/category/party"
+                      onClick={() => setShopDropdownOpen(false)}
+                      className="block px-3 py-2 text-sm text-black/80 hover:bg-black/5 hover:text-black rounded-lg transition font-medium"
+                    >
+                      Party Outfits
+                    </Link>
+                    <Link
+                      href="/category/gym"
+                      onClick={() => setShopDropdownOpen(false)}
+                      className="block px-3 py-2 text-sm text-black/80 hover:bg-black/5 hover:text-black rounded-lg transition font-medium"
+                    >
+                      Gym & Active
+                    </Link>
+
+                    <div className="pt-2 border-t border-black/5 space-y-1">
+                      <Link
+                        href="/category/all"
+                        onClick={() => setShopDropdownOpen(false)}
+                        className="block px-3 py-2 text-xs font-bold text-black hover:bg-black hover:text-white rounded-lg transition text-center border border-black/15"
+                      >
+                        Browse All Products →
+                      </Link>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -266,27 +317,44 @@ export default function Navbar() {
               </button>
               {shopDropdownOpen && (
                 <div className="pl-4 py-2 flex flex-col space-y-2 text-sm text-black/70">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider pt-1">
+                    Departments
+                  </p>
                   <Link
-                    href="/#new-arrivals"
+                    href="/category/men"
                     onClick={() => {
                       setShopDropdownOpen(false);
                       setMobileMenuOpen(false);
                     }}
-                    className="hover:text-black transition"
+                    className="font-semibold text-black hover:text-black transition"
                   >
-                    • New Arrivals
+                    • Men's Collection
                   </Link>
                   <Link
-                    href="/#top-selling"
+                    href="/category/women"
                     onClick={() => {
                       setShopDropdownOpen(false);
                       setMobileMenuOpen(false);
                     }}
-                    className="hover:text-black transition"
+                    className="font-semibold text-black hover:text-black transition"
                   >
-                    • Top Selling
+                    • Women's Collection
                   </Link>
+                  <Link
+                    href="/category/kids"
+                    onClick={() => {
+                      setShopDropdownOpen(false);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="font-semibold text-black hover:text-black transition"
+                  >
+                    • Kids Collection
+                  </Link>
+                  
                   <div className="border-t border-black/5 my-1" />
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                    Styles & Categories
+                  </p>
                   <Link
                     href="/category/casual"
                     onClick={() => {
@@ -295,7 +363,7 @@ export default function Navbar() {
                     }}
                     className="hover:text-black transition"
                   >
-                    • Casual
+                    • Casual Wear
                   </Link>
                   <Link
                     href="/category/formal"
@@ -305,7 +373,7 @@ export default function Navbar() {
                     }}
                     className="hover:text-black transition"
                   >
-                    • Formal
+                    • Formal Wear
                   </Link>
                   <Link
                     href="/category/party"
@@ -315,7 +383,7 @@ export default function Navbar() {
                     }}
                     className="hover:text-black transition"
                   >
-                    • Party
+                    • Party Outfits
                   </Link>
                   <Link
                     href="/category/gym"
@@ -325,7 +393,17 @@ export default function Navbar() {
                     }}
                     className="hover:text-black transition"
                   >
-                    • Gym
+                    • Gym & Active
+                  </Link>
+                  <Link
+                    href="/category/all"
+                    onClick={() => {
+                      setShopDropdownOpen(false);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="font-bold text-black hover:text-black transition pt-1"
+                  >
+                    → Browse All Products
                   </Link>
                 </div>
               )}
