@@ -34,19 +34,32 @@ export interface OrderEmailData {
 
 export type EmailType = "CONFIRMATION" | "STATUS_UPDATE" | "SHIPPED" | "DELIVERED" | "CANCELLED";
 
-// Create SMTP Transporter or return null if unconfigured
-function getTransporter() {
-  const host = process.env.SMTP_HOST;
+// Create SMTP Transporter with smart Gmail and STARTTLS detection
+export function getTransporter() {
+  const host = process.env.SMTP_HOST?.trim();
   const port = Number(process.env.SMTP_PORT) || 587;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
+  const user = process.env.SMTP_USER?.trim();
+  const rawPass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
+  // Strip all whitespace from app passwords (e.g. "abcd efgh ijkl mnop" -> "abcdefghijklmnop")
+  const pass = rawPass ? rawPass.replace(/\s+/g, "").trim() : undefined;
 
-  if (host && user && pass) {
+  if (user && pass) {
+    // If Gmail host or Gmail user, use Gmail service for 100% reliable connection
+    if (host?.includes("gmail") || user.includes("@gmail.com")) {
+      return nodemailer.createTransport({
+        service: "gmail",
+        auth: { user, pass },
+      });
+    }
+
     return nodemailer.createTransport({
-      host,
+      host: host || "smtp.gmail.com",
       port,
       secure: port === 465,
       auth: { user, pass },
+      tls: {
+        rejectUnauthorized: false,
+      },
     });
   }
 
@@ -65,14 +78,17 @@ export async function sendOrderNotificationEmail({
   previousStatus?: string;
 }) {
   try {
-    const recipientEmail = order.customerEmail;
+    const recipientEmail = order.customerEmail?.trim();
     if (!recipientEmail || recipientEmail.includes("@guest.shop.co")) {
-      console.log(`[Email Service] Skipping email for guest placeholder: ${recipientEmail}`);
+      console.log(`[Email Service] Skipping email for guest placeholder or empty email: ${recipientEmail}`);
       return { success: false, reason: "Invalid or guest placeholder email" };
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://e-commerce-hassam-dev.vercel.app";
-    const fromAddress = process.env.EMAIL_FROM || '"SHOP.CO" <orders@shop.co>';
+    const smtpUser = process.env.SMTP_USER?.trim();
+    
+    // Ensure fromAddress is valid and compliant with Gmail SMTP rules
+    const fromAddress = process.env.EMAIL_FROM?.trim() || (smtpUser ? `"SHOP.CO" <${smtpUser}>` : '"SHOP.CO" <orders@shop.co>');
 
     // Determine subject & header badge based on status or type
     const status = (newStatus || order.orderStatus || "PROCESSING").toUpperCase();
@@ -98,108 +114,107 @@ export async function sendOrderNotificationEmail({
       statusColor = "#EF4444"; // Red
     }
 
-    const itemsRowsHtml = (order.items || [])
-      .map(
-        (item) => `
-        <tr>
-          <td style="padding: 12px 8px; border-bottom: 1px solid #EEEEEE; text-align: left;">
-            <strong style="color: #111111; font-size: 14px;">${item.name}</strong>
-            ${item.size || item.color ? `<br/><span style="color: #666666; font-size: 12px;">Variant: ${[item.size, item.color].filter(Boolean).join(" / ")}</span>` : ""}
-          </td>
-          <td style="padding: 12px 8px; border-bottom: 1px solid #EEEEEE; text-align: center; color: #555555; font-size: 14px;">
-            ${item.quantity}
-          </td>
-          <td style="padding: 12px 8px; border-bottom: 1px solid #EEEEEE; text-align: right; color: #111111; font-size: 14px; font-weight: 600;">
-            $${(Number(item.unitPrice) * item.quantity).toFixed(2)}
-          </td>
-        </tr>
-      `
-      )
+    const itemsHtml = order.items
+      .map((item) => {
+        const variantText = [item.size, item.color].filter(Boolean).join(" / ");
+        const priceFormatted = Number(item.unitPrice).toFixed(2);
+        const lineTotalFormatted = Number(item.lineTotal || item.unitPrice * item.quantity).toFixed(2);
+
+        return `
+          <tr style="border-bottom: 1px solid #E5E7EB;">
+            <td style="padding: 14px 0;">
+              <p style="margin: 0; font-weight: 700; color: #111827; font-size: 14px;">${item.name}</p>
+              ${variantText ? `<p style="margin: 3px 0 0 0; color: #6B7280; font-size: 12px;">Variant: ${variantText}</p>` : ""}
+            </td>
+            <td style="padding: 14px 8px; text-align: center; color: #4B5563; font-size: 13px; font-weight: 600;">x${item.quantity}</td>
+            <td style="padding: 14px 0; text-align: right; color: #111827; font-size: 14px; font-weight: 700;">$${lineTotalFormatted}</td>
+          </tr>
+        `;
+      })
       .join("");
 
-    const discountRowHtml =
-      order.discount && order.discount > 0
-        ? `
-        <tr>
-          <td style="padding: 6px 0; color: #16A34A; font-size: 13px; font-weight: 600;">Discount / Promo Savings</td>
-          <td style="padding: 6px 0; text-align: right; color: #16A34A; font-size: 13px; font-weight: 600;">-$${Number(order.discount).toFixed(2)}</td>
-        </tr>
-      `
-        : "";
+    const discountRow = order.discount && order.discount > 0 ? `
+      <tr>
+        <td style="padding: 6px 0; color: #059669; font-size: 13px; font-weight: 600;">Discount / Promo Savings</td>
+        <td style="padding: 6px 0; text-align: right; color: #059669; font-size: 13px; font-weight: 700;">-$${Number(order.discount).toFixed(2)}</td>
+      </tr>
+    ` : "";
 
     const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${subject}</title>
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F8F9FA; margin: 0; padding: 24px 12px;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 16px; border: 1px solid #E5E7EB; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F3F4F6; margin: 0; padding: 24px 12px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);">
           
-          <!-- Brand Header -->
-          <div style="background-color: #000000; padding: 24px; text-align: center;">
-            <h1 style="color: #FFFFFF; margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.5px;">SHOP.CO</h1>
-            <p style="color: #9CA3AF; margin: 4px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Official Order Receipt & Update</p>
+          <!-- Header Bar -->
+          <div style="background-color: #000000; padding: 28px; text-align: center;">
+            <h1 style="color: #FFFFFF; font-size: 28px; font-weight: 900; letter-spacing: -1px; margin: 0;">SHOP.CO</h1>
+            <p style="color: #9CA3AF; font-size: 12px; margin: 6px 0 0 0; text-transform: uppercase; letter-spacing: 1px;">Official Order Receipt</p>
           </div>
 
           <!-- Status Banner -->
-          <div style="padding: 24px 28px 16px 28px; text-align: left;">
-            <div style="display: inline-block; background-color: ${statusColor}15; color: ${statusColor}; border: 1px solid ${statusColor}40; border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: bold; margin-bottom: 12px;">
-              ● ${statusTitle}
-            </div>
-            <h2 style="margin: 0 0 8px 0; color: #111827; font-size: 20px; font-weight: 800;">Hello, ${order.customerName || "Customer"}!</h2>
+          <div style="padding: 24px 28px; background-color: #FAFAFA; border-bottom: 1px solid #E5E7EB; text-align: center;">
+            <span style="display: inline-block; background-color: ${statusColor}15; color: ${statusColor}; border: 1px solid ${statusColor}40; padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">
+              ${statusTitle}
+            </span>
+            <h2 style="margin: 0 0 8px 0; color: #111827; font-size: 20px; font-weight: 800;">Order #${order.orderNumber}</h2>
             <p style="margin: 0; color: #4B5563; font-size: 14px; line-height: 1.5;">${statusMessage}</p>
           </div>
 
-          <!-- Order Summary Meta -->
-          <div style="background-color: #F9FAFB; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; padding: 16px 28px; margin-bottom: 20px;">
+          <!-- Order & Payment Info -->
+          <div style="padding: 24px 28px;">
             <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
               <tr>
-                <td style="padding: 4px 0; color: #6B7280;">Order Number:</td>
-                <td style="padding: 4px 0; text-align: right; font-weight: 700; color: #111827;">#${order.orderNumber}</td>
-              </tr>
-              <tr>
-                <td style="padding: 4px 0; color: #6B7280;">Order Date:</td>
-                <td style="padding: 4px 0; text-align: right; color: #374151;">${order.orderDate || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+                <td style="padding: 4px 0; color: #6B7280; width: 40%;">Order Date:</td>
+                <td style="padding: 4px 0; color: #111827; font-weight: 600;">${order.orderDate || new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</td>
               </tr>
               <tr>
                 <td style="padding: 4px 0; color: #6B7280;">Payment Method:</td>
-                <td style="padding: 4px 0; text-align: right; color: #374151; font-weight: 600;">${order.paymentMethod || "Credit Card (Stripe)"}</td>
+                <td style="padding: 4px 0; color: #111827; font-weight: 600;">${order.paymentMethod}</td>
               </tr>
-            </table>
-          </div>
-
-          <!-- Items Table -->
-          <div style="padding: 0 28px 20px 28px;">
-            <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #111827;">Purchased Items</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-              <thead>
-                <tr style="background-color: #F3F4F6;">
-                  <th style="padding: 8px; text-align: left; font-size: 12px; color: #6B7280; text-transform: uppercase;">Item</th>
-                  <th style="padding: 8px; text-align: center; font-size: 12px; color: #6B7280; text-transform: uppercase;">Qty</th>
-                  <th style="padding: 8px; text-align: right; font-size: 12px; color: #6B7280; text-transform: uppercase;">Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${itemsRowsHtml}
-              </tbody>
+              ${order.transactionId ? `
+              <tr>
+                <td style="padding: 4px 0; color: #6B7280;">Transaction ID:</td>
+                <td style="padding: 4px 0; color: #111827; font-family: monospace; font-size: 12px;">${order.transactionId}</td>
+              </tr>` : ""}
             </table>
 
-            <!-- Financial Breakdown -->
-            <div style="margin-top: 16px; border-top: 1px solid #E5E7EB; padding-top: 12px;">
+            <!-- Itemized Table -->
+            <div style="margin-top: 24px;">
+              <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 800; text-transform: uppercase; color: #111827; letter-spacing: 0.5px;">Order Summary</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="border-bottom: 2px solid #111827; text-align: left;">
+                    <th style="padding: 8px 0; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #6B7280;">Item</th>
+                    <th style="padding: 8px 8px; text-align: center; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #6B7280;">Qty</th>
+                    <th style="padding: 8px 0; text-align: right; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #6B7280;">Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Price Breakdown -->
+            <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #E5E7EB;">
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 4px 0; color: #6B7280; font-size: 13px;">Subtotal</td>
                   <td style="padding: 4px 0; text-align: right; color: #111827; font-size: 13px; font-weight: 600;">$${Number(order.subtotal).toFixed(2)}</td>
                 </tr>
-                ${discountRowHtml}
+                ${discountRow}
                 <tr>
                   <td style="padding: 4px 0; color: #6B7280; font-size: 13px;">Delivery Fee</td>
-                  <td style="padding: 4px 0; text-align: right; color: #111827; font-size: 13px; font-weight: 600;">$${Number(order.deliveryFee).toFixed(2)}</td>
+                  <td style="padding: 4px 0; text-align: right; color: #111827; font-size: 13px; font-weight: 600;">${order.deliveryFee === 0 ? "FREE" : `$${Number(order.deliveryFee).toFixed(2)}`}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 10px 0 0 0; color: #111827; font-size: 16px; font-weight: 800; border-top: 2px solid #111827;">Total Paid</td>
+                  <td style="padding: 10px 0 0 0; color: #111827; font-size: 16px; font-weight: 800; border-top: 2px solid #111827;">Total Amount</td>
                   <td style="padding: 10px 0 0 0; text-align: right; color: #111827; font-size: 18px; font-weight: 900; border-top: 2px solid #111827;">$${Number(order.totalAmount).toFixed(2)}</td>
                 </tr>
               </table>
@@ -236,6 +251,7 @@ export async function sendOrderNotificationEmail({
     const transporter = getTransporter();
 
     if (transporter) {
+      console.log(`[Email Service] Attempting to deliver email via SMTP to: ${recipientEmail} from: ${fromAddress}`);
       const info = await transporter.sendMail({
         from: fromAddress,
         to: recipientEmail,
@@ -243,15 +259,15 @@ export async function sendOrderNotificationEmail({
         html: htmlContent,
       });
 
-      console.log(`[Email Service] Sent order notification email to ${recipientEmail} (Message ID: ${info.messageId})`);
+      console.log(`[Email Service] ✅ Successfully sent email to ${recipientEmail} (Message ID: ${info.messageId})`);
       return { success: true, messageId: info.messageId };
     } else {
       console.log(`[Email Service] (Preview Mode - SMTP keys not configured) Order notification generated for: ${recipientEmail}`);
       console.log(`[Email Service] Subject: ${subject}`);
-      return { success: true, preview: true };
+      return { success: true, preview: true, reason: "SMTP credentials not provided in environment variables" };
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("[Email Service Error] Failed to send order email:", error);
-    return { success: false, error };
+    return { success: false, error: error?.message || String(error) };
   }
 }

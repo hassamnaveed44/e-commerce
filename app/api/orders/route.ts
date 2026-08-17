@@ -15,11 +15,12 @@ export async function POST(req: NextRequest) {
     });
 
     // Trigger non-blocking order confirmation email
-    if (body.email && !body.email.includes("@guest.shop.co")) {
+    const targetEmail = body.email || (order as any).user?.email;
+    if (targetEmail && !targetEmail.includes("@guest.shop.co")) {
       const emailData = {
         orderNumber: order.orderNumber,
-        customerName: body.customerName || "Customer",
-        customerEmail: body.email,
+        customerName: body.customerName || (order as any).user?.fullName || "Customer",
+        customerEmail: targetEmail,
         customerPhone: body.phone || "",
         orderDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
         orderStatus: "PROCESSING",

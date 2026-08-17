@@ -56,9 +56,22 @@ export async function POST(
     });
 
     if (result.success) {
-      return NextResponse.json({ success: true, message: "Order receipt email sent successfully" });
+      if ((result as any).preview) {
+        return NextResponse.json({
+          success: true,
+          preview: true,
+          message: "Email preview logged (Configure SMTP environment variables for inbox delivery)",
+        });
+      }
+      return NextResponse.json({
+        success: true,
+        message: `Official invoice delivered to ${email}`,
+      });
     } else {
-      return NextResponse.json({ success: false, message: "Could not send email", reason: (result as any).reason }, { status: 500 });
+      return NextResponse.json({
+        success: false,
+        message: (result as any).error || (result as any).reason || "Could not send email",
+      }, { status: 500 });
     }
   } catch (error) {
     console.error("Resend email error:", error);
