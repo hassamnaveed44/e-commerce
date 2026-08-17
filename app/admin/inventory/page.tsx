@@ -16,7 +16,6 @@ import {
   ChevronDown,
   ChevronRight,
   Package,
-  Layers,
   ArrowUpRight,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -100,10 +99,52 @@ export default function InventoryPage() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const fetchInventory = async (isRefresh = false) => {
-    if (isRefresh) setIsRefreshing(true);
-    else setIsLoading(true);
+  // Pure React 19 Effect without synchronous setState triggers
+  useEffect(() => {
+    let isCancelled = false;
 
+    async function loadInventoryData() {
+      try {
+        const params = new URLSearchParams();
+        if (searchQuery) params.set("search", searchQuery);
+        if (statusFilter !== "ALL") params.set("status", statusFilter);
+        if (selectedCategory !== "ALL") params.set("categoryId", selectedCategory);
+
+        const res = await fetch(`/api/admin/inventory?${params.toString()}`);
+        const data = await res.json();
+
+        if (!isCancelled && data.success) {
+          setItems(data.items || []);
+          setOverview(
+            data.overview || {
+              totalUnits: 0,
+              totalVariants: 0,
+              lowStockCount: 0,
+              criticalStockCount: 0,
+              outOfStockCount: 0,
+            }
+          );
+          setCategories(data.categories || []);
+        }
+      } catch (err) {
+        console.error("Failed to load inventory:", err);
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+          setIsRefreshing(false);
+        }
+      }
+    }
+
+    loadInventoryData();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [searchQuery, statusFilter, selectedCategory]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
     try {
       const params = new URLSearchParams();
       if (searchQuery) params.set("search", searchQuery);
@@ -127,16 +168,11 @@ export default function InventoryPage() {
         setCategories(data.categories || []);
       }
     } catch (err) {
-      console.error("Failed to load inventory:", err);
+      console.error("Failed to refresh inventory:", err);
     } finally {
-      setIsLoading(false);
       setIsRefreshing(false);
     }
   };
-
-  useEffect(() => {
-    fetchInventory();
-  }, [statusFilter, selectedCategory]);
 
   const toggleExpand = (productId: string) => {
     setExpandedProductIds((prev) => ({
@@ -158,11 +194,18 @@ export default function InventoryPage() {
   };
 
   // Group items by product
-  const groupedProducts = useMemo(() => {
+  const groupedProducts: GroupedProduct[] = useMemo(() => {
     const map = new Map<string, GroupedProduct>();
 
     for (const item of items) {
-      if (!map.has(item.productId)) {
+      const existing = map.get(item.productId);
+      if (existing) {
+        existing.totalStock += item.stockQuantity;
+        existing.variants = [...existing.variants, item];
+        if (item.stockLevel === "LOW") existing.hasLowStock = true;
+        if (item.stockLevel === "CRITICAL") existing.hasCriticalStock = true;
+        if (item.stockLevel === "OUT_OF_STOCK") existing.hasOutOfStock = true;
+      } else {
         map.set(item.productId, {
           productId: item.productId,
           productName: item.productName,
@@ -172,21 +215,13 @@ export default function InventoryPage() {
           dressStyle: item.dressStyle || "Casual",
           price: item.price,
           isActive: item.isActive,
-          totalStock: 0,
-          variants: [],
-          hasLowStock: false,
-          hasCriticalStock: false,
-          hasOutOfStock: false,
+          totalStock: item.stockQuantity,
+          variants: [item],
+          hasLowStock: item.stockLevel === "LOW",
+          hasCriticalStock: item.stockLevel === "CRITICAL",
+          hasOutOfStock: item.stockLevel === "OUT_OF_STOCK",
         });
       }
-
-      const prod = map.get(item.productId)!;
-      prod.totalStock += item.stockQuantity;
-      prod.variants.push(item);
-
-      if (item.stockLevel === "LOW") prod.hasLowStock = true;
-      if (item.stockLevel === "CRITICAL") prod.hasCriticalStock = true;
-      if (item.stockLevel === "OUT_OF_STOCK") prod.hasOutOfStock = true;
     }
 
     return Array.from(map.values());
@@ -282,26 +317,26 @@ export default function InventoryPage() {
     switch (level) {
       case "OUT_OF_STOCK":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-900 text-white dark:bg-gray-100 dark:text-black">
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-800 border border-gray-300">
             <AlertOctagon size={11} /> Out of Stock (0)
           </span>
         );
       case "CRITICAL":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-900">
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
             <AlertTriangle size={11} className="animate-pulse" /> Critical ({qty} left)
           </span>
         );
       case "LOW":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-900">
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
             <TrendingDown size={11} /> Low Stock ({qty} left)
           </span>
         );
       case "OK":
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
             <CheckCircle2 size={11} /> In Stock ({qty})
           </span>
         );
@@ -332,7 +367,7 @@ export default function InventoryPage() {
         <div className="flex items-center gap-2.5">
           <button
             type="button"
-            onClick={() => fetchInventory(true)}
+            onClick={handleManualRefresh}
             disabled={isRefreshing}
             className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted transition shadow-2xs cursor-pointer disabled:opacity-50"
           >
@@ -355,7 +390,7 @@ export default function InventoryPage() {
         <Card className="p-5 bg-card border-border shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">Catalog Products</span>
-            <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center">
               <Package size={16} />
             </div>
           </div>
@@ -378,7 +413,7 @@ export default function InventoryPage() {
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">Low Stock (≤ 10)</span>
-            <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-300 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center">
               <TrendingDown size={16} />
             </div>
           </div>
@@ -401,7 +436,7 @@ export default function InventoryPage() {
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">Critical Stock (≤ 5)</span>
-            <div className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-300 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-800 flex items-center justify-center">
               <AlertTriangle size={16} />
             </div>
           </div>
@@ -424,7 +459,7 @@ export default function InventoryPage() {
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">Out of Stock (0)</span>
-            <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-800 flex items-center justify-center">
               <AlertOctagon size={16} />
             </div>
           </div>
@@ -626,15 +661,15 @@ export default function InventoryPage() {
                             {prod.totalStock} Units
                           </span>
                           {prod.hasCriticalStock ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
                               🚨 Critical
                             </span>
                           ) : prod.hasLowStock ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
                               ⚠️ Low Stock
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                               ✓ Good
                             </span>
                           )}
