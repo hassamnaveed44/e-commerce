@@ -53,9 +53,30 @@ async function main() {
         imageUrl: "/images/product-8.png",
       },
     }),
+    prisma.category.create({
+      data: {
+        name: "Full Suits",
+        slug: "full-suits",
+        imageUrl: "/images/product-3.png",
+      },
+    }),
+    prisma.category.create({
+      data: {
+        name: "Pant Shirt",
+        slug: "pant-shirt",
+        imageUrl: "/images/product-3.png",
+      },
+    }),
+    prisma.category.create({
+      data: {
+        name: "Three Piece",
+        slug: "three-piece",
+        imageUrl: "/images/product-3.png",
+      },
+    }),
   ]);
 
-  const [tshirts, jeans, shirts, shorts, hoodies] = categories;
+  const [tshirts, jeans, shirts, shorts, hoodies, fullSuits, pantShirt, threePiece] = categories;
 
   // 3. Products Data Array
   const productsData = [

@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams, useParams } from "next/navigation";
 import { ChevronRight, ChevronUp, SlidersHorizontal, Check, RotateCcw } from "lucide-react";
 
-const categories = ["T-shirts", "Shorts", "Shirts", "Hoodie", "Jeans"];
+const categories = ["T-shirts", "Shorts", "Shirts", "Hoodie", "Jeans", "Full Suits", "Pant Shirt", "Three Piece"];
 
 const colors = [
   { name: "Green", hex: "#00C12B" },

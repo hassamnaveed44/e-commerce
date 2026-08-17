@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight, ChevronUp, Check, X, RotateCcw } from "lucide-react";
 
-const categories = ["T-shirts", "Shorts", "Shirts", "Hoodie", "Jeans"];
+const categories = ["T-shirts", "Shorts", "Shirts", "Hoodie", "Jeans", "Full Suits", "Pant Shirt", "Three Piece"];
 
 const colors = [
   { name: "Green", hex: "#00C12B" },
