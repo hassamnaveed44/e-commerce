@@ -4,7 +4,8 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { CheckCircle2, Package, ArrowRight, Loader2, MapPin, CreditCard } from "lucide-react";
+import { CheckCircle2, Package, ArrowRight, Loader2, MapPin, CreditCard, Printer } from "lucide-react";
+import OrderReceiptModal from "@/app/components/order/OrderReceiptModal";
 
 interface OrderData {
   id: string;
@@ -42,6 +43,7 @@ function OrderConfirmationContent() {
   const sessionId = searchParams.get("session_id") || searchParams.get("sessionId");
   const [order, setOrder] = useState<OrderData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -190,12 +192,20 @@ function OrderConfirmationContent() {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => setIsReceiptOpen(true)}
+            className="flex-1 bg-white border border-black text-black rounded-full py-3.5 text-sm font-semibold hover:bg-black/5 transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+          >
+            <Printer size={18} />
+            <span>View & Print Slip</span>
+          </button>
           <Link
             href="/account"
             className="flex-1 bg-white border border-black/15 text-black rounded-full py-3.5 text-sm font-medium hover:bg-black/5 transition flex items-center justify-center gap-2 cursor-pointer"
           >
             <Package size={18} />
-            <span>View Order History</span>
+            <span>Order History</span>
           </Link>
           <Link
             href="/"
@@ -205,6 +215,45 @@ function OrderConfirmationContent() {
             <ArrowRight size={18} />
           </Link>
         </div>
+
+        {/* Official Receipt Slip Modal */}
+        {order && (
+          <OrderReceiptModal
+            isOpen={isReceiptOpen}
+            onClose={() => setIsReceiptOpen(false)}
+            order={{
+              id: order.orderNumber,
+              orderId: order.id,
+              date: new Date(order.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+              time: new Date(order.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+              customerName: (order as any).user?.fullName || "Customer",
+              customerEmail: (order as any).user?.email || "",
+              customerPhone: order.shippingAddress?.phoneNumber || "",
+              subtotal: Number(order.subtotal),
+              deliveryFee: Number(order.deliveryFee),
+              discount: Math.max(0, Number(order.subtotal) + Number(order.deliveryFee) - Number(order.totalAmount)),
+              total: Number(order.totalAmount),
+              status: order.orderStatus,
+              paymentMethod: order.payment?.paymentMethod === "COD" ? "Cash on Delivery" : "Credit Card (Stripe)",
+              paymentStatus: order.payment?.status || (order.orderStatus === "PROCESSING" ? "SUCCESSFUL" : "PENDING"),
+              shippingAddress: {
+                street: order.shippingAddress?.streetAddress || "",
+                city: order.shippingAddress?.city || "",
+                state: order.shippingAddress?.state || "",
+                postalCode: order.shippingAddress?.postalCode || "",
+                country: order.shippingAddress?.country || "United States",
+                phone: order.shippingAddress?.phoneNumber || "",
+              },
+              items: (order.items || []).map((i) => ({
+                id: i.id,
+                name: i.productName,
+                qty: i.quantity,
+                price: Number(i.unitPrice),
+                image: i.image,
+              })),
+            }}
+          />
+        )}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOrderById } from "@/services/order.service";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
+import { sendOrderNotificationEmail } from "@/services/email.service";
 
 export async function GET(
   req: NextRequest,
@@ -46,6 +47,44 @@ export async function GET(
           const updatedOrder = await getOrderById(id);
           if (updatedOrder) {
             order = updatedOrder;
+
+            // 4. Trigger Confirmation Email asynchronously
+            const email = order.user?.email;
+            if (email && !email.includes("@guest.shop.co")) {
+              sendOrderNotificationEmail({
+                order: {
+                  orderNumber: order.orderNumber,
+                  customerName: order.user?.fullName || "Customer",
+                  customerEmail: email,
+                  customerPhone: order.shippingAddress?.phoneNumber || "",
+                  orderDate: new Date(order.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+                  orderStatus: "PROCESSING",
+                  paymentMethod: "Credit Card (Stripe)",
+                  paymentStatus: "SUCCESSFUL",
+                  transactionId: (session.payment_intent as string) || session.id,
+                  subtotal: Number(order.subtotal),
+                  deliveryFee: Number(order.deliveryFee),
+                  discount: Math.max(0, Number(order.subtotal) + Number(order.deliveryFee) - Number(order.totalAmount)),
+                  totalAmount: Number(order.totalAmount),
+                  shippingAddress: {
+                    street: order.shippingAddress?.streetAddress || "",
+                    city: order.shippingAddress?.city || "",
+                    state: order.shippingAddress?.state || "",
+                    postalCode: order.shippingAddress?.postalCode || "",
+                    country: order.shippingAddress?.country || "United States",
+                    phone: order.shippingAddress?.phoneNumber || "",
+                  },
+                  items: (order.items || []).map((i: any) => ({
+                    name: i.productName,
+                    size: i.variant?.size,
+                    color: i.variant?.colorName,
+                    quantity: i.quantity,
+                    unitPrice: Number(i.unitPrice),
+                  })),
+                },
+                type: "CONFIRMATION",
+              }).catch((e) => console.error("Confirmation email dispatch error:", e));
+            }
           }
         }
       } catch (stripeErr) {

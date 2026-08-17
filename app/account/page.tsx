@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Package, User, MapPin, LogOut, CheckCircle2, X, Printer, FileText, Loader2 } from "lucide-react";
+import { Package, User, MapPin, LogOut, CheckCircle2, FileText, Loader2 } from "lucide-react";
 import { useClerk, useUser } from "@clerk/nextjs";
+import OrderReceiptModal, { ReceiptOrder } from "@/app/components/order/OrderReceiptModal";
 
 interface OrderItem {
   name: string;
@@ -29,8 +30,8 @@ export default function AccountPage() {
   const { user, isLoaded } = useUser();
 
   const [activeTab, setActiveTab] = useState<"orders" | "profile" | "addresses">("orders");
-  const [selectedInvoice, setSelectedInvoice] = useState<Order | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [selectedInvoice, setSelectedInvoice] = useState<ReceiptOrder | null>(null);
+  const [orders, setOrders] = useState<any[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
 
   useEffect(() => {
@@ -153,7 +154,7 @@ export default function AccountPage() {
                         </div>
 
                         <div className="text-sm text-black/70">
-                          {order.items.map((i) => `${i.name} (x${i.qty})`).join(", ")}
+                          {order.items.map((i: any) => `${i.name} (x${i.qty})`).join(", ")}
                         </div>
 
                         <div className="flex justify-between items-center pt-2">
@@ -222,71 +223,12 @@ export default function AccountPage() {
         </div>
       </div>
 
-      {/* Invoice Modal */}
-      {selectedInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white rounded-[24px] max-w-lg w-full p-6 sm:p-8 border border-black/10 shadow-2xl relative font-satoshi max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start border-b border-black/10 pb-4 mb-5">
-              <div>
-                <h3 className="text-2xl font-bold font-sans tracking-tight text-black">SHOP.CO</h3>
-                <p className="text-xs text-black/40 mt-0.5">Order Invoice #{selectedInvoice.id}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedInvoice(null)}
-                className="text-black/40 hover:text-black p-1 cursor-pointer"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-sm">
-              <div className="flex justify-between text-xs text-black/60 pb-2 border-b border-black/5">
-                <span>Date: {selectedInvoice.date}</span>
-                <span>Payment: {selectedInvoice.paymentMethod}</span>
-              </div>
-
-              <div className="space-y-2">
-                <p className="font-bold text-black text-xs uppercase tracking-wider">Items</p>
-                {selectedInvoice.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-sm">
-                    <span className="text-black/80">{item.name} x{item.qty}</span>
-                    <span className="font-medium text-black">${(item.price * item.qty).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-
-              <hr className="border-black/10" />
-
-              <div className="space-y-1.5 text-xs text-black/60">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span className="font-bold text-black">${selectedInvoice.subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Delivery Fee</span>
-                  <span className="font-bold text-black">${selectedInvoice.deliveryFee.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-base font-bold text-black pt-2 border-t border-black/10">
-                  <span>Total Paid</span>
-                  <span>${selectedInvoice.total.toFixed(2)}</span>
-                </div>
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="flex-1 bg-black text-white rounded-full py-3 text-xs font-medium hover:bg-black/80 transition flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Printer size={16} />
-                  <span>Print Receipt</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Official Order Receipt Slip Modal */}
+      <OrderReceiptModal
+        order={selectedInvoice}
+        isOpen={!!selectedInvoice}
+        onClose={() => setSelectedInvoice(null)}
+      />
     </div>
   );
 }

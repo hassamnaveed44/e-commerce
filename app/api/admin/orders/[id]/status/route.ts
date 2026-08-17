@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { OrderStatus } from "@prisma/client";
+import { sendOrderNotificationEmail } from "@/services/email.service";
 
 const VALID_STATUSES: OrderStatus[] = [
   "PENDING_PAYMENT",
@@ -37,8 +38,10 @@ export async function PATCH(
     const existingOrder = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
+        user: true,
         payment: true,
         items: true,
+        shippingAddress: true,
       },
     });
 
@@ -56,6 +59,7 @@ export async function PATCH(
         user: true,
         payment: true,
         items: true,
+        shippingAddress: true,
       },
     });
 
@@ -65,6 +69,50 @@ export async function PATCH(
         where: { id: existingOrder.payment.id },
         data: { status: "SUCCESSFUL" },
       });
+    }
+
+    // Trigger Non-Blocking Customer Status Update Email
+    const customerEmail = updatedOrder.user?.email;
+    if (customerEmail && !customerEmail.includes("@guest.shop.co")) {
+      const emailPayload = {
+        orderNumber: updatedOrder.orderNumber,
+        customerName: updatedOrder.user?.fullName || "Customer",
+        customerEmail,
+        customerPhone: updatedOrder.shippingAddress?.phoneNumber || "",
+        orderDate: new Date(updatedOrder.createdAt).toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        }),
+        orderStatus: status,
+        paymentMethod: updatedOrder.paymentMethod === "CARD" ? "Credit Card (Stripe)" : "Cash on Delivery",
+        paymentStatus: updatedOrder.payment?.status || (status === "DELIVERED" ? "SUCCESSFUL" : "PENDING"),
+        transactionId: updatedOrder.payment?.transactionId || undefined,
+        subtotal: Number(updatedOrder.subtotal),
+        deliveryFee: Number(updatedOrder.deliveryFee),
+        discount: Math.max(0, Number(updatedOrder.subtotal) + Number(updatedOrder.deliveryFee) - Number(updatedOrder.totalAmount)),
+        totalAmount: Number(updatedOrder.totalAmount),
+        shippingAddress: {
+          street: updatedOrder.shippingAddress?.streetAddress || "",
+          city: updatedOrder.shippingAddress?.city || "",
+          state: updatedOrder.shippingAddress?.state || "",
+          postalCode: updatedOrder.shippingAddress?.postalCode || "",
+          country: updatedOrder.shippingAddress?.country || "United States",
+          phone: updatedOrder.shippingAddress?.phoneNumber || "",
+        },
+        items: (updatedOrder.items || []).map((i) => ({
+          name: i.productName,
+          quantity: i.quantity,
+          unitPrice: Number(i.unitPrice),
+        })),
+      };
+
+      sendOrderNotificationEmail({
+        order: emailPayload,
+        type: "STATUS_UPDATE",
+        newStatus: status,
+        previousStatus: existingOrder.orderStatus,
+      }).catch((err) => console.error("Async status email dispatch error:", err));
     }
 
     return NextResponse.json({

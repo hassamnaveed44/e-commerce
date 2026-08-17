@@ -280,23 +280,53 @@ export async function getUserOrders(clerkId: string) {
     orderBy: { createdAt: "desc" },
   });
 
-  return orders.map((order) => ({
-    id: order.orderNumber,
-    date: new Date(order.createdAt).toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    }),
-    subtotal: Number(order.subtotal),
-    deliveryFee: Number(order.deliveryFee),
-    total: Number(order.totalAmount),
-    status: order.orderStatus,
-    paymentMethod: order.paymentMethod === "CARD" ? "Credit Card (Stripe)" : "Cash on Delivery",
-    shippingAddress: `${order.shippingAddress.streetAddress}, ${order.shippingAddress.city}, ${order.shippingAddress.postalCode}`,
-    items: order.items.map((i) => ({
-      name: i.productName,
-      qty: i.quantity,
-      price: Number(i.unitPrice),
-    })),
-  }));
+  return orders.map((order) => {
+    const subtotal = Number(order.subtotal);
+    const deliveryFee = Number(order.deliveryFee);
+    const totalAmount = Number(order.totalAmount);
+    const discount = Math.max(0, subtotal + deliveryFee - totalAmount);
+
+    return {
+      id: order.orderNumber,
+      orderId: order.id,
+      date: new Date(order.createdAt).toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }),
+      time: new Date(order.createdAt).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      customerName: user.fullName || user.email.split("@")[0],
+      customerEmail: user.email,
+      customerPhone: order.shippingAddress.phoneNumber || "",
+      subtotal,
+      deliveryFee,
+      discount,
+      total: totalAmount,
+      status: order.orderStatus,
+      paymentMethod: order.paymentMethod === "CARD" ? "Credit Card (Stripe)" : "Cash on Delivery",
+      paymentStatus: order.payment?.status || (order.orderStatus === "PROCESSING" ? "SUCCESSFUL" : "PENDING"),
+      transactionId: order.payment?.transactionId || undefined,
+      shippingAddress: {
+        street: order.shippingAddress.streetAddress,
+        city: order.shippingAddress.city,
+        state: order.shippingAddress.state,
+        postalCode: order.shippingAddress.postalCode,
+        country: order.shippingAddress.country,
+        phone: order.shippingAddress.phoneNumber,
+        formatted: `${order.shippingAddress.streetAddress}, ${order.shippingAddress.city}, ${order.shippingAddress.postalCode}`,
+      },
+      items: order.items.map((i) => ({
+        id: i.id,
+        name: i.productName,
+        size: i.variant?.size || "Standard",
+        color: i.variant?.colorName || "Standard",
+        qty: i.quantity,
+        price: Number(i.unitPrice),
+        image: i.variant?.product?.images[0]?.url || "/images/product-1.png",
+      })),
+    };
+  });
 }
