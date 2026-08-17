@@ -104,10 +104,15 @@ export default function OrderReceiptModal({ order, isOpen, onClose }: OrderRecei
       .filter(Boolean)
       .join(", ");
 
+  const isCod =
+    order.paymentMethod?.toLowerCase().includes("cash") ||
+    order.paymentMethod === "COD";
+
   const isPaid =
-    order.status === "PROCESSING" ||
-    order.status === "DELIVERED" ||
-    order.paymentStatus === "SUCCESSFUL";
+    !isCod &&
+    (order.status === "PROCESSING" ||
+      order.status === "DELIVERED" ||
+      order.paymentStatus === "SUCCESSFUL");
 
   return (
     <div
@@ -197,7 +202,7 @@ export default function OrderReceiptModal({ order, isOpen, onClose }: OrderRecei
             <div className="text-right">
               <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Payment Method</p>
               <p className="text-xs font-bold text-gray-900">
-                {order.paymentMethod} {isPaid ? "(Paid)" : "(Pending)"}
+                {order.paymentMethod} {isPaid ? "(Paid)" : isCod ? "(Cash Due on Delivery)" : "(Pending)"}
               </p>
               {order.transactionId && (
                 <p className="text-[10px] text-gray-400 font-mono">ID: {order.transactionId.slice(-10)}</p>

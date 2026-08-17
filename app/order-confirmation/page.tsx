@@ -115,17 +115,37 @@ function OrderConfirmationContent() {
             </div>
             <div className="text-right">
               <p className="text-xs text-black/60">Status</p>
-              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
-                order?.orderStatus === "PROCESSING" || order?.payment?.status === "SUCCESSFUL"
-                  ? "bg-emerald-100 text-emerald-800"
-                  : order?.orderStatus === "PENDING_PAYMENT"
-                  ? "bg-amber-100 text-amber-800"
-                  : "bg-black/5 text-black"
-              }`}>
-                {order?.orderStatus === "PROCESSING" || order?.payment?.status === "SUCCESSFUL"
-                  ? "✓ Paid & Processing"
-                  : order?.orderStatus?.replace(/_/g, " ") || "Processing"}
-              </span>
+              {(() => {
+                const isCod =
+                  order?.payment?.paymentMethod === "COD" ||
+                  (order as any)?.paymentMethod === "COD";
+                const isPaidCard =
+                  !isCod &&
+                  (order?.payment?.status === "SUCCESSFUL" ||
+                    order?.orderStatus === "PROCESSING");
+
+                if (isCod) {
+                  return (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                      <span>⏳ Pending Payment (COD)</span>
+                    </span>
+                  );
+                }
+
+                if (isPaidCard) {
+                  return (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                      <span>✓ Paid & Processing</span>
+                    </span>
+                  );
+                }
+
+                return (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-black/5 text-black">
+                    <span>{order?.orderStatus?.replace(/_/g, " ") || "Processing"}</span>
+                  </span>
+                );
+              })()}
             </div>
           </div>
 
