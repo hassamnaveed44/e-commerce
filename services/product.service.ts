@@ -198,20 +198,46 @@ export async function getProducts(params: GetProductsParams = {}) {
 
   let minCatalogPrice = 0;
   let maxCatalogPrice = 250;
+  let inStockSizes: string[] = [];
+  let inStockColors: string[] = [];
+
   try {
-    const agg = await prisma.product.aggregate({
-      where: { isActive: true },
-      _min: { price: true },
-      _max: { price: true },
-    });
+    const [agg, activeVariants] = await Promise.all([
+      prisma.product.aggregate({
+        where: { isActive: true },
+        _min: { price: true },
+        _max: { price: true },
+      }),
+      prisma.productVariant.findMany({
+        where: {
+          stockQuantity: { gt: 0 },
+          product: { isActive: true },
+        },
+        select: {
+          size: true,
+          colorHex: true,
+          colorName: true,
+        },
+      }),
+    ]);
+
     if (agg._min.price !== null && agg._min.price !== undefined) {
       minCatalogPrice = Math.floor(Number(agg._min.price));
     }
     if (agg._max.price !== null && agg._max.price !== undefined) {
       maxCatalogPrice = Math.ceil(Number(agg._max.price));
     }
+
+    inStockSizes = Array.from(new Set(activeVariants.map((v) => v.size)));
+    inStockColors = Array.from(
+      new Set(
+        activeVariants
+          .flatMap((v) => [v.colorHex.toLowerCase(), v.colorName.toLowerCase()])
+          .filter(Boolean)
+      )
+    );
   } catch (e) {
-    console.warn("Price aggregation fallback:", e);
+    console.warn("Price & variant aggregation fallback:", e);
   }
 
   return {
@@ -221,6 +247,8 @@ export async function getProducts(params: GetProductsParams = {}) {
     totalPages: Math.ceil(totalCount / limit),
     minCatalogPrice,
     maxCatalogPrice,
+    inStockSizes,
+    inStockColors,
   };
 }
 

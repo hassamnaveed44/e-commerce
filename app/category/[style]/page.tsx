@@ -84,7 +84,10 @@ export default async function CategoryPage({
       <section className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-10 pb-16 pt-2">
         <div className="flex gap-5 lg:gap-8 items-start">
           {/* Filters Sidebar */}
-          <FiltersSidebar />
+          <FiltersSidebar
+            inStockSizes={result.inStockSizes}
+            inStockColors={result.inStockColors}
+          />
 
           {/* Right Product Grid Area + Pagination */}
           <div className="flex-1 w-full">
@@ -96,6 +99,11 @@ export default async function CategoryPage({
               maxPriceFilter={maxPrice}
               minCatalogPrice={result.minCatalogPrice}
               maxCatalogPrice={result.maxCatalogPrice}
+              inStockSizes={result.inStockSizes}
+              inStockColors={result.inStockColors}
+              activeColorFilter={color}
+              activeSizeFilter={size}
+              activeCategoryFilter={activeCategory}
             />
             {result.totalPages > 1 && <Pagination />}
           </div>

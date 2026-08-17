@@ -25,6 +25,11 @@ interface ProductGridProps {
   maxPriceFilter?: number;
   minCatalogPrice?: number;
   maxCatalogPrice?: number;
+  inStockSizes?: string[];
+  inStockColors?: string[];
+  activeColorFilter?: string;
+  activeSizeFilter?: string;
+  activeCategoryFilter?: string;
 }
 
 const sortOptions = [
@@ -42,6 +47,11 @@ export default function ProductGrid({
   maxPriceFilter,
   minCatalogPrice = 30,
   maxCatalogPrice = 250,
+  inStockSizes = [],
+  inStockColors = [],
+  activeColorFilter,
+  activeSizeFilter,
+  activeCategoryFilter,
 }: ProductGridProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -75,6 +85,13 @@ export default function ProductGrid({
     params.delete("page");
     setSortDropdownOpen(false);
     router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const handleClearSpecificFilter = (paramKey: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete(paramKey);
+    params.delete("page");
+    router.push(`${pathname}${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
   const handleClearPriceFilter = () => {
@@ -157,13 +174,29 @@ export default function ProductGrid({
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-bold text-black font-integral mb-2.5">
-            {isPriceFiltered
+            {activeSizeFilter
+              ? `No Products in Size "${activeSizeFilter}"`
+              : activeColorFilter
+              ? "No Products in This Color"
+              : isPriceFiltered
               ? `No Products Under $${maxPriceFilter || 250}`
-              : `No ${categoryName.toLowerCase() === "hoodie" || categoryName.toLowerCase() === "hoodies" ? "Hoodie" : categoryName} in Stock`}
+              : `No ${categoryName} in Stock Yet`}
           </h2>
 
           <p className="text-sm sm:text-base text-black/60 max-w-md mb-6 leading-relaxed">
-            {isPriceFiltered ? (
+            {activeSizeFilter ? (
+              <>
+                There are currently no products available in size{" "}
+                <strong className="text-black font-semibold">"{activeSizeFilter}"</strong>.
+                {inStockSizes.length > 0 && (
+                  <span className="block mt-1 text-xs text-black/50">
+                    Available in-stock sizes: {inStockSizes.join(", ")}
+                  </span>
+                )}
+              </>
+            ) : activeColorFilter ? (
+              "No products currently match this color swatch. Try selecting another color or reset color filters."
+            ) : isPriceFiltered ? (
               <>
                 We couldn't find any products in the selected price range (
                 <strong className="text-black font-semibold">
@@ -175,15 +208,33 @@ export default function ProductGrid({
                 </strong>
                 .
               </>
-            ) : categoryName.toLowerCase().includes("hoodie") ? (
-              "We currently don't have any hoodies in stock. Check back soon for our upcoming collection or explore other categories!"
             ) : (
-              "We couldn't find any products matching your selected criteria. Try adjusting or clearing your filters."
+              `We are currently restocking our ${categoryName} collection! Check back soon or explore other popular styles.`
             )}
           </p>
 
           <div className="flex flex-wrap gap-3 justify-center">
-            {isPriceFiltered && (
+            {activeSizeFilter && (
+              <button
+                type="button"
+                onClick={() => handleClearSpecificFilter("size")}
+                className="bg-black text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-black/80 transition-colors cursor-pointer flex items-center gap-2"
+              >
+                <RotateCcw size={15} />
+                Clear Size Filter
+              </button>
+            )}
+            {activeColorFilter && (
+              <button
+                type="button"
+                onClick={() => handleClearSpecificFilter("color")}
+                className="bg-black text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-black/80 transition-colors cursor-pointer flex items-center gap-2"
+              >
+                <RotateCcw size={15} />
+                Clear Color Filter
+              </button>
+            )}
+            {isPriceFiltered && !activeSizeFilter && !activeColorFilter && (
               <button
                 type="button"
                 onClick={handleClearPriceFilter}
