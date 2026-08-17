@@ -27,9 +27,9 @@ export default async function CategoryPage({
   const currentCategoryParam = search.category;
   const normalizedStyle = style?.toLowerCase() || "casual";
   const isAll = normalizedStyle === "all";
-  const isDressStyle = ["casual", "formal", "party", "gym"].includes(normalizedStyle);
+  const isDressStyle = ["casual", "formal", "party", "gym", "men", "women", "kids"].includes(normalizedStyle);
 
-  // If route param is a parent dress style (e.g. /category/formal), filter by dressStyle
+  // If route param is a parent dress style or audience (e.g. /category/men, /category/formal), filter by dressStyle
   const activeDressStyle = isDressStyle ? normalizedStyle : undefined;
 
   // If search.category is provided (e.g. ?category=shirts) or route param is a direct garment type
@@ -69,6 +69,8 @@ export default async function CategoryPage({
 
   const displayCategoryName = isAll
     ? "All Products"
+    : ["men", "women", "kids"].includes(normalizedStyle)
+    ? `${normalizedStyle.charAt(0).toUpperCase() + normalizedStyle.slice(1)}'s Collection`
     : activeCategory
     ? activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)
     : style.charAt(0).toUpperCase() + style.slice(1);
@@ -90,6 +92,10 @@ export default async function CategoryPage({
               categoryName={displayCategoryName}
               products={serializedProducts}
               totalCount={result.totalCount}
+              minPriceFilter={minPrice}
+              maxPriceFilter={maxPrice}
+              minCatalogPrice={result.minCatalogPrice}
+              maxCatalogPrice={result.maxCatalogPrice}
             />
             {result.totalPages > 1 && <Pagination />}
           </div>

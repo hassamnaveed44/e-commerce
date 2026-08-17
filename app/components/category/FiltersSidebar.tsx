@@ -31,7 +31,7 @@ const sizes = [
   "4X-Large",
 ];
 
-const dressStyles = ["Casual", "Formal", "Party", "Gym"];
+const dressStyles = ["Casual", "Formal", "Party", "Gym", "Men", "Women", "Kids"];
 
 export default function FiltersSidebar() {
   const router = useRouter();
@@ -294,6 +294,8 @@ export default function FiltersSidebar() {
                   const value = Math.min(Number(e.target.value), priceRange.max - 10);
                   setPriceRange((prev) => ({ ...prev, min: value }));
                 }}
+                onMouseUp={() => pushFilters({ minPrice: priceRange.min, maxPrice: priceRange.max })}
+                onTouchEnd={() => pushFilters({ minPrice: priceRange.min, maxPrice: priceRange.max })}
                 className="absolute w-full h-1.5 opacity-0 cursor-pointer pointer-events-auto z-30"
               />
               <input
@@ -305,6 +307,8 @@ export default function FiltersSidebar() {
                   const value = Math.max(Number(e.target.value), priceRange.min + 10);
                   setPriceRange((prev) => ({ ...prev, max: value }));
                 }}
+                onMouseUp={() => pushFilters({ minPrice: priceRange.min, maxPrice: priceRange.max })}
+                onTouchEnd={() => pushFilters({ minPrice: priceRange.min, maxPrice: priceRange.max })}
                 className="absolute w-full h-1.5 opacity-0 cursor-pointer pointer-events-auto z-30"
               />
               <div

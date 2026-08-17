@@ -21,6 +21,10 @@ interface ProductGridProps {
   categoryName: string;
   products: CategoryProductItem[];
   totalCount: number;
+  minPriceFilter?: number;
+  maxPriceFilter?: number;
+  minCatalogPrice?: number;
+  maxCatalogPrice?: number;
 }
 
 const sortOptions = [
@@ -34,6 +38,10 @@ export default function ProductGrid({
   categoryName,
   products,
   totalCount,
+  minPriceFilter,
+  maxPriceFilter,
+  minCatalogPrice = 30,
+  maxCatalogPrice = 250,
 }: ProductGridProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -47,6 +55,8 @@ export default function ProductGrid({
     sortOptions.find((opt) => opt.value === currentSortValue) || sortOptions[0];
 
   const currentSlug = categoryName.toLowerCase();
+
+  const isPriceFiltered = minPriceFilter !== undefined || maxPriceFilter !== undefined;
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -65,6 +75,14 @@ export default function ProductGrid({
     params.delete("page");
     setSortDropdownOpen(false);
     router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const handleClearPriceFilter = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("minPrice");
+    params.delete("maxPrice");
+    params.delete("page");
+    router.push(`${pathname}${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
   const handleClearFilters = () => {
@@ -131,7 +149,7 @@ export default function ProductGrid({
         </div>
       </div>
 
-      {/* Empty State when 0 products in stock */}
+      {/* Empty State when 0 products match filters */}
       {products.length === 0 ? (
         <div className="bg-[#F9F9F9] rounded-[24px] border border-black/5 p-8 sm:p-14 text-center my-6 flex flex-col items-center justify-center">
           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-black/5 flex items-center justify-center text-black/40 mb-4 sm:mb-6">
@@ -139,23 +157,48 @@ export default function ProductGrid({
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-bold text-black font-integral mb-2.5">
-            No {categoryName.toLowerCase() === "hoodie" || categoryName.toLowerCase() === "hoodies" ? "Hoodie" : categoryName} in Stock
+            {isPriceFiltered
+              ? `No Products Under $${maxPriceFilter || 250}`
+              : `No ${categoryName.toLowerCase() === "hoodie" || categoryName.toLowerCase() === "hoodies" ? "Hoodie" : categoryName} in Stock`}
           </h2>
 
           <p className="text-sm sm:text-base text-black/60 max-w-md mb-6 leading-relaxed">
-            {categoryName.toLowerCase().includes("hoodie")
-              ? "We currently don't have any hoodies in stock. Check back soon for our upcoming collection or explore other categories!"
-              : "We couldn't find any products matching your selected criteria. Try adjusting or clearing your filters."}
+            {isPriceFiltered ? (
+              <>
+                We couldn't find any products in the selected price range (
+                <strong className="text-black font-semibold">
+                  ${minPriceFilter || 0} – ${maxPriceFilter || 250}
+                </strong>
+                ). Available products in our catalog range from{" "}
+                <strong className="text-black font-semibold">
+                  ${minCatalogPrice} to ${maxCatalogPrice}
+                </strong>
+                .
+              </>
+            ) : categoryName.toLowerCase().includes("hoodie") ? (
+              "We currently don't have any hoodies in stock. Check back soon for our upcoming collection or explore other categories!"
+            ) : (
+              "We couldn't find any products matching your selected criteria. Try adjusting or clearing your filters."
+            )}
           </p>
 
           <div className="flex flex-wrap gap-3 justify-center">
+            {isPriceFiltered && (
+              <button
+                type="button"
+                onClick={handleClearPriceFilter}
+                className="bg-black text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-black/80 transition-colors cursor-pointer flex items-center gap-2"
+              >
+                <RotateCcw size={15} />
+                Reset Price Filter (${minCatalogPrice} - ${maxCatalogPrice})
+              </button>
+            )}
             <button
               type="button"
               onClick={handleClearFilters}
-              className="bg-black text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-black/80 transition-colors cursor-pointer flex items-center gap-2"
+              className="bg-white border border-black/15 text-black px-6 py-3 rounded-full text-sm font-medium hover:bg-black/5 transition-colors cursor-pointer flex items-center gap-2"
             >
-              <RotateCcw size={15} />
-              Clear Filters
+              Clear All Filters
             </button>
             <Link
               href="/category/casual"

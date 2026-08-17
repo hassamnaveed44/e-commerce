@@ -32,7 +32,7 @@ const sizes = [
   "4X-Large",
 ];
 
-const dressStyles = ["Casual", "Formal", "Party", "Gym"];
+const dressStyles = ["Casual", "Formal", "Party", "Gym", "Men", "Women", "Kids"];
 
 export default function MobileFiltersPage() {
   const router = useRouter();
