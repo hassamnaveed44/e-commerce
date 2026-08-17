@@ -8,7 +8,12 @@ export async function POST(req: NextRequest) {
     const { userId: clerkId } = await auth();
     const body = await req.json();
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const origin =
+      req.headers.get("origin") ||
+      (req.headers.get("referer") ? new URL(req.headers.get("referer")!).origin : null) ||
+      req.nextUrl.origin ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      "http://localhost:3000";
 
     // 1. Create order in PostgreSQL in PENDING_PAYMENT state
     const order = await createOrder({
@@ -44,8 +49,8 @@ export async function POST(req: NextRequest) {
       ],
       mode: "payment",
       customer_email: body.email,
-      success_url: `${appUrl}/order-confirmation?orderId=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/checkout`,
+      success_url: `${origin}/order-confirmation?orderId=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/checkout`,
       metadata: {
         orderId: order.id,
         orderNumber: order.orderNumber,
