@@ -253,7 +253,7 @@ export default function PaymentDashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 shadow-2xs">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
                 <span>Live Gateways Active</span>
               </span>
@@ -273,7 +273,7 @@ export default function PaymentDashboardPage() {
               <Card className="hover:shadow-md transition-shadow rounded-2xl border-border bg-card p-5 shadow-xs">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3.5">
-                    <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                    <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-blue-100 text-blue-800 border border-blue-300">
                       🇺🇸 USD
                     </span>
                     <div>
@@ -293,7 +293,7 @@ export default function PaymentDashboardPage() {
               <Card className="hover:shadow-md transition-shadow rounded-2xl border-border bg-card p-5 shadow-xs">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3.5">
-                    <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
+                    <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300">
                       🇵🇰 PKR
                     </span>
                     <div>
@@ -408,8 +408,55 @@ export default function PaymentDashboardPage() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="upcoming" className="p-12 text-center text-xs text-muted-foreground">
-                  All customer settlements are currently balanced and active.
+                <TabsContent value="upcoming" className="m-0">
+                  {transactions.filter((t) => t.status === "Pending" || t.channel.toLowerCase().includes("cod")).length === 0 ? (
+                    <div className="p-12 text-center text-xs text-muted-foreground">
+                      <p className="font-semibold text-foreground">No Pending Settlements</p>
+                      <p className="mt-1">All customer payments are currently balanced and collected.</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border/60">
+                      {transactions
+                        .filter((t) => t.status === "Pending" || t.channel.toLowerCase().includes("cod"))
+                        .slice(0, 6)
+                        .map((txn) => (
+                          <div
+                            key={txn.id}
+                            className="flex items-center justify-between p-4 px-6 hover:bg-muted/40 transition"
+                          >
+                            <div className="flex items-center gap-4">
+                              <span className="text-xs text-muted-foreground font-mono w-28 hidden sm:inline">
+                                {txn.date}
+                              </span>
+                              <div>
+                                <p className="font-semibold text-xs text-foreground">
+                                  {txn.title}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground">
+                                  {txn.channel.toLowerCase().includes("cod")
+                                    ? "🚚 Cash on Delivery · Awaiting Courier Collection"
+                                    : "💳 Stripe Checkout · Estimated Payout in 2-3 Business Days"}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                <span className="font-bold font-sans text-xs text-amber-600">
+                                  {txn.amount}
+                                </span>
+                                <span className="block text-[10px] text-muted-foreground">
+                                  ≈ ₨ {(txn.amountNumber * 279).toLocaleString("en-US", { minimumFractionDigits: 2 })} PKR
+                                </span>
+                              </div>
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                {txn.channel.toLowerCase().includes("cod") ? "COD Pending" : "In Clearing"}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </CardContent>

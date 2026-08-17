@@ -365,10 +365,10 @@ export default function ProductDetailPage({
                 {product.name}
               </h1>
               <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                   isActive
-                    ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
-                    : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                    : "bg-gray-100 text-gray-700 border-gray-300"
                 }`}
               >
                 {isActive ? "Active" : "Hidden"}
@@ -751,8 +751,8 @@ export default function ProductDetailPage({
                   onClick={() => setIsActive(!isActive)}
                   className={`w-full sm:w-auto px-4 h-9 rounded-xl text-xs font-semibold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
                     isActive
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
-                      : "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400"
+                      ? "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200"
+                      : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
                   }`}
                 >
                   {isActive ? "✓ Active (Public in Store)" : "✕ Hidden (Draft)"}

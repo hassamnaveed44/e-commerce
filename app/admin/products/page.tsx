@@ -198,27 +198,27 @@ export default function AdminProductsPage() {
   const getStockBadge = (stock: number, isActive: boolean) => {
     if (!isActive) {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-300">
           Hidden
         </span>
       );
     }
     if (stock === 0) {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-300">
           0 Left (Out of stock)
         </span>
       );
     }
     if (stock <= 10) {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-900">
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
           {stock} Left (Low stock)
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
+      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
         {stock} In Stock
       </span>
     );
@@ -414,10 +414,10 @@ export default function AdminProductsPage() {
                           type="button"
                           onClick={() => handleToggleStatus(p)}
                           disabled={isToggling}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition cursor-pointer disabled:opacity-50 ${
+                          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border transition cursor-pointer disabled:opacity-50 ${
                             p.isActive
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300"
-                              : "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400"
+                              ? "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200"
+                              : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
                           }`}
                           title="Click to toggle live visibility"
                         >

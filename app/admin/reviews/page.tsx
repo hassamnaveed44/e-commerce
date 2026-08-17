@@ -397,7 +397,7 @@ export default function AdminReviewsPage() {
 
                     {/* Verified Buyer Badge */}
                     {rev.isVerifiedPurchase && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                         <CheckCircle2 size={10} /> Verified Purchase
                       </span>
                     )}

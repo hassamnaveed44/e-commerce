@@ -710,8 +710,8 @@ export default function AddProductPage() {
                         onClick={() => setIsActive(true)}
                         className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
                           isActive
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
-                            : "border-border text-muted-foreground"
+                            ? "bg-emerald-100 text-emerald-800 border-emerald-300 shadow-xs"
+                            : "border-border text-muted-foreground hover:bg-muted"
                         }`}
                       >
                         Active
@@ -721,8 +721,8 @@ export default function AddProductPage() {
                         onClick={() => setIsActive(false)}
                         className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
                           !isActive
-                            ? "bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300"
-                            : "border-border text-muted-foreground"
+                            ? "bg-rose-100 text-rose-800 border-rose-300 shadow-xs"
+                            : "border-border text-muted-foreground hover:bg-muted"
                         }`}
                       >
                         Inactive

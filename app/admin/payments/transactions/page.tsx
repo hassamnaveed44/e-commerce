@@ -326,12 +326,12 @@ export default function PaymentTransactionsPage() {
                             onChange={(e) => handleUpdateStatus(t.id, e.target.value)}
                             className={`appearance-none text-xs font-semibold pl-2.5 pr-7 py-1 rounded-full border transition cursor-pointer focus:outline-none ${
                               t.status === "Completed"
-                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900"
+                                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
                                 : t.status === "Pending"
-                                ? "bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-900"
+                                ? "bg-amber-100 text-amber-800 border-amber-300"
                                 : t.status === "Refunded"
-                                ? "bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border-purple-200 dark:border-purple-900"
-                                : "bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border-rose-200 dark:border-rose-900"
+                                ? "bg-purple-100 text-purple-800 border-purple-300"
+                                : "bg-rose-100 text-rose-800 border-rose-300"
                             }`}
                           >
                             <option value="Completed">✓ Completed</option>

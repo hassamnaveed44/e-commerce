@@ -93,37 +93,37 @@ interface OrdersOverview {
 const ORDER_STATUS_CONFIG = {
   PENDING_PAYMENT: {
     label: "Pending Payment",
-    color: "bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-900",
+    color: "bg-amber-100 text-amber-900 border-amber-300",
     dot: "bg-amber-500",
     next: ["PROCESSING", "CANCELLED"],
   },
   PROCESSING: {
     label: "Processing",
-    color: "bg-sky-50 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200 dark:border-sky-900",
+    color: "bg-sky-100 text-sky-900 border-sky-300",
     dot: "bg-sky-500",
     next: ["SHIPPED", "CANCELLED"],
   },
   SHIPPED: {
     label: "Shipped",
-    color: "bg-indigo-50 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-900",
+    color: "bg-indigo-100 text-indigo-900 border-indigo-300",
     dot: "bg-indigo-500",
     next: ["DELIVERED", "RETURNED_REFUSED"],
   },
   DELIVERED: {
     label: "Delivered",
-    color: "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900",
+    color: "bg-emerald-100 text-emerald-900 border-emerald-300",
     dot: "bg-emerald-500",
     next: [],
   },
   CANCELLED: {
     label: "Cancelled",
-    color: "bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-900",
+    color: "bg-rose-100 text-rose-900 border-rose-300",
     dot: "bg-rose-500",
     next: [],
   },
   RETURNED_REFUSED: {
     label: "Returned / Refused",
-    color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-300 dark:border-gray-700",
+    color: "bg-gray-200 text-gray-800 border-gray-300",
     dot: "bg-gray-500",
     next: [],
   },
