@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { OrderStatus } from "@prisma/client";
+import { sendOrderNotificationEmail } from "@/services/email.service";
 
 export async function GET(
   req: NextRequest,
@@ -195,6 +196,64 @@ export async function PATCH(
       revalidatePath("/orders");
     } catch (e) {
       console.warn("Revalidation warning:", e);
+    }
+
+    // Trigger Non-Blocking Customer Status Update Email
+    try {
+      const fullOrder = await prisma.order.findUnique({
+        where: { id: result.id },
+        include: {
+          user: true,
+          shippingAddress: true,
+          payment: true,
+          items: true,
+        },
+      });
+
+      const customerEmail = fullOrder?.user?.email;
+      if (customerEmail && !customerEmail.includes("@guest.shop.co")) {
+        const emailPayload = {
+          orderNumber: fullOrder.orderNumber,
+          customerName: fullOrder.user?.fullName || "Customer",
+          customerEmail,
+          customerPhone: fullOrder.shippingAddress?.phoneNumber || "",
+          orderDate: new Date(fullOrder.createdAt).toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          }),
+          orderStatus: newStatus,
+          paymentMethod: fullOrder.paymentMethod === "CARD" ? "Credit Card (Stripe)" : "Cash on Delivery",
+          paymentStatus: fullOrder.payment?.status || (newStatus === "DELIVERED" ? "SUCCESSFUL" : "PENDING"),
+          transactionId: fullOrder.payment?.transactionId || undefined,
+          subtotal: Number(fullOrder.subtotal),
+          deliveryFee: Number(fullOrder.deliveryFee),
+          discount: Math.max(0, Number(fullOrder.subtotal) + Number(fullOrder.deliveryFee) - Number(fullOrder.totalAmount)),
+          totalAmount: Number(fullOrder.totalAmount),
+          shippingAddress: {
+            street: fullOrder.shippingAddress?.streetAddress || "",
+            city: fullOrder.shippingAddress?.city || "",
+            state: fullOrder.shippingAddress?.state || "",
+            postalCode: fullOrder.shippingAddress?.postalCode || "",
+            country: fullOrder.shippingAddress?.country || "United States",
+            phone: fullOrder.shippingAddress?.phoneNumber || "",
+          },
+          items: (fullOrder.items || []).map((i) => ({
+            name: i.productName,
+            quantity: i.quantity,
+            unitPrice: Number(i.unitPrice),
+          })),
+        };
+
+        sendOrderNotificationEmail({
+          order: emailPayload,
+          type: "STATUS_UPDATE",
+          newStatus,
+          previousStatus,
+        }).catch((err) => console.error("Admin order update async email dispatch error:", err));
+      }
+    } catch (emailErr) {
+      console.error("Failed to prepare admin order email notification:", emailErr);
     }
 
     return NextResponse.json({

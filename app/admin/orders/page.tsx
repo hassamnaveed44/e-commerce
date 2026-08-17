@@ -23,6 +23,7 @@ import {
   ChevronDown,
   Printer,
   ExternalLink,
+  Mail,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -149,12 +150,38 @@ export default function AdminOrdersPage() {
   // Selected Order for Detail Modal
   const [selectedOrder, setSelectedOrder] = useState<OrderData | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleTestEmail = async () => {
+    const targetEmail = window.prompt("Enter an email address to send a live test notification:", "hassamnaveed44@gmail.com");
+    if (!targetEmail) return;
+
+    setIsTestingEmail(true);
+    try {
+      const res = await fetch("/api/admin/test-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: targetEmail.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`✅ Success: Test email sent to ${targetEmail}!\nCheck your inbox/spam folder.`);
+        showToast(`Test email sent to ${targetEmail}`);
+      } else {
+        alert(`❌ Email Error:\n${data.error || data.message || "Failed to send test email"}`);
+      }
+    } catch (err: any) {
+      alert(`Network error testing email: ${err?.message || err}`);
+    } finally {
+      setIsTestingEmail(false);
+    }
   };
 
   const fetchOrders = async (isRefresh = false) => {
@@ -279,6 +306,17 @@ export default function AdminOrdersPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={handleTestEmail}
+            disabled={isTestingEmail}
+            className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted transition shadow-2xs cursor-pointer disabled:opacity-50"
+            title="Send a live test order confirmation email to verify SMTP delivery"
+          >
+            <Mail className={`h-3.5 w-3.5 text-blue-500 ${isTestingEmail ? "animate-bounce" : ""}`} />
+            <span>{isTestingEmail ? "Testing SMTP..." : "Test Email Service"}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => fetchOrders(true)}
