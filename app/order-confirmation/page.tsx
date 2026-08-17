@@ -39,6 +39,7 @@ interface OrderData {
 function OrderConfirmationContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
+  const sessionId = searchParams.get("session_id") || searchParams.get("sessionId");
   const [order, setOrder] = useState<OrderData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -52,7 +53,8 @@ function OrderConfirmationContent() {
       }
 
       try {
-        const res = await fetch(`/api/orders/${orderId}`);
+        const query = sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : "";
+        const res = await fetch(`/api/orders/${orderId}${query}`);
         if (!res.ok) {
           if (isMounted) setIsLoading(false);
           return;
@@ -73,7 +75,7 @@ function OrderConfirmationContent() {
     return () => {
       isMounted = false;
     };
-  }, [orderId]);
+  }, [orderId, sessionId]);
 
   if (isLoading) {
     return (
@@ -111,8 +113,16 @@ function OrderConfirmationContent() {
             </div>
             <div className="text-right">
               <p className="text-xs text-black/60">Status</p>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 capitalize">
-                {order?.orderStatus?.toLowerCase() || "Processing"}
+              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
+                order?.orderStatus === "PROCESSING" || order?.payment?.status === "SUCCESSFUL"
+                  ? "bg-emerald-100 text-emerald-800"
+                  : order?.orderStatus === "PENDING_PAYMENT"
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-black/5 text-black"
+              }`}>
+                {order?.orderStatus === "PROCESSING" || order?.payment?.status === "SUCCESSFUL"
+                  ? "✓ Paid & Processing"
+                  : order?.orderStatus?.replace(/_/g, " ") || "Processing"}
               </span>
             </div>
           </div>
