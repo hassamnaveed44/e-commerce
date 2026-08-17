@@ -48,18 +48,27 @@ export async function createOrder(data: CreateOrderInput) {
       let dbUser = null;
       if (clerkId) {
         dbUser = await tx.user.findUnique({ where: { clerkId } });
+        if (dbUser && email && email.trim() !== dbUser.email && !email.includes("@guest.shop.co")) {
+          dbUser = await tx.user.update({
+            where: { id: dbUser.id },
+            data: {
+              email: email.trim(),
+              fullName: customerName?.trim() || dbUser.fullName,
+            },
+          });
+        }
       }
 
       if (!dbUser) {
         const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         const guestClerkId = clerkId || `guest_${uniqueSuffix}`;
-        const guestEmail = email || `guest_${uniqueSuffix}@guest.shop.co`;
+        const guestEmail = email?.trim() || `guest_${uniqueSuffix}@guest.shop.co`;
 
         dbUser = await tx.user.create({
           data: {
             clerkId: guestClerkId,
             email: guestEmail,
-            fullName: customerName,
+            fullName: customerName?.trim() || "Customer",
           },
         });
       }
