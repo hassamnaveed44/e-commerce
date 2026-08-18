@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     });
 
     // 2. Format line items for Stripe Checkout
-    const lineItems = body.items.map((item: { name?: string; price?: number; quantity: number }) => ({
+    const lineItems = (body.items || []).map((item: { name?: string; price?: number; quantity: number }) => ({
       price_data: {
         currency: "usd",
         product_data: {
@@ -34,7 +34,23 @@ export async function POST(req: NextRequest) {
       quantity: item.quantity,
     }));
 
-    // 3. Create Stripe Checkout session
+    // 3. Add Delivery / Shipping Fee as a dedicated line item in Stripe
+    const deliveryFeeNum = Number(order.deliveryFee || 0);
+    if (deliveryFeeNum > 0) {
+      lineItems.push({
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: `Delivery Fee (${body.shippingMethod === "express" ? "Express Shipping" : "Standard Delivery"})`,
+            description: body.shippingMethod === "express" ? "1-2 business days delivery" : "3-5 business days delivery",
+          },
+          unit_amount: Math.round(deliveryFeeNum * 100),
+        },
+        quantity: 1,
+      });
+    }
+
+    // 4. Create Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: lineItems.length > 0 ? lineItems : [
@@ -54,6 +70,8 @@ export async function POST(req: NextRequest) {
       metadata: {
         orderId: order.id,
         orderNumber: order.orderNumber,
+        deliveryFee: String(deliveryFeeNum),
+        shippingMethod: body.shippingMethod || "standard",
       },
     });
 

@@ -246,61 +246,61 @@ export default function CheckoutPage() {
             </div>
 
             {/* 2. Delivery Option */}
-            <div className="border border-black/10 rounded-[20px] p-5 sm:p-7 bg-white">
-              <h2 className="text-xl font-bold text-black mb-5">2. Delivery Option</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="border border-black/10 rounded-[18px] p-4 sm:p-5 bg-white">
+              <h2 className="text-base sm:text-lg font-bold text-black mb-3">2. Delivery Option</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShippingMethod("standard")}
-                  className={`flex items-start gap-3 p-4 rounded-[16px] border cursor-pointer text-left transition ${
-                    shippingMethod === "standard" ? "border-black bg-[#F0F0F0]/50" : "border-black/10"
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border cursor-pointer text-left transition ${
+                    shippingMethod === "standard" ? "border-black bg-[#F0F0F0]/60 ring-1 ring-black" : "border-black/10 hover:border-black/30"
                   }`}
                 >
-                  <Truck className="shrink-0 mt-0.5 text-black" size={20} />
-                  <div className="flex-1">
-                    <div className="flex justify-between font-bold text-sm text-black">
+                  <Truck className="shrink-0 text-black" size={18} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between font-bold text-xs sm:text-sm text-black">
                       <span>Standard Delivery</span>
-                      <span>{subtotal >= 100 ? "FREE" : "$15"}</span>
+                      <span className="font-extrabold">{subtotal >= 100 ? "FREE" : "$15"}</span>
                     </div>
-                    <p className="text-xs text-black/60 mt-1">3-5 business days</p>
+                    <p className="text-[11px] text-black/60 mt-0.5">3-5 business days</p>
                   </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setShippingMethod("express")}
-                  className={`flex items-start gap-3 p-4 rounded-[16px] border cursor-pointer text-left transition ${
-                    shippingMethod === "express" ? "border-black bg-[#F0F0F0]/50" : "border-black/10"
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border cursor-pointer text-left transition ${
+                    shippingMethod === "express" ? "border-black bg-[#F0F0F0]/60 ring-1 ring-black" : "border-black/10 hover:border-black/30"
                   }`}
                 >
-                  <Truck className="shrink-0 mt-0.5 text-black" size={20} />
-                  <div className="flex-1">
-                    <div className="flex justify-between font-bold text-sm text-black">
+                  <Truck className="shrink-0 text-black" size={18} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between font-bold text-xs sm:text-sm text-black">
                       <span>Express Shipping</span>
-                      <span>$25</span>
+                      <span className="font-extrabold">$25</span>
                     </div>
-                    <p className="text-xs text-black/60 mt-1">1-2 business days</p>
+                    <p className="text-[11px] text-black/60 mt-0.5">1-2 business days</p>
                   </div>
                 </button>
               </div>
             </div>
 
             {/* 3. Payment Method */}
-            <div className="border border-black/10 rounded-[20px] p-5 sm:p-7 bg-white">
-              <h2 className="text-xl font-bold text-black mb-5">3. Payment Method</h2>
-              <div className="space-y-3">
+            <div className="border border-black/10 rounded-[18px] p-4 sm:p-5 bg-white">
+              <h2 className="text-base sm:text-lg font-bold text-black mb-3">3. Payment Method</h2>
+              <div className="space-y-2">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("COD")}
-                  className={`w-full flex items-center justify-between p-4 rounded-[16px] border cursor-pointer transition ${
-                    paymentMethod === "COD" ? "border-black bg-[#F0F0F0]/50" : "border-black/10"
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border cursor-pointer transition ${
+                    paymentMethod === "COD" ? "border-black bg-[#F0F0F0]/60 ring-1 ring-black" : "border-black/10 hover:border-black/30"
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Banknote size={22} className="text-black" />
+                    <Banknote size={19} className="text-black shrink-0" />
                     <div className="text-left">
-                      <p className="font-bold text-sm text-black">Cash on Delivery (COD)</p>
-                      <p className="text-xs text-black/60">Pay with cash upon delivery at your doorstep</p>
+                      <p className="font-bold text-xs sm:text-sm text-black">Cash on Delivery (COD)</p>
+                      <p className="text-[11px] text-black/60">Pay with cash upon delivery at your doorstep</p>
                     </div>
                   </div>
                   <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === "COD" ? "border-black" : "border-black/30"}`}>
@@ -311,15 +311,15 @@ export default function CheckoutPage() {
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("CARD")}
-                  className={`w-full flex items-center justify-between p-4 rounded-[16px] border cursor-pointer transition ${
-                    paymentMethod === "CARD" ? "border-black bg-[#F0F0F0]/50" : "border-black/10"
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border cursor-pointer transition ${
+                    paymentMethod === "CARD" ? "border-black bg-[#F0F0F0]/60 ring-1 ring-black" : "border-black/10 hover:border-black/30"
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <CreditCard size={22} className="text-black" />
+                    <CreditCard size={19} className="text-black shrink-0" />
                     <div className="text-left">
-                      <p className="font-bold text-sm text-black">Credit / Debit Card</p>
-                      <p className="text-xs text-black/60">Secure checkout powered by Stripe</p>
+                      <p className="font-bold text-xs sm:text-sm text-black">Credit / Debit Card</p>
+                      <p className="text-[11px] text-black/60">Secure checkout powered by Stripe</p>
                     </div>
                   </div>
                   <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === "CARD" ? "border-black" : "border-black/30"}`}>
