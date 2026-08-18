@@ -376,7 +376,7 @@ export default function EcommerceDashboardPage() {
         </div>
       </div>
 
-      {/* 3️⃣ Middle Row (2 Charts - Exact Match to Screenshot 3) */}
+      {/* 3️⃣ Middle Row (2 Charts - Exact Match to Screenshots 1 & 2 Hover Tooltips) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
         {/* Left Chart: Total Revenue Bar Chart (6 Cols) */}
         <div className="lg:col-span-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
@@ -406,48 +406,76 @@ export default function EcommerceDashboardPage() {
             </div>
           </div>
 
-          {/* SVG Bar Chart with Wider Rounded Bars Matching Screenshot 3 */}
-          <div className="h-52 w-full flex items-end justify-between gap-2 pt-6 px-1 sm:px-3">
-            {[
-              { month: "January", h1: 60, h2: 55, amount: "$21,400" },
-              { month: "February", h1: 85, h2: 70, amount: "$28,600" },
-              { month: "March", h1: 90, h2: 45, amount: "$24,300" },
-              { month: "April", h1: 45, h2: 65, amount: "$19,800" },
-              { month: "May", h1: 40, h2: 50, amount: "$16,500" },
-              { month: "June", h1: 92, h2: 58, amount: "$31,200" },
-            ].map((bar, idx) => (
-              <div
-                key={idx}
-                className="flex-1 flex items-end justify-center gap-1 sm:gap-1.5 h-full group relative cursor-pointer"
-                onMouseEnter={() => setHoveredBar(idx)}
-                onMouseLeave={() => setHoveredBar(null)}
-              >
-                {/* Desktop Bar (Dark Solid Rounded Bar) */}
-                <div
-                  style={{ height: `${bar.h1}%` }}
-                  className={`w-4 sm:w-6 rounded-t-md transition-all duration-200 ${
-                    hoveredBar === idx ? "bg-slate-800" : "bg-[#0F172A]"
-                  }`}
-                />
-                {/* Mobile Bar (Slate Grey Rounded Bar) */}
-                <div
-                  style={{ height: `${bar.h2}%` }}
-                  className={`w-4 sm:w-6 rounded-t-md transition-all duration-200 ${
-                    hoveredBar === idx ? "bg-slate-600" : "bg-[#64748B]"
-                  }`}
-                />
+          {/* SVG Bar Chart with Rounded Bars Matching Screenshot 1 */}
+          <div className="h-52 w-full flex items-end justify-between gap-2 pt-6 px-1 sm:px-3 relative">
+            {(data?.monthlyRevenueChart || [
+              { month: "January", h1: 60, h2: 55, desktopOrders: 90, mobileOrders: 110 },
+              { month: "February", h1: 85, h2: 70, desktopOrders: 140, mobileOrders: 120 },
+              { month: "March", h1: 90, h2: 45, desktopOrders: 130, mobileOrders: 95 },
+              { month: "April", h1: 45, h2: 65, desktopOrders: 85, mobileOrders: 115 },
+              { month: "May", h1: 40, h2: 50, desktopOrders: 110, mobileOrders: 130 },
+              { month: "June", h1: 92, h2: 58, desktopOrders: 155, mobileOrders: 140 },
+            ]).map((bar, idx) => {
+              const h1Val = (bar as any).h1 || Math.max(30, Math.round((bar.desktop / (data?.overview.totalRevenue || 40000)) * 180));
+              const h2Val = (bar as any).h2 || Math.max(25, Math.round((bar.mobile / (data?.overview.totalRevenue || 40000)) * 160));
+              const isHovered = hoveredBar === idx;
 
-                {/* Clean Black Tooltip on Hover */}
-                {hoveredBar === idx && (
-                  <div className="absolute -top-8 bg-black text-white text-[10px] font-semibold py-1 px-2 rounded-md shadow-md pointer-events-none whitespace-nowrap z-10 animate-in fade-in">
-                    {bar.amount}
-                  </div>
-                )}
-              </div>
-            ))}
+              return (
+                <div
+                  key={idx}
+                  className="flex-1 flex items-end justify-center gap-1 sm:gap-1.5 h-full relative cursor-pointer"
+                  onMouseEnter={() => setHoveredBar(idx)}
+                  onMouseLeave={() => setHoveredBar(null)}
+                >
+                  {/* Desktop Bar (Dark Solid Rounded Bar) */}
+                  <div
+                    style={{ height: `${Math.min(95, h1Val)}%` }}
+                    className={`w-4 sm:w-6 rounded-t-md transition-all duration-200 ${
+                      isHovered ? "bg-slate-800" : "bg-[#0F172A]"
+                    }`}
+                  />
+                  {/* Mobile Bar (Slate Grey Rounded Bar) */}
+                  <div
+                    style={{ height: `${Math.min(90, h2Val)}%` }}
+                    className={`w-4 sm:w-6 rounded-t-md transition-all duration-200 ${
+                      isHovered ? "bg-slate-600" : "bg-[#64748B]"
+                    }`}
+                  />
+
+                  {/* 🎯 Exact Screenshot 1 Hover Tooltip */}
+                  {isHovered && (
+                    <div className="absolute bottom-[45%] z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-2.5 text-left text-[11px] min-w-[125px] animate-in fade-in zoom-in-95 pointer-events-none">
+                      <p className="font-bold text-slate-900 mb-1.5 text-xs">
+                        {bar.month}
+                      </p>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-slate-700">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-xs bg-[#0F172A]" />
+                            <span>Desktop</span>
+                          </span>
+                          <span className="font-mono font-bold text-slate-900">
+                            {bar.desktopOrders || 110}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-700">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-xs bg-[#64748B]" />
+                            <span>Mobile</span>
+                          </span>
+                          <span className="font-mono font-bold text-slate-900">
+                            {bar.mobileOrders || 130}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          {/* Months on X-Axis Matching Screenshot 3 */}
+          {/* Months on X-Axis Matching Screenshot 1 */}
           <div className="flex justify-between px-1 sm:px-3 pt-3 border-t border-slate-100 text-[11px] font-normal text-slate-500">
             <span>January</span>
             <span>February</span>
@@ -458,7 +486,7 @@ export default function EcommerceDashboardPage() {
           </div>
         </div>
 
-        {/* Right Chart: Returning Rate Matching Screenshot 3 */}
+        {/* Right Chart: Returning Rate Matching Screenshot 2 Hover Tooltip */}
         <div className="lg:col-span-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div>
@@ -473,7 +501,6 @@ export default function EcommerceDashboardPage() {
               </div>
             </div>
 
-            {/* Export Button matching Screenshot 5 */}
             <Button
               variant="outline"
               size="sm"
@@ -485,17 +512,16 @@ export default function EcommerceDashboardPage() {
             </Button>
           </div>
 
-          {/* SVG Multi-Line Chart with Clean Dark & Slate Curves (Screenshot 3) */}
+          {/* SVG Multi-Line Chart with Interactive Hover Dots (Screenshot 2) */}
           <div className="h-52 w-full relative flex items-center justify-center pt-2">
             <svg
               className="w-full h-full overflow-visible"
               viewBox="0 0 560 180"
               preserveAspectRatio="none"
             >
-              {/* Subtle Horizontal Reference Line */}
               <line x1="0" y1="130" x2="560" y2="130" stroke="#f8fafc" strokeWidth="1" />
 
-              {/* Line 1 (Solid Dark Black Line - Screenshot 3) */}
+              {/* Line 1 (Solid Dark Line) */}
               <path
                 d="M 0 140 L 70 120 L 140 135 L 210 90 L 280 105 L 350 70 L 420 140 L 490 100 L 560 40"
                 fill="none"
@@ -505,7 +531,7 @@ export default function EcommerceDashboardPage() {
                 strokeLinejoin="round"
               />
 
-              {/* Line 2 (Secondary Slate Grey Line - Screenshot 3) */}
+              {/* Line 2 (Secondary Slate Grey Line) */}
               <path
                 d="M 0 160 L 70 140 L 140 155 L 210 130 L 280 145 L 350 140 L 420 155 L 490 135 L 560 110"
                 fill="none"
@@ -514,10 +540,35 @@ export default function EcommerceDashboardPage() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
+
+              {/* Highlighted Active Dots for June (Screenshot 2) */}
+              <circle cx="210" cy="90" r="4.5" fill="#0F172A" stroke="#FFFFFF" strokeWidth="1.5" />
+              <circle cx="210" cy="130" r="4.5" fill="#64748B" stroke="#FFFFFF" strokeWidth="1.5" />
             </svg>
+
+            {/* 🎯 Exact Screenshot 2 Hover Tooltip on June */}
+            <div className="absolute right-[45%] top-[40%] z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-2.5 text-left text-[11px] min-w-[130px] animate-in fade-in">
+              <p className="font-bold text-slate-900 mb-1.5 text-xs">June</p>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-slate-700">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-xs bg-[#0F172A]" />
+                    <span>Desktop</span>
+                  </span>
+                  <span className="font-mono font-bold text-slate-900">514</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-700">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-xs bg-[#64748B]" />
+                    <span>Mobile</span>
+                  </span>
+                  <span className="font-mono font-bold text-slate-900">140</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* X-Axis Months Matching Screenshot 3 */}
+          {/* X-Axis Months Matching Screenshot 2 */}
           <div className="flex justify-between px-1 sm:px-3 pt-3 border-t border-slate-100 text-[10px] sm:text-[11px] font-normal text-slate-500">
             <span>March</span>
             <span>April</span>
@@ -531,9 +582,9 @@ export default function EcommerceDashboardPage() {
         </div>
       </div>
 
-      {/* 4️⃣ Third Row (3 Analytics Cards) */}
+      {/* 4️⃣ Third Row (3 Analytics Cards - Dynamic Locations & Visits by Source) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
-        {/* Card 1: Sales by Location (4 Cols) */}
+        {/* Card 1: Sales by Location (Aggregated Directly by Customer City / Country) */}
         <div className="lg:col-span-4 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-start justify-between gap-2 mb-2">
@@ -555,7 +606,7 @@ export default function EcommerceDashboardPage() {
               </Button>
             </div>
 
-            {/* Location Progress List */}
+            {/* Location Progress List from real database shipping addresses */}
             <div className="space-y-3 mt-4">
               {(data?.salesByLocation || [
                 { country: "Canada", change: "+5.2%", percentage: 85, isPositive: true },
@@ -568,7 +619,9 @@ export default function EcommerceDashboardPage() {
                 <div key={idx} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-slate-700 font-medium">{loc.country}</span>
+                      <span className="text-slate-700 font-medium truncate max-w-[140px]">
+                        {loc.country}
+                      </span>
                       <span
                         className={`text-[9px] font-semibold px-1 py-0.2 rounded ${
                           loc.isPositive
@@ -593,75 +646,101 @@ export default function EcommerceDashboardPage() {
           </div>
         </div>
 
-        {/* Card 2: Store Visits by Source (4 Cols) */}
+        {/* Card 2: Store Visits by Source (Screenshot 3 Matching Segmented Ring) */}
         <div className="lg:col-span-4 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div>
             <h3 className="text-sm sm:text-base font-bold text-slate-900">Store Visits by Source</h3>
 
-            {/* Center Donut Gauge */}
+            {/* Segmented Donut Gauge (Screenshot 3) */}
             <div className="relative w-40 h-40 mx-auto my-5 flex items-center justify-center">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="38" fill="none" stroke="#f1f5f9" strokeWidth="11" />
+                {/* Background Ring */}
+                <circle cx="50" cy="50" r="38" fill="none" stroke="#F1F5F9" strokeWidth="12" />
+                {/* Arc 1: Direct (Dark Navy #0F172A - 42%) */}
                 <circle
                   cx="50"
                   cy="50"
                   r="38"
                   fill="none"
-                  stroke="#0f172a"
-                  strokeWidth="11"
+                  stroke="#0F172A"
+                  strokeWidth="12"
                   strokeDasharray="100 138"
                   strokeDashoffset="0"
                 />
+                {/* Arc 2: Referrals (Slate #64748B - 28%) */}
                 <circle
                   cx="50"
                   cy="50"
                   r="38"
                   fill="none"
-                  stroke="#94a3b8"
-                  strokeWidth="11"
-                  strokeDasharray="65 173"
+                  stroke="#64748B"
+                  strokeWidth="12"
+                  strokeDasharray="67 171"
                   strokeDashoffset="-100"
                 />
+                {/* Arc 3: Email (Steel Blue #94A3B8 - 15%) */}
                 <circle
                   cx="50"
                   cy="50"
                   r="38"
                   fill="none"
-                  stroke="#1e293b"
-                  strokeWidth="11"
-                  strokeDasharray="35 203"
-                  strokeDashoffset="-165"
+                  stroke="#94A3B8"
+                  strokeWidth="12"
+                  strokeDasharray="36 202"
+                  strokeDashoffset="-167"
+                />
+                {/* Arc 4: Other (Light Grey #E2E8F0 - 10%) */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="38"
+                  fill="none"
+                  stroke="#E2E8F0"
+                  strokeWidth="12"
+                  strokeDasharray="24 214"
+                  strokeDashoffset="-203"
+                />
+                {/* Arc 5: Social (Dark Slate #1E293B - 5%) */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="38"
+                  fill="none"
+                  stroke="#1E293B"
+                  strokeWidth="12"
+                  strokeDasharray="12 226"
+                  strokeDashoffset="-227"
                 />
               </svg>
 
               <div className="absolute flex flex-col items-center text-center">
                 <span className="text-xl font-bold text-slate-900 tracking-tight">
-                  10.2K
+                  {data?.totalVisitorsFormatted || "10.2K"}
                 </span>
                 <span className="text-[10px] font-normal text-slate-400">Visitors</span>
               </div>
             </div>
 
-            {/* Legend */}
+            {/* Legend (Screenshot 3) */}
             <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1.5 text-[10px] font-medium text-slate-600 pt-2.5 border-t border-slate-100">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-slate-950" />
+                <span className="w-2 h-2 rounded-full bg-[#0F172A]" />
                 <span>Direct</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-slate-400" />
+                <span className="w-2 h-2 rounded-full bg-[#64748B]" />
                 <span>Referrals</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-slate-800" />
+                <span className="w-2 h-2 rounded-full bg-[#94A3B8]" />
                 <span>Email</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-slate-300" />
+                <span className="w-2 h-2 rounded-full bg-[#E2E8F0]" />
                 <span>Other</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-slate-500" />
+                <span className="w-2 h-2 rounded-full bg-[#1E293B]" />
                 <span>Social</span>
               </div>
             </div>
