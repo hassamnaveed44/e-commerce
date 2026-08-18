@@ -369,6 +369,61 @@ export default function ProductDetailPage({
           { hex: "#A855F7", name: "Purple" },
         ];
 
+  // 🎯 DYNAMIC KEY FEATURES PARSER ACCORDING TO THIS PRODUCT
+  const getKeyFeatures = () => {
+    const pName = (product.name || "").toLowerCase();
+    const pCat = (product.category || "").toLowerCase();
+    const pStyle = (product.dressStyle || "").toLowerCase();
+
+    if (pName.includes("three piece") || pCat.includes("three piece") || pCat.includes("suit") || pStyle.includes("formal")) {
+      return [
+        "Premium Italian wool-blend tailored construction",
+        "Slim-fit 2-button jacket with refined peak lapels",
+        "Coordinated single-breasted waistcoat and flat-front trousers",
+        "Silky breathable interior lining for all-day comfort",
+      ];
+    }
+    if (pName.includes("hoodie") || pCat.includes("hoodie") || pCat.includes("sweatshirt")) {
+      return [
+        "100% Heavyweight organic combed cotton fleece",
+        "Double-lined hood with adjustable braided drawstrings",
+        "Spacious kangaroo pouch pocket with reinforced seams",
+        "Elastic ribbed cuffs and waistband for shape retention",
+      ];
+    }
+    if (pName.includes("jeans") || pCat.includes("denim") || pCat.includes("pant")) {
+      return [
+        "Durable premium stretch cotton denim blend",
+        "Classic 5-pocket construction with antique metal hardware",
+        "Comfortable contoured mid-rise waistband",
+        "Enzyme stone-washed finish for lasting color vibrancy",
+      ];
+    }
+    if (pName.includes("shirt") || pCat.includes("shirt") || pCat.includes("t-shirt")) {
+      return [
+        "100% Breathable ring-spun long-staple cotton",
+        "Pre-shrunk fabric ensuring consistent wash-to-wash fit",
+        "Double-needle neckband and reinforced sleeve hems",
+        "Ultra-soft hand feel with natural moisture-wicking",
+      ];
+    }
+    return [
+      `Engineered with premium fabric tailored for durability`,
+      `Modern cut designed for versatile ${product.dressStyle || "daily"} wear`,
+      `Precision reinforced stitching throughout seams`,
+      `Color-fast dye technology resistant to fading`,
+    ];
+  };
+  const dynamicKeyFeatures = getKeyFeatures();
+
+  // Specification helpers
+  const activeColorName =
+    displayColors.find((c) => c.hex.toLowerCase() === selectedColor.toLowerCase())?.name ||
+    product.color ||
+    "Black";
+  const dynamicBrand = product.seller || product.brand || "Poetic Fashion";
+  const dynamicWeight = product.weight || (product.name?.toLowerCase().includes("three piece") ? "480 Gr" : "180 Gr");
+
   return (
     <div className="space-y-6 pb-20 font-satoshi text-slate-900 max-w-7xl mx-auto">
       {/* Toast notification */}
@@ -487,13 +542,13 @@ export default function ProductDetailPage({
 
         {/* Right Column: 4 KPI Cards + Spec & Details Card + Reviews Parent Container */}
         <div className="lg:col-span-7 space-y-6">
-          {/* 1. Top 4 Mini Metric Cards (Exact Match to Screenshot 2 - Clean Outline Icons & No Overlap) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-3.5">
+          {/* 1. Top 4 Mini Metric Cards (Clean Outline Icons & Clean Wrapping - No Overlap) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
             {/* Card 1: Price */}
-            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-2xs flex items-center gap-3 min-h-[72px]">
-              <CircleDollarSign size={24} className="text-slate-400 stroke-[1.5] shrink-0" />
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-3.5 shadow-2xs flex items-center gap-2.5 sm:gap-3 min-h-[72px]">
+              <CircleDollarSign size={22} className="text-slate-400 stroke-[1.5] shrink-0" />
               <div className="min-w-0 flex-1">
-                <span className="text-xs text-slate-500 font-normal block truncate">
+                <span className="text-[11px] sm:text-xs text-slate-500 font-normal block leading-tight">
                   Price
                 </span>
                 <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight block">
@@ -503,40 +558,40 @@ export default function ProductDetailPage({
             </div>
 
             {/* Card 2: No. of Orders */}
-            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-2xs flex items-center gap-3 min-h-[72px]">
-              <Truck size={24} className="text-slate-400 stroke-[1.5] shrink-0" />
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-3.5 shadow-2xs flex items-center gap-2.5 sm:gap-3 min-h-[72px]">
+              <Truck size={22} className="text-slate-400 stroke-[1.5] shrink-0" />
               <div className="min-w-0 flex-1">
-                <span className="text-xs text-slate-500 font-normal block truncate">
+                <span className="text-[11px] sm:text-xs text-slate-500 font-normal block leading-tight">
                   No. of Orders
                 </span>
                 <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight block">
-                  {Number(product.ordersCount ?? 250).toLocaleString()}
+                  {Number(product.ordersCount ?? 3).toLocaleString()}
                 </span>
               </div>
             </div>
 
             {/* Card 3: Available Stocks */}
-            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-2xs flex items-center gap-3 min-h-[72px]">
-              <Layers size={24} className="text-slate-400 stroke-[1.5] shrink-0" />
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-3.5 shadow-2xs flex items-center gap-2.5 sm:gap-3 min-h-[72px]">
+              <Layers size={22} className="text-slate-400 stroke-[1.5] shrink-0" />
               <div className="min-w-0 flex-1">
-                <span className="text-xs text-slate-500 font-normal block truncate">
+                <span className="text-[11px] sm:text-xs text-slate-500 font-normal block leading-tight">
                   Available Stocks
                 </span>
                 <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight block">
-                  {Number(product.stock ?? (product as any).stockQuantity ?? 2550).toLocaleString()}
+                  {Number(product.stock ?? (product as any).stockQuantity ?? 22).toLocaleString()}
                 </span>
               </div>
             </div>
 
             {/* Card 4: Total Revenue */}
-            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-2xs flex items-center gap-3 min-h-[72px]">
-              <HandCoins size={24} className="text-slate-400 stroke-[1.5] shrink-0" />
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-3.5 shadow-2xs flex items-center gap-2.5 sm:gap-3 min-h-[72px]">
+              <HandCoins size={22} className="text-slate-400 stroke-[1.5] shrink-0" />
               <div className="min-w-0 flex-1">
-                <span className="text-xs text-slate-500 font-normal block truncate">
+                <span className="text-[11px] sm:text-xs text-slate-500 font-normal block leading-tight">
                   Total Revenue
                 </span>
                 <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight block">
-                  ${Number(product.totalRevenue ?? (Number(product.price ?? 0) * Number(product.ordersCount ?? 250))).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                  ${Number(product.totalRevenue ?? (Number(product.price ?? 0) * Number(product.ordersCount ?? 3))).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
@@ -546,7 +601,7 @@ export default function ProductDetailPage({
           <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-5">
             {/* Top Row: Description & Spec Table */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-              {/* Left Column: Description & Key Features */}
+              {/* Left Column: Description & Dynamic Key Features */}
               <div className="md:col-span-7 space-y-4">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 mb-1.5">
@@ -554,7 +609,7 @@ export default function ProductDetailPage({
                   </h3>
                   <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed font-normal">
                     {product.description ||
-                      "Tommy Hilfiger men striped pink sweatshirt. Crafted with cotton. Material composition is 100% organic cotton."}
+                      "Premium quality craftsmanship designed with comfortable, breathable materials tailored for modern style and durability."}
                   </p>
                 </div>
 
@@ -563,31 +618,30 @@ export default function ProductDetailPage({
                     Key Features:
                   </h3>
                   <ul className="space-y-1 text-xs sm:text-[13px] text-slate-600 list-disc list-inside">
-                    <li>Industry-leading noise cancellation</li>
-                    <li>30-hour battery life</li>
-                    <li>Touch sensor controls</li>
-                    <li>Speak-to-chat technology</li>
+                    {dynamicKeyFeatures.map((feat, i) => (
+                      <li key={i}>{feat}</li>
+                    ))}
                   </ul>
                 </div>
               </div>
 
-              {/* Right Column: Specification Mini Table (Screenshot 1 Match) */}
+              {/* Right Column: Dynamic Specification Mini Table */}
               <div className="md:col-span-5 rounded-xl border border-slate-200 bg-white overflow-hidden text-xs">
                 <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-slate-100">
                   <span className="font-bold text-slate-800">Category</span>
-                  <span className="text-slate-600 font-normal">{product.category || "T-Shirt"}</span>
+                  <span className="text-slate-600 font-normal">{product.category || "Apparel"}</span>
                 </div>
                 <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-slate-100">
                   <span className="font-bold text-slate-800">Brand</span>
-                  <span className="text-slate-600 font-normal">{product.brand || "Tommy Hilfiger"}</span>
+                  <span className="text-slate-600 font-normal">{dynamicBrand}</span>
                 </div>
                 <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-slate-100">
                   <span className="font-bold text-slate-800">Color</span>
-                  <span className="text-slate-600 font-normal">{product.color || "Purple"}</span>
+                  <span className="text-slate-600 font-normal">{activeColorName}</span>
                 </div>
                 <div className="flex items-center justify-between px-3.5 py-2.5">
                   <span className="font-bold text-slate-800">Weight</span>
-                  <span className="text-slate-600 font-normal">{product.weight || "140 Gr"}</span>
+                  <span className="text-slate-600 font-normal">{dynamicWeight}</span>
                 </div>
               </div>
             </div>
