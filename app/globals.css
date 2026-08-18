@@ -67,10 +67,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  color: #0F172A;
-}
-
 /* 🖨️ Clean Order Print Styles (Excludes Layout Chrome: Sidebar, Header, Buttons) */
 @media print {
   /* Hide all dashboard layout elements */
