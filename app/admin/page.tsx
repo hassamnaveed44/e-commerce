@@ -409,15 +409,15 @@ export default function EcommerceDashboardPage() {
           {/* SVG Bar Chart with Rounded Bars Matching Screenshot 1 */}
           <div className="h-52 w-full flex items-end justify-between gap-2 pt-6 px-1 sm:px-3 relative">
             {(data?.monthlyRevenueChart || [
-              { month: "January", h1: 60, h2: 55, desktopOrders: 90, mobileOrders: 110 },
-              { month: "February", h1: 85, h2: 70, desktopOrders: 140, mobileOrders: 120 },
-              { month: "March", h1: 90, h2: 45, desktopOrders: 130, mobileOrders: 95 },
-              { month: "April", h1: 45, h2: 65, desktopOrders: 85, mobileOrders: 115 },
-              { month: "May", h1: 40, h2: 50, desktopOrders: 110, mobileOrders: 130 },
-              { month: "June", h1: 92, h2: 58, desktopOrders: 155, mobileOrders: 140 },
-            ]).map((bar, idx) => {
-              const h1Val = (bar as any).h1 || Math.max(30, Math.round((bar.desktop / (data?.overview.totalRevenue || 40000)) * 180));
-              const h2Val = (bar as any).h2 || Math.max(25, Math.round((bar.mobile / (data?.overview.totalRevenue || 40000)) * 160));
+              { month: "January", h1: 60, h2: 55, desktopOrders: 90, mobileOrders: 110, desktop: 11000, mobile: 10000 },
+              { month: "February", h1: 85, h2: 70, desktopOrders: 140, mobileOrders: 120, desktop: 15000, mobile: 13000 },
+              { month: "March", h1: 90, h2: 45, desktopOrders: 130, mobileOrders: 95, desktop: 16000, mobile: 8000 },
+              { month: "April", h1: 45, h2: 65, desktopOrders: 85, mobileOrders: 115, desktop: 8000, mobile: 11000 },
+              { month: "May", h1: 40, h2: 50, desktopOrders: 110, mobileOrders: 130, desktop: 7000, mobile: 9000 },
+              { month: "June", h1: 92, h2: 58, desktopOrders: 155, mobileOrders: 140, desktop: 17000, mobile: 14000 },
+            ]).map((bar: any, idx: number) => {
+              const h1Val = bar.h1 || Math.max(30, Math.round((bar.desktop / (data?.overview.totalRevenue || 40000)) * 180));
+              const h2Val = bar.h2 || Math.max(25, Math.round((bar.mobile / (data?.overview.totalRevenue || 40000)) * 160));
               const isHovered = hoveredBar === idx;
 
               return (
