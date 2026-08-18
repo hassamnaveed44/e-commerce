@@ -9,6 +9,7 @@ import {
   Share2,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Search,
   Star,
   MoreHorizontal,
@@ -70,6 +71,7 @@ export default function EcommerceDashboardPage() {
 
   // Row Dropdown & Detail Modal States
   const [activeOrderMenu, setActiveOrderMenu] = useState<string | null>(null);
+  const [activeStatusMenuOrderId, setActiveStatusMenuOrderId] = useState<string | null>(null);
   const [activeProductMenu, setActiveProductMenu] = useState<string | null>(null);
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<any | null>(null);
   const [selectedCustomerModal, setSelectedCustomerModal] = useState<{
@@ -81,8 +83,14 @@ export default function EcommerceDashboardPage() {
     status: string;
   } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Close menus on outside click
   useEffect(() => {
@@ -90,6 +98,7 @@ export default function EcommerceDashboardPage() {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setActiveOrderMenu(null);
         setActiveProductMenu(null);
+        setActiveStatusMenuOrderId(null);
       }
     };
     document.addEventListener("mousedown", handleOutsideClick);
@@ -191,45 +200,104 @@ export default function EcommerceDashboardPage() {
     a.click();
   };
 
+  // Handle Update Order Status directly from Recent Orders table
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      const res = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, orderStatus: newStatus }),
+      });
+      const resJson = await res.json();
+      if (resJson.success) {
+        setData((prev: any) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            recentOrders: prev.recentOrders?.map((ord: any) =>
+              ord.id === orderId ? { ...ord, status: newStatus } : ord
+            ),
+          };
+        });
+        showToast(`Order status updated to ${newStatus}!`);
+        fetchAnalytics(true);
+      } else {
+        showToast(resJson.error || "Failed to update order status");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error updating order status");
+    }
+  };
+
   const getOrderStatusBadge = (status: string) => {
-    const s = status.toUpperCase();
-    if (s === "PROCESSING" || s === "PENDING_PAYMENT") {
+    const s = status ? status.toUpperCase() : "PROCESSING";
+    if (s === "PROCESSING" || s === "PROCESSED") {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-sky-50 text-sky-600 border border-sky-200">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-600 border border-sky-200">
           Processing
         </span>
       );
     }
-    if (s === "DELIVERED" || s === "SUCCESS") {
+    if (s === "PENDING_PAYMENT" || s === "PENDING") {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-600 border border-emerald-200">
-          Success
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-600 border border-amber-300">
+          Pending
         </span>
       );
     }
-    if (s === "SHIPPED" || s === "PAID") {
+    if (s === "SHIPPED") {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-600 border border-amber-200">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-300">
+          Shipped
+        </span>
+      );
+    }
+    if (s === "DELIVERED" || s === "SUCCESS" || s === "COMPLETED") {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-300">
+          Delivered
+        </span>
+      );
+    }
+    if (s === "PAID") {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-600 border border-amber-300">
           Paid
         </span>
       );
     }
-    if (s === "CANCELLED" || s === "FAILED" || s === "RETURNED_REFUSED") {
+    if (s === "CANCELLED" || s === "CANCELED" || s === "FAILED") {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-50 text-rose-600 border border-rose-200">
-          Failed
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-600 border border-rose-300">
+          Cancelled
+        </span>
+      );
+    }
+    if (s === "RETURNED_REFUSED" || s === "RETURNED") {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 border border-amber-400">
+          Returned
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-50 text-slate-600 border border-slate-200">
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-50 text-slate-600 border border-slate-300">
         {status}
       </span>
     );
   };
 
   return (
-    <div className="space-y-5 sm:space-y-6 pb-12 font-satoshi text-slate-900">
+    <div ref={menuRef} className="space-y-5 sm:space-y-6 pb-12 font-satoshi text-slate-900">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-[999999] bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4">
+          <Check size={14} className="text-emerald-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* 1️⃣ Top Dashboard Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -1001,8 +1069,66 @@ export default function EcommerceDashboardPage() {
                             ${o.totalAmount.toFixed(2)}
                           </td>
 
-                          {/* Status */}
-                          <td className="py-3 px-1 text-center">{getOrderStatusBadge(o.status)}</td>
+                          {/* Status (Clickable to change status directly) */}
+                          <td className="py-3 px-1 text-center relative">
+                            <div className="relative inline-block">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveStatusMenuOrderId(activeStatusMenuOrderId === o.id ? null : o.id);
+                                  setActiveOrderMenu(null);
+                                }}
+                                className="cursor-pointer group inline-flex items-center gap-1 focus:outline-none hover:opacity-85 transition rounded-full"
+                                title="Click to change order status"
+                              >
+                                {getOrderStatusBadge(o.status)}
+                                <ChevronDown size={11} className="text-slate-400 opacity-60 group-hover:opacity-100 transition" />
+                              </button>
+
+                              {/* Quick Status Dropdown Menu */}
+                              {activeStatusMenuOrderId === o.id && (
+                                <div
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 z-50 w-40 bg-white rounded-2xl border border-slate-200 shadow-2xl p-1.5 text-xs font-satoshi animate-in fade-in zoom-in-95 text-left"
+                                >
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 border-b border-slate-100">
+                                    Change Status
+                                  </p>
+                                  <div className="space-y-0.5 pt-1">
+                                    {[
+                                      { value: "PROCESSING", label: "Processing", color: "text-blue-600" },
+                                      { value: "PENDING_PAYMENT", label: "Pending", color: "text-amber-600" },
+                                      { value: "SHIPPED", label: "Shipped", color: "text-slate-600" },
+                                      { value: "DELIVERED", label: "Delivered", color: "text-emerald-600" },
+                                      { value: "PAID", label: "Paid", color: "text-amber-600" },
+                                      { value: "CANCELLED", label: "Cancelled", color: "text-rose-600" },
+                                      { value: "RETURNED_REFUSED", label: "Returned", color: "text-amber-700" },
+                                    ].map((opt) => (
+                                      <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => {
+                                          handleUpdateOrderStatus(o.id, opt.value);
+                                          setActiveStatusMenuOrderId(null);
+                                        }}
+                                        className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-medium flex items-center justify-between transition cursor-pointer ${
+                                          o.status?.toUpperCase() === opt.value
+                                            ? "bg-slate-100 text-slate-950 font-bold"
+                                            : "text-slate-700 hover:bg-slate-50"
+                                        }`}
+                                      >
+                                        <span className={opt.color}>{opt.label}</span>
+                                        {o.status?.toUpperCase() === opt.value && (
+                                          <Check size={13} className="text-slate-900 stroke-[2.5]" />
+                                        )}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </td>
 
                           {/* Actions Dropdown */}
                           <td className="py-3 pl-1 text-right relative">
