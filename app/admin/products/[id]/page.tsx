@@ -294,14 +294,25 @@ export default function ProductDetailPage({
     );
   }
 
-  // 🖼️ DYNAMIC CAROUSEL IMAGES & GALLERY
-  const carouselImages: { id: string; url: string; name?: string }[] =
+  // 🖼️ DYNAMIC CAROUSEL IMAGES & GALLERY (Auto-renders product details on switch)
+  const carouselImages: { id: string; productId?: string; url: string; name?: string }[] =
     product.images && product.images.length > 1
-      ? product.images
+      ? product.images.map((img) => ({
+          id: img.id,
+          productId: product.id,
+          url: img.url,
+          name: product.name,
+        }))
       : [
-          { id: "img-main", url: product.images?.[0]?.url || "/images/product-1.png", name: product.name },
+          {
+            id: product.id,
+            productId: product.id,
+            url: product.images?.[0]?.url || "/images/product-1.png",
+            name: product.name,
+          },
           ...otherProducts.slice(0, 3).map((op, idx) => ({
             id: op.id || `op-${idx}`,
+            productId: op.id,
             url: op.image,
             name: op.name,
           })),
@@ -310,12 +321,22 @@ export default function ProductDetailPage({
   const totalImageCount = carouselImages.length;
   const currentMainImage = carouselImages[activeImageIdx]?.url || carouselImages[0]?.url || "/images/product-1.png";
 
+  const handleSelectCarouselIndex = (newIdx: number) => {
+    setActiveImageIdx(newIdx);
+    const targetItem = carouselImages[newIdx];
+    if (targetItem?.productId && targetItem.productId !== product.id) {
+      router.push(`/admin/products/${targetItem.productId}`);
+    }
+  };
+
   const prevImage = () => {
-    setActiveImageIdx((prev) => (prev === 0 ? totalImageCount - 1 : prev - 1));
+    const newIdx = activeImageIdx === 0 ? totalImageCount - 1 : activeImageIdx - 1;
+    handleSelectCarouselIndex(newIdx);
   };
 
   const nextImage = () => {
-    setActiveImageIdx((prev) => (prev === totalImageCount - 1 ? 0 : prev + 1));
+    const newIdx = activeImageIdx === totalImageCount - 1 ? 0 : activeImageIdx + 1;
+    handleSelectCarouselIndex(newIdx);
   };
 
   // 🎯 DYNAMIC SIZES AVAILABLE FOR THIS PRODUCT
@@ -520,7 +541,7 @@ export default function ProductDetailPage({
                 <button
                   key={img.id + idx}
                   type="button"
-                  onClick={() => setActiveImageIdx(idx)}
+                  onClick={() => handleSelectCarouselIndex(idx)}
                   className={`aspect-square rounded-2xl bg-[#EFEFEF] overflow-hidden border-2 transition cursor-pointer ${
                     isActive
                       ? "border-slate-950 shadow-xs ring-1 ring-slate-950 opacity-100"

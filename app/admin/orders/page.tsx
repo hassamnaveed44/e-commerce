@@ -104,8 +104,9 @@ export default function AdminOrdersPage() {
   const [createStatus, setCreateStatus] = useState("PENDING_PAYMENT");
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
-  // Toast
+  // Toast & Active Menus
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [statusMenuOrderId, setStatusMenuOrderId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const showToast = (msg: string) => {
@@ -120,6 +121,7 @@ export default function AdminOrdersPage() {
         setIsStatusDropdownOpen(false);
         setIsCategoryDropdownOpen(false);
         setIsColumnsDropdownOpen(false);
+        setStatusMenuOrderId(null);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -764,10 +766,64 @@ export default function AdminOrdersPage() {
                         </td>
                       )}
 
-                      {/* Status */}
+                      {/* Status (Clickable to change status directly from table) */}
                       {visibleColumns.status && (
-                        <td className="py-3.5 px-4">
-                          {renderStatusBadge(ord.orderStatus)}
+                        <td className="py-3.5 px-4 relative">
+                          <div className="relative inline-block">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setStatusMenuOrderId(statusMenuOrderId === ord.id ? null : ord.id);
+                              }}
+                              className="cursor-pointer group inline-flex items-center gap-1 focus:outline-none hover:opacity-85 transition rounded-full"
+                              title="Click to change order status"
+                            >
+                              {renderStatusBadge(ord.orderStatus)}
+                              <ChevronDown size={11} className="text-slate-400 opacity-60 group-hover:opacity-100 transition" />
+                            </button>
+
+                            {/* Quick Status Dropdown Menu */}
+                            {statusMenuOrderId === ord.id && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute left-0 top-full mt-1.5 z-50 w-40 bg-white rounded-2xl border border-slate-200 shadow-2xl p-1.5 text-xs font-satoshi animate-in fade-in zoom-in-95"
+                              >
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 border-b border-slate-100">
+                                  Change Status
+                                </p>
+                                <div className="space-y-0.5 pt-1">
+                                  {[
+                                    { value: "PENDING_PAYMENT", label: "Pending", color: "text-amber-600" },
+                                    { value: "PROCESSING", label: "Processing", color: "text-blue-600" },
+                                    { value: "SHIPPED", label: "Shipped", color: "text-slate-600" },
+                                    { value: "DELIVERED", label: "Delivered", color: "text-emerald-600" },
+                                    { value: "CANCELLED", label: "Cancelled", color: "text-rose-600" },
+                                    { value: "RETURNED_REFUSED", label: "Returned", color: "text-amber-700" },
+                                  ].map((opt) => (
+                                    <button
+                                      key={opt.value}
+                                      type="button"
+                                      onClick={() => {
+                                        handleUpdateStatus(ord.id, opt.value);
+                                        setStatusMenuOrderId(null);
+                                      }}
+                                      className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-medium flex items-center justify-between transition cursor-pointer ${
+                                        ord.orderStatus.toUpperCase() === opt.value
+                                          ? "bg-slate-100 text-slate-950 font-bold"
+                                          : "text-slate-700 hover:bg-slate-50"
+                                      }`}
+                                    >
+                                      <span className={opt.color}>{opt.label}</span>
+                                      {ord.orderStatus.toUpperCase() === opt.value && (
+                                        <Check size={13} className="text-slate-900 stroke-[2.5]" />
+                                      )}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </td>
                       )}
 
