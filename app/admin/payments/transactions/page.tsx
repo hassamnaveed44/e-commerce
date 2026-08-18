@@ -15,16 +15,21 @@ import {
   CreditCard,
   Building,
   DollarSign,
-  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface TransactionItem {
   id: string;
+  orderNumber?: string;
   date: string;
   title: string;
+  customerName?: string;
+  customerEmail?: string;
+  paymentMethod?: string;
+  orderStatus?: string;
   status: string;
   amount: string;
+  amountPKR?: string;
   isPositive: boolean;
   type: string;
 }
@@ -74,155 +79,17 @@ export default function TransactionsPage() {
     fetchTransactions();
   }, []);
 
-  // Filter transactions based on active tab
-  const rawList = activeTab === "Latest" ? latestTransactions : upcomingTransactions;
-
-  // If list is small, provide rich fallback entries to ensure multiple pages
-  const allList = useMemo(() => {
-    if (rawList.length >= 14) return rawList;
-
-    const fallbacks: TransactionItem[] = [
-      {
-        id: "tx-fallback-1",
-        date: "16 Aug 2025",
-        title: "Withdrawal to JP Morgan Chase (0440)",
-        status: "Completed",
-        amount: "-1,275.79 USD",
-        isPositive: false,
-        type: "withdrawal",
-      },
-      {
-        id: "tx-fallback-2",
-        date: "5 Aug 2025",
-        title: "Withdrawal to Citibank (2290)",
-        status: "Completed",
-        amount: "-202.99 USD",
-        isPositive: false,
-        type: "withdrawal",
-      },
-      {
-        id: "tx-fallback-3",
-        date: "5 Aug 2025",
-        title: "Withdrawal to Bank of America (3311)",
-        status: "Completed",
-        amount: "-1,272.30 USD",
-        isPositive: false,
-        type: "withdrawal",
-      },
-      {
-        id: "tx-fallback-4",
-        date: "4 Aug 2025",
-        title: "Payment from Paddle",
-        status: "Completed",
-        amount: "+5,651.56 USD",
-        isPositive: true,
-        type: "deposit",
-      },
-      {
-        id: "tx-fallback-5",
-        date: "4 Aug 2025",
-        title: "Withdrawal to HSBC (5522)",
-        status: "Completed",
-        amount: "-1,679.35 USD",
-        isPositive: false,
-        type: "withdrawal",
-      },
-      {
-        id: "tx-fallback-6",
-        date: "20 Aug 2025",
-        title: "Withdrawal to JP Morgan Chase (1133)",
-        status: "Completed",
-        amount: "-3,420.00 USD",
-        isPositive: false,
-        type: "withdrawal",
-      },
-      {
-        id: "tx-fallback-7",
-        date: "18 Aug 2025",
-        title: "Payment from Stripe",
-        status: "Completed",
-        amount: "+2,345.75 USD",
-        isPositive: true,
-        type: "deposit",
-      },
-      {
-        id: "tx-fallback-8",
-        date: "12 Aug 2025",
-        title: "Withdrawal to Wells Fargo (8819)",
-        status: "Completed",
-        amount: "-890.00 USD",
-        isPositive: false,
-        type: "withdrawal",
-      },
-      {
-        id: "tx-fallback-9",
-        date: "10 Aug 2025",
-        title: "Payment from Customer Checkout (Order #ORD-99120)",
-        status: "Completed",
-        amount: "+1,420.50 USD",
-        isPositive: true,
-        type: "deposit",
-      },
-      {
-        id: "tx-fallback-10",
-        date: "8 Aug 2025",
-        title: "Payment from Customer Checkout (Order #ORD-88219)",
-        status: "Completed",
-        amount: "+340.00 USD",
-        isPositive: true,
-        type: "deposit",
-      },
-      {
-        id: "tx-fallback-11",
-        date: "2 Aug 2025",
-        title: "Withdrawal to Barclays Bank (1029)",
-        status: "Completed",
-        amount: "-2,100.00 USD",
-        isPositive: false,
-        type: "withdrawal",
-      },
-      {
-        id: "tx-fallback-12",
-        date: "1 Aug 2025",
-        title: "Payment from Apple Pay Merchant Gateway",
-        status: "Completed",
-        amount: "+3,180.20 USD",
-        isPositive: true,
-        type: "deposit",
-      },
-      {
-        id: "tx-fallback-13",
-        date: "29 Jul 2025",
-        title: "Withdrawal to Standard Chartered (4490)",
-        status: "Completed",
-        amount: "-650.00 USD",
-        isPositive: false,
-        type: "withdrawal",
-      },
-      {
-        id: "tx-fallback-14",
-        date: "25 Jul 2025",
-        title: "Payment from Customer Checkout (Order #ORD-77182)",
-        status: "Completed",
-        amount: "+895.00 USD",
-        isPositive: true,
-        type: "deposit",
-      },
-    ];
-
-    if (activeTab === "Latest") {
-      return [...rawList, ...fallbacks];
-    } else {
-      return rawList.length > 0 ? rawList : fallbacks.slice(0, 5);
-    }
-  }, [rawList, activeTab]);
+  // 100% Real Dynamic List from Store Orders (No fake withdrawals)
+  const currentList = useMemo(() => {
+    return activeTab === "Latest" ? latestTransactions : upcomingTransactions;
+  }, [activeTab, latestTransactions, upcomingTransactions]);
 
   // Paginated Slicing
-  const totalPages = Math.ceil(allList.length / ITEMS_PER_PAGE) || 1;
+  const totalPages = Math.ceil(currentList.length / ITEMS_PER_PAGE) || 1;
   const paginatedTransactions = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return allList.slice(start, start + ITEMS_PER_PAGE);
-  }, [allList, currentPage]);
+    return currentList.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentList, currentPage]);
 
   // Reset to page 1 on tab switch
   const handleTabSwitch = (tab: "Latest" | "Upcoming") => {
@@ -232,9 +99,12 @@ export default function TransactionsPage() {
 
   // Export CSV
   const handleExportCSV = () => {
-    const headers = "ID,Date,Title,Status,Amount\n";
-    const rows = allList
-      .map((t) => `"${t.id}","${t.date}","${t.title}","${t.status}","${t.amount}"`)
+    const headers = "ID,OrderNumber,Date,Title,Customer,PaymentMethod,Status,Amount,AmountPKR\n";
+    const rows = currentList
+      .map(
+        (t) =>
+          `"${t.id}","${t.orderNumber || ""}","${t.date}","${t.title}","${t.customerName || ""}","${t.paymentMethod || ""}","${t.status}","${t.amount}","${t.amountPKR || ""}"`
+      )
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -343,7 +213,7 @@ export default function TransactionsPage() {
                 : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            Latest
+            Latest ({latestTransactions.length})
           </button>
           <button
             type="button"
@@ -354,7 +224,7 @@ export default function TransactionsPage() {
                 : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            Upcoming
+            Upcoming ({upcomingTransactions.length})
           </button>
         </div>
 
@@ -362,7 +232,7 @@ export default function TransactionsPage() {
         {isLoading ? (
           <div className="py-16 flex flex-col items-center justify-center gap-2 text-slate-400">
             <RefreshCw size={18} className="animate-spin text-slate-600" />
-            <span className="text-xs">Loading transactions...</span>
+            <span className="text-xs">Loading store orders...</span>
           </div>
         ) : paginatedTransactions.length > 0 ? (
           <div className="divide-y divide-slate-100">
@@ -403,6 +273,7 @@ export default function TransactionsPage() {
                       setSelectedTx(tx);
                     }}
                     className="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition cursor-pointer shadow-2xs"
+                    title="View details"
                   >
                     <ChevronRight size={13} />
                   </button>
@@ -412,12 +283,12 @@ export default function TransactionsPage() {
           </div>
         ) : (
           <div className="py-16 text-center text-slate-400 text-xs">
-            No {activeTab.toLowerCase()} transactions available.
+            No {activeTab.toLowerCase()} transactions found in your store database.
           </div>
         )}
 
         {/* 🔢 Bottom Pagination Controls */}
-        {allList.length > ITEMS_PER_PAGE && (
+        {currentList.length > ITEMS_PER_PAGE && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-slate-100 text-xs text-slate-500">
             <div>
               Showing{" "}
@@ -426,9 +297,9 @@ export default function TransactionsPage() {
               </span>{" "}
               to{" "}
               <span className="font-semibold text-slate-800">
-                {Math.min(currentPage * ITEMS_PER_PAGE, allList.length)}
+                {Math.min(currentPage * ITEMS_PER_PAGE, currentList.length)}
               </span>{" "}
-              of <span className="font-semibold text-slate-800">{allList.length}</span>{" "}
+              of <span className="font-semibold text-slate-800">{currentList.length}</span>{" "}
               entries
             </div>
 
@@ -496,7 +367,7 @@ export default function TransactionsPage() {
 
             <div className="space-y-3 text-xs">
               <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 text-center">
-                <span className="text-[11px] text-slate-400 block">Total Amount</span>
+                <span className="text-[11px] text-slate-400 block">Total Settlement</span>
                 <span
                   className={`text-2xl font-bold font-mono mt-1 block ${
                     selectedTx.isPositive ? "text-emerald-600" : "text-rose-600"
@@ -504,31 +375,54 @@ export default function TransactionsPage() {
                 >
                   {selectedTx.amount}
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-white border border-slate-200 text-slate-700 mt-2 shadow-2xs">
+                {selectedTx.amountPKR && (
+                  <span className="text-xs text-slate-500 font-mono block mt-0.5">
+                    {selectedTx.amountPKR}
+                  </span>
+                )}
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white border border-slate-200 text-slate-700 mt-2 shadow-2xs">
                   {selectedTx.status}
                 </span>
               </div>
 
               <div className="divide-y divide-slate-100">
+                {selectedTx.orderNumber && (
+                  <div className="py-2 flex justify-between">
+                    <span className="text-slate-500">Order Number:</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      {selectedTx.orderNumber}
+                    </span>
+                  </div>
+                )}
                 <div className="py-2 flex justify-between">
-                  <span className="text-slate-500">Description:</span>
+                  <span className="text-slate-500">Customer:</span>
                   <span className="font-semibold text-slate-800 text-right max-w-[220px]">
-                    {selectedTx.title}
+                    {selectedTx.customerName || selectedTx.title}
                   </span>
                 </div>
+                {selectedTx.customerEmail && (
+                  <div className="py-2 flex justify-between">
+                    <span className="text-slate-500">Email:</span>
+                    <span className="font-mono text-slate-700">
+                      {selectedTx.customerEmail}
+                    </span>
+                  </div>
+                )}
+                {selectedTx.paymentMethod && (
+                  <div className="py-2 flex justify-between">
+                    <span className="text-slate-500">Payment Method:</span>
+                    <span className="font-semibold text-slate-800">
+                      {selectedTx.paymentMethod}
+                    </span>
+                  </div>
+                )}
                 <div className="py-2 flex justify-between">
                   <span className="text-slate-500">Date:</span>
                   <span className="font-semibold text-slate-800">{selectedTx.date}</span>
                 </div>
                 <div className="py-2 flex justify-between">
-                  <span className="text-slate-500">Type:</span>
-                  <span className="font-semibold text-slate-800 capitalize">
-                    {selectedTx.type.replace("_", " ")}
-                  </span>
-                </div>
-                <div className="py-2 flex justify-between">
                   <span className="text-slate-500">Settlement Currency:</span>
-                  <span className="font-semibold text-slate-800">USD</span>
+                  <span className="font-semibold text-slate-800">USD ($) / PKR (₨)</span>
                 </div>
               </div>
             </div>

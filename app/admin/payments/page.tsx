@@ -12,6 +12,9 @@ import {
   BarChart2,
   Bell,
   Check,
+  CreditCard,
+  Building,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -25,10 +28,16 @@ interface BalanceItem {
 
 interface TransactionItem {
   id: string;
+  orderNumber?: string;
   date: string;
   title: string;
+  customerName?: string;
+  customerEmail?: string;
+  paymentMethod?: string;
+  orderStatus?: string;
   status: string;
   amount: string;
+  amountPKR?: string;
   isPositive: boolean;
   type: string;
 }
@@ -52,6 +61,12 @@ export default function PaymentsPage() {
   const [latestTransactions, setLatestTransactions] = useState<TransactionItem[]>([]);
   const [upcomingTransactions, setUpcomingTransactions] = useState<TransactionItem[]>([]);
   const [activeTab, setActiveTab] = useState<"Latest" | "Upcoming">("Latest");
+
+  // Selected Transaction Modal
+  const [selectedTx, setSelectedTx] = useState<TransactionItem | null>(null);
+
+  // Selected Balance Modal
+  const [selectedBalance, setSelectedBalance] = useState<BalanceItem | null>(null);
 
   // Yellow Banner Dismiss
   const [isBannerVisible, setIsBannerVisible] = useState(true);
@@ -223,7 +238,8 @@ export default function PaymentsPage() {
             {balances.map((b) => (
               <div
                 key={b.currency}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs flex items-center justify-between hover:border-slate-300 transition"
+                onClick={() => setSelectedBalance(b)}
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs flex items-center justify-between hover:border-slate-300 transition cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
                   <span className="font-bold text-xs text-slate-700">
@@ -233,7 +249,7 @@ export default function PaymentsPage() {
                     {b.amount} {b.currency}
                   </span>
                 </div>
-                <ChevronRight size={16} className="text-slate-400" />
+                <ChevronRight size={16} className="text-slate-400 group-hover:text-slate-900 transition" />
               </div>
             ))}
           </div>
@@ -292,7 +308,8 @@ export default function PaymentsPage() {
                 displayedTransactions.map((tx) => (
                   <div
                     key={tx.id}
-                    className="py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50/50 rounded-xl px-2 -mx-2 transition"
+                    onClick={() => setSelectedTx(tx)}
+                    className="py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50/70 rounded-xl px-2.5 -mx-2.5 transition cursor-pointer group"
                   >
                     {/* Left: Date */}
                     <div className="w-24 sm:w-28 shrink-0 text-xs font-bold text-slate-900">
@@ -301,7 +318,7 @@ export default function PaymentsPage() {
 
                     {/* Center: Title & Status */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-slate-900 truncate">
+                      <p className="text-xs font-semibold text-slate-900 group-hover:text-black transition truncate">
                         {tx.title}
                       </p>
                       <span className="text-[11px] text-slate-400 font-normal block mt-0.5">
@@ -309,7 +326,7 @@ export default function PaymentsPage() {
                       </span>
                     </div>
 
-                    {/* Right: Amount & Chevron */}
+                    {/* Right: Amount & Chevron Button (Clicking opens details modal) */}
                     <div className="flex items-center gap-3 shrink-0">
                       <span
                         className={`text-xs font-bold font-mono ${
@@ -320,7 +337,12 @@ export default function PaymentsPage() {
                       </span>
                       <button
                         type="button"
-                        className="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-700 transition cursor-pointer shadow-2xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedTx(tx);
+                        }}
+                        className="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition cursor-pointer shadow-2xs"
+                        title="View details"
                       >
                         <ChevronRight size={13} />
                       </button>
@@ -561,6 +583,152 @@ export default function PaymentsPage() {
           </div>
         </div>
       </div>
+
+      {/* 🟢 Transaction Detail Modal (Shows when clicking arrow > or row) */}
+      {selectedTx && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedTx(null);
+          }}
+        >
+          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 text-slate-900 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-sm text-slate-900">
+                Transaction Details
+              </h3>
+              <button
+                type="button"
+                onClick={() => setSelectedTx(null)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 text-center">
+                <span className="text-[11px] text-slate-400 block">Total Settlement</span>
+                <span
+                  className={`text-2xl font-bold font-mono mt-1 block ${
+                    selectedTx.isPositive ? "text-emerald-600" : "text-rose-600"
+                  }`}
+                >
+                  {selectedTx.amount}
+                </span>
+                {selectedTx.amountPKR && (
+                  <span className="text-xs text-slate-500 font-mono block mt-0.5">
+                    {selectedTx.amountPKR}
+                  </span>
+                )}
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white border border-slate-200 text-slate-700 mt-2 shadow-2xs">
+                  {selectedTx.status}
+                </span>
+              </div>
+
+              <div className="divide-y divide-slate-100 text-xs">
+                {selectedTx.orderNumber && (
+                  <div className="py-2 flex justify-between">
+                    <span className="text-slate-500">Order Number:</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      {selectedTx.orderNumber}
+                    </span>
+                  </div>
+                )}
+                <div className="py-2 flex justify-between">
+                  <span className="text-slate-500">Customer:</span>
+                  <span className="font-semibold text-slate-800">
+                    {selectedTx.customerName || selectedTx.title}
+                  </span>
+                </div>
+                {selectedTx.customerEmail && (
+                  <div className="py-2 flex justify-between">
+                    <span className="text-slate-500">Email:</span>
+                    <span className="font-mono text-slate-700">
+                      {selectedTx.customerEmail}
+                    </span>
+                  </div>
+                )}
+                {selectedTx.paymentMethod && (
+                  <div className="py-2 flex justify-between">
+                    <span className="text-slate-500">Payment Method:</span>
+                    <span className="font-semibold text-slate-800">
+                      {selectedTx.paymentMethod}
+                    </span>
+                  </div>
+                )}
+                <div className="py-2 flex justify-between">
+                  <span className="text-slate-500">Date:</span>
+                  <span className="font-semibold text-slate-800">{selectedTx.date}</span>
+                </div>
+                <div className="py-2 flex justify-between">
+                  <span className="text-slate-500">Currency:</span>
+                  <span className="font-semibold text-slate-800">USD ($) / PKR (₨)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedTx(null)}
+                className="rounded-lg text-xs"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🟢 Balance Card Detail Modal */}
+      {selectedBalance && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedBalance(null);
+          }}
+        >
+          <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 text-slate-900 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-sm text-slate-900">
+                {selectedBalance.code} Balance Details
+              </h3>
+              <button
+                type="button"
+                onClick={() => setSelectedBalance(null)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 text-center">
+                <span className="text-[11px] text-slate-400 block">Available Funds</span>
+                <span className="text-2xl font-bold font-mono text-slate-900 mt-1 block">
+                  {selectedBalance.amount} {selectedBalance.currency}
+                </span>
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  100% backed by store order receipts
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedBalance(null)}
+                className="rounded-lg text-xs"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 🟢 Convert Currencies Modal */}
       {isConvertModalOpen && (

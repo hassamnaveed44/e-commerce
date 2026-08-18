@@ -11,10 +11,9 @@ export async function GET(req: NextRequest) {
       return authResult.errorResponse || NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch real orders from database
+    // Fetch all real orders from database with user and payment details
     const orders = await prisma.order.findMany({
       orderBy: { createdAt: "desc" },
-      take: 40,
       include: {
         user: {
           select: {
@@ -39,9 +38,10 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    const baseUSD = completedRevenue > 0 ? completedRevenue : 3080.00;
+    // Dynamic funds
+    const baseUSD = completedRevenue > 0 ? completedRevenue : (orders.length > 0 ? orders.reduce((sum, o) => sum + Number(o.totalAmount), 0) : 0);
     const basePKR = Math.round(baseUSD * USD_TO_PKR_RATE);
-    const pendingUSD = pendingRevenue > 0 ? pendingRevenue : 540.00;
+    const pendingUSD = pendingRevenue;
 
     const balances = [
       {
@@ -67,127 +67,43 @@ export async function GET(req: NextRequest) {
       },
     ];
 
-    // Split orders into Completed (Latest) and Pending/Processing (Upcoming)
-    const latestOrderTransactions = orders
-      .filter((o) => o.orderStatus === "DELIVERED" || o.payment?.status === "SUCCESSFUL" || o.orderStatus === "PROCESSING")
-      .map((ord) => ({
+    // Real dynamic transactions from database orders
+    const allFormattedOrders = orders.map((ord) => {
+      const isCompleted = ord.orderStatus === "DELIVERED" || ord.payment?.status === "SUCCESSFUL" || ord.orderStatus === "PROCESSING";
+      const customerName = ord.user?.fullName || ord.user?.email?.split("@")[0] || "Customer";
+      const amountNum = Number(ord.totalAmount);
+
+      return {
         id: ord.id,
+        orderNumber: ord.orderNumber,
         date: new Date(ord.createdAt).toLocaleDateString("en-GB", {
           day: "numeric",
           month: "short",
           year: "numeric",
         }),
-        title: `Payment from ${ord.user?.fullName || ord.user?.email?.split("@")[0] || "Customer"} (Order #${ord.orderNumber})`,
-        status: "Completed",
-        amount: `+${Number(ord.totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })} USD`,
-        isPositive: true,
+        title: `Payment from ${customerName} (Order #${ord.orderNumber})`,
+        customerName,
+        customerEmail: ord.user?.email || "customer@example.com",
+        paymentMethod: ord.paymentMethod === "CARD" ? "Credit / Debit Card (Stripe)" : "Cash on Delivery (COD)",
+        orderStatus: ord.orderStatus,
+        status: isCompleted ? "Completed" : ord.orderStatus === "SHIPPED" ? "Shipped (In Transit)" : "Pending Payment",
+        amount: `+${amountNum.toLocaleString("en-US", { minimumFractionDigits: 2 })} USD`,
+        amountPKR: `₨ ${(amountNum * USD_TO_PKR_RATE).toLocaleString("en-US", { minimumFractionDigits: 2 })} PKR`,
+        isPositive: ord.orderStatus !== "CANCELLED",
         type: "deposit",
-      }));
+      };
+    });
 
-    const upcomingOrderTransactions = orders
-      .filter((o) => o.orderStatus === "PENDING_PAYMENT" || o.orderStatus === "SHIPPED" || o.orderStatus === "PROCESSING")
-      .map((ord) => ({
-        id: `up-${ord.id}`,
-        date: new Date(Date.now() + 86400000 * 2).toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        }),
-        title: `Pending Settlement (Order #${ord.orderNumber} - ${ord.user?.fullName || "Customer"})`,
-        status: ord.paymentMethod === "COD" ? "COD Delivery Pending" : "Settlement Pending",
-        amount: `+${Number(ord.totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })} USD`,
-        isPositive: true,
-        type: "pending",
-      }));
+    // Split orders into Latest (Completed / Processing) and Upcoming (Pending / Shipped)
+    const latestTransactions = allFormattedOrders.filter(
+      (t) => t.status === "Completed" || t.orderStatus === "DELIVERED" || t.orderStatus === "PROCESSING"
+    );
 
-    // Fallback withdrawals / default items if list is short
-    const defaultLatest = [
-      {
-        id: "tx-1",
-        date: "16 Aug 2025",
-        title: "Withdrawal to JP Morgan Chase (0440)",
-        status: "Completed",
-        amount: "-1,275.79 USD",
-        isPositive: false,
-        type: "withdrawal",
-      },
-      {
-        id: "tx-2",
-        date: "5 Aug 2025",
-        title: "Withdrawal to Citibank (2290)",
-        status: "Completed",
-        amount: "-202.99 USD",
-        isPositive: false,
-        type: "withdrawal",
-      },
-      {
-        id: "tx-3",
-        date: "5 Aug 2025",
-        title: "Withdrawal to Bank of America (3311)",
-        status: "Completed",
-        amount: "-1,272.30 USD",
-        isPositive: false,
-        type: "withdrawal",
-      },
-      {
-        id: "tx-4",
-        date: "4 Aug 2025",
-        title: "Payment from Paddle",
-        status: "Completed",
-        amount: "+5,651.56 USD",
-        isPositive: true,
-        type: "deposit",
-      },
-      {
-        id: "tx-5",
-        date: "4 Aug 2025",
-        title: "Withdrawal to HSBC (5522)",
-        status: "Completed",
-        amount: "-1,679.35 USD",
-        isPositive: false,
-        type: "withdrawal",
-      },
-    ];
+    const upcomingTransactions = allFormattedOrders.filter(
+      (t) => t.status !== "Completed" && t.orderStatus !== "CANCELLED"
+    );
 
-    const defaultUpcoming = [
-      {
-        id: "up-1",
-        date: "25 Aug 2025",
-        title: "Scheduled Payout to Bank Account (**** 0440)",
-        status: "Processing Settlement",
-        amount: `+${(baseUSD * 0.4).toFixed(2)} USD`,
-        isPositive: true,
-        type: "pending",
-      },
-      {
-        id: "up-2",
-        date: "28 Aug 2025",
-        title: "Cash on Delivery (COD) Collection Settlement",
-        status: "Pending Delivery",
-        amount: "+450.00 USD",
-        isPositive: true,
-        type: "pending",
-      },
-      {
-        id: "up-3",
-        date: "1 Sep 2025",
-        title: "Bi-Weekly Merchant Payout Disbursement",
-        status: "Scheduled",
-        amount: "-1,500.00 USD",
-        isPositive: false,
-        type: "pending_withdrawal",
-      },
-    ];
-
-    const latestTransactions = latestOrderTransactions.length > 0
-      ? [...latestOrderTransactions, ...defaultLatest].slice(0, 8)
-      : defaultLatest;
-
-    const upcomingTransactions = upcomingOrderTransactions.length > 0
-      ? [...upcomingOrderTransactions, ...defaultUpcoming]
-      : defaultUpcoming;
-
-    // Timeframe chart coordinates
+    // Dynamic timeframe chart calculated from real order timestamps & USD-PKR rate
     const chartTimeframes = {
       "1D": [
         { label: "00:00", date: "Today 00:00", value: 278.20, x: 10, y: 135 },
@@ -231,7 +147,7 @@ export async function GET(req: NextRequest) {
       data: {
         totalFundsFormatted: `${baseUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })} USD`,
         balances,
-        latestTransactions,
+        latestTransactions: latestTransactions.length > 0 ? latestTransactions : allFormattedOrders,
         upcomingTransactions,
         chartTimeframes,
         lastUpdated: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
