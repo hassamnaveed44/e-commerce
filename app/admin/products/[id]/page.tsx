@@ -523,60 +523,60 @@ export default function ProductDetailPage({
           {/* 1. Top 4 Mini Metric Cards with Soft Grey Background (Screenshot 1 Match) */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
             {/* Card 1: Price */}
-            <div className="rounded-xl border border-slate-200/90 bg-[#F8FAFC] p-3.5 shadow-2xs flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center text-slate-500 shrink-0">
+            <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-[#F8FAFC] dark:bg-card p-3.5 shadow-2xs flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 shadow-2xs flex items-center justify-center text-slate-500 dark:text-slate-300 shrink-0">
                 <CircleDollarSign size={18} />
               </div>
               <div>
-                <span className="text-[11px] text-slate-400 font-normal block">
+                <span className="text-[11px] text-slate-400 dark:text-slate-400 font-normal block">
                   Price
                 </span>
-                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight font-mono">
+                <span className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono">
                   ${product.price.toFixed(2)}
                 </span>
               </div>
             </div>
 
             {/* Card 2: No. of Orders */}
-            <div className="rounded-xl border border-slate-200/90 bg-[#F8FAFC] p-3.5 shadow-2xs flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center text-slate-500 shrink-0">
+            <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-[#F8FAFC] dark:bg-card p-3.5 shadow-2xs flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 shadow-2xs flex items-center justify-center text-slate-500 dark:text-slate-300 shrink-0">
                 <Truck size={17} />
               </div>
               <div>
-                <span className="text-[11px] text-slate-400 font-normal block">
+                <span className="text-[11px] text-slate-400 dark:text-slate-400 font-normal block">
                   No. of Orders
                 </span>
-                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight font-mono">
+                <span className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono">
                   {product.ordersCount.toLocaleString()}
                 </span>
               </div>
             </div>
 
             {/* Card 3: Available Stocks */}
-            <div className="rounded-xl border border-slate-200/90 bg-[#F8FAFC] p-3.5 shadow-2xs flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center text-slate-500 shrink-0">
+            <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-[#F8FAFC] dark:bg-card p-3.5 shadow-2xs flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 shadow-2xs flex items-center justify-center text-slate-500 dark:text-slate-300 shrink-0">
                 <Layers size={17} />
               </div>
               <div>
-                <span className="text-[11px] text-slate-400 font-normal block">
+                <span className="text-[11px] text-slate-400 dark:text-slate-400 font-normal block">
                   Available Stocks
                 </span>
-                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight font-mono">
+                <span className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono">
                   {product.stock.toLocaleString()}
                 </span>
               </div>
             </div>
 
             {/* Card 4: Total Revenue */}
-            <div className="rounded-xl border border-slate-200/90 bg-[#F8FAFC] p-3.5 shadow-2xs flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center text-slate-500 shrink-0">
+            <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-[#F8FAFC] dark:bg-card p-3.5 shadow-2xs flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 shadow-2xs flex items-center justify-center text-slate-500 dark:text-slate-300 shrink-0">
                 <HandCoins size={17} />
               </div>
               <div>
-                <span className="text-[11px] text-slate-400 font-normal block">
+                <span className="text-[11px] text-slate-400 dark:text-slate-400 font-normal block">
                   Total Revenue
                 </span>
-                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight font-mono">
+                <span className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono">
                   ${product.totalRevenue.toLocaleString()}
                 </span>
               </div>

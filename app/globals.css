@@ -182,6 +182,11 @@ body {
   color: #f8fafc !important;
 }
 
+.dark .bg-\[\#F8FAFC\] {
+  background-color: #121214 !important;
+  border-color: #27272a !important;
+}
+
 .dark .bg-\[\#FEFCE8\] {
   background-color: #1c1917 !important;
   border-color: #78350f !important;

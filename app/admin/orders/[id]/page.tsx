@@ -416,9 +416,19 @@ export default function OrderDetailPage({
               {order.items.length > 0 ? (
                 order.items.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition">
-                    {/* Product thumbnail + title */}
+                    {/* Product thumbnail + title (Clickable link to Product Detail) */}
                     <td className="py-3.5 px-2">
-                      <div className="flex items-center gap-3">
+                      <Link
+                        href={
+                          item.productId
+                            ? `/admin/products/${item.productId}`
+                            : item.productSlug
+                            ? `/admin/products/${item.productSlug}`
+                            : `/admin/products`
+                        }
+                        className="flex items-center gap-3 group/item hover:opacity-90 transition"
+                        title="View Product Details"
+                      >
                         <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden border border-slate-200/90 dark:border-slate-700 shrink-0 flex items-center justify-center">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
@@ -428,7 +438,7 @@ export default function OrderDetailPage({
                           />
                         </div>
                         <div>
-                          <span className="font-semibold text-slate-900 dark:text-slate-100 block">
+                          <span className="font-semibold text-slate-900 dark:text-slate-100 group-hover/item:underline block">
                             {item.productName}
                           </span>
                           {(item.size || item.colorName) && (
@@ -437,7 +447,7 @@ export default function OrderDetailPage({
                             </span>
                           )}
                         </div>
-                      </div>
+                      </Link>
                     </td>
 
                     {/* Quantity */}

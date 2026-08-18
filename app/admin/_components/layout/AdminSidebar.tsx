@@ -56,7 +56,7 @@ export default function AdminSidebar({
     },
     { title: "Add Product", href: "/admin/products/new", exact: true },
     { title: "Order List", href: "/admin/orders", exact: true },
-    { title: "Order Detail", href: "/admin/orders", isOrderDetail: true },
+    { title: "Order Detail", href: "/admin/orders/detail", isOrderDetail: true },
   ];
 
   const paymentSubItems = [
