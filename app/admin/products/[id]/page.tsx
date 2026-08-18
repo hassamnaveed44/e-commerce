@@ -229,19 +229,19 @@ export default function ProductDetailPage({
     showToast(`Added ${product.name} (${selectedSize}) to cart!`);
   };
 
-  // Handle Submit Review (Dynamic integration: immediately prepends to current reviews)
+  // Handle Submit Review (Dynamic integration: immediately prepends to current reviews with entered name)
   const handleSubmitReview = async () => {
     if (!product || !reviewTitle || !reviewComment) return;
     setIsSubmittingReview(true);
     try {
+      const enteredAuthor = reviewName.trim() || "Verified Buyer";
       const newRev: ReviewItem = {
         id: `rev-${Date.now()}`,
-        authorName: reviewName || "Verified Buyer",
+        authorName: enteredAuthor,
         rating: reviewRating,
-        title: reviewTitle,
-        comment: reviewComment,
+        title: reviewTitle.trim(),
+        comment: reviewComment.trim(),
         createdAt: "Just now",
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
       };
 
       setProduct((prev) => {
@@ -260,9 +260,10 @@ export default function ProductDetailPage({
       });
 
       setIsReviewModalOpen(false);
+      setReviewName("");
       setReviewTitle("");
       setReviewComment("");
-      showToast("Review submitted successfully!");
+      showToast(`Review added by ${enteredAuthor}!`);
     } finally {
       setIsSubmittingReview(false);
     }
@@ -728,32 +729,19 @@ export default function ProductDetailPage({
             <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
               {/* Left Column: Customer Review Cards List */}
               <div className="md:col-span-7 space-y-3.5">
-                {product.reviews.slice(0, visibleReviewsCount).map((rev, idx) => {
-                  const fallbackAvatars = [
-                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
-                    "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80",
-                    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
-                    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
-                    "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80",
-                    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-                  ];
-                  const avatarUrl = rev.avatar || fallbackAvatars[idx % fallbackAvatars.length];
+                {product.reviews.slice(0, visibleReviewsCount).map((rev) => {
+                  const initial = (rev.authorName || "C").trim().charAt(0).toUpperCase();
 
                   return (
                     <div
                       key={rev.id}
                       className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs space-y-2.5"
                     >
-                      {/* Review Header: Avatar, Name, Rating, Time */}
+                      {/* Review Header: Initial Letter Avatar, Name, Rating, Time */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={avatarUrl}
-                              alt={rev.authorName}
-                              className="w-full h-full object-cover"
-                            />
+                          <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200/90 shrink-0 flex items-center justify-center font-bold text-slate-700 text-sm shadow-2xs">
+                            {initial}
                           </div>
                           <div>
                             <span className="font-bold text-slate-900 text-xs sm:text-[13px] block">
