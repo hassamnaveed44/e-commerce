@@ -13,19 +13,14 @@ export default function AdminLayout({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // Default to light theme unless explicitly set to dark
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      if (!savedTheme) localStorage.setItem("theme", "light");
-    }
+    // Strictly enforce light theme
+    document.documentElement.classList.remove("dark");
+    localStorage.setItem("theme", "light");
   }, []);
 
   return (
     <AdminAuthGate>
-      <div className="min-h-screen w-full max-w-full overflow-x-clip bg-background text-foreground flex transition-colors duration-200">
+      <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[#F8FAFC] text-slate-950 flex font-satoshi">
         {/* Fixed Sticky Sidebar on Desktop */}
         <AdminSidebar
           mobileOpen={mobileSidebarOpen}
