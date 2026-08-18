@@ -144,9 +144,20 @@ export async function createOrder(data: CreateOrderInput) {
       let discountAmount = 0;
       if (promoCode) {
         const cleaned = promoCode.trim().toUpperCase();
-        if (cleaned === "SHOP20" || cleaned === "DISCOUNT20") {
+        if (
+          cleaned === "WELCOME20" ||
+          cleaned === "FIRST20" ||
+          cleaned === "SHOP20" ||
+          cleaned === "DISCOUNT20"
+        ) {
           discountAmount = (subtotal * 20) / 100;
-        } else if (cleaned === "SHOP10") {
+        } else if (
+          cleaned === "REF10" ||
+          cleaned === "SHOP10" ||
+          cleaned === "AD10" ||
+          cleaned === "TIKTOK10" ||
+          cleaned === "INSTA10"
+        ) {
           discountAmount = (subtotal * 10) / 100;
         }
       }
@@ -158,8 +169,8 @@ export async function createOrder(data: CreateOrderInput) {
       const orderNumber = `ORD-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
       const mappedPaymentMethod = paymentMethod === "CARD" ? PaymentMethod.CARD : PaymentMethod.COD;
-      const mappedOrderStatus =
-        paymentMethod === "COD" ? OrderStatus.PROCESSING : OrderStatus.PENDING_PAYMENT;
+      // All orders start in initial Pending state (Awaiting verification / processing)
+      const mappedOrderStatus = OrderStatus.PENDING_PAYMENT;
 
       // 7. Create Order Record
       const order = await tx.order.create({

@@ -19,11 +19,14 @@ export default async function CategoryPage({
     size?: string;
     sort?: string;
     page?: string;
+    search?: string;
+    q?: string;
   }>;
 }) {
   const { style } = await params;
   const search = await searchParams;
 
+  const searchQuery = search.search || search.q || undefined;
   const currentCategoryParam = search.category;
   const normalizedStyle = style?.toLowerCase() || "casual";
   const isAll = normalizedStyle === "all";
@@ -46,6 +49,7 @@ export default async function CategoryPage({
   const result = await getProducts({
     categorySlug: activeCategory,
     dressStyle: activeDressStyle,
+    search: searchQuery,
     minPrice,
     maxPrice,
     color,

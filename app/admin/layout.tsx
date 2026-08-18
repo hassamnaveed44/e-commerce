@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminSidebar from "./_components/layout/AdminSidebar";
 import AdminHeader from "./_components/layout/AdminHeader";
 import AdminAuthGate from "./_components/auth/AdminAuthGate";
@@ -12,9 +12,15 @@ export default function AdminLayout({
 }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
+  useEffect(() => {
+    // Strictly enforce light theme
+    document.documentElement.classList.remove("dark");
+    localStorage.setItem("theme", "light");
+  }, []);
+
   return (
     <AdminAuthGate>
-      <div className="min-h-screen w-full max-w-full overflow-x-clip bg-background text-foreground flex">
+      <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[#F8FAFC] text-slate-950 flex font-satoshi">
         {/* Fixed Sticky Sidebar on Desktop */}
         <AdminSidebar
           mobileOpen={mobileSidebarOpen}

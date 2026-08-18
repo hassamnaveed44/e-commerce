@@ -5,68 +5,35 @@ html {
 }
 
 :root {
-  /* SHOP.CO Signature Crisp Light Theme */
-  --background: #F9FAFB;
-  --foreground: #171717;
+  /* Crisp Light Theme */
+  --background: #F8FAFC;
+  --foreground: #0F172A;
 
-  --card: #ffffff;
-  --card-foreground: #171717;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
 
-  --popover: #ffffff;
-  --popover-foreground: #171717;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
 
-  /* SHOP.CO Pitch Black Brand Color */
-  --primary: #171717;
-  --primary-foreground: #ffffff;
+  --primary: #0F172A;
+  --primary-foreground: #FFFFFF;
 
-  /* SHOP.CO Soft Surfaces (#F0EEED / #F2F0F1) */
-  --secondary: #F0EEED;
-  --secondary-foreground: #171717;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #0F172A;
 
-  --muted: #F3F4F6;
-  --muted-foreground: #737373;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
 
-  --accent: #F0EEED;
-  --accent-foreground: #171717;
+  --accent: #F1F5F9;
+  --accent-foreground: #0F172A;
 
   --destructive: #EF4444;
-  --destructive-foreground: #ffffff;
+  --destructive-foreground: #FFFFFF;
 
-  --border: #E5E7EB;
-  --input: #E5E7EB;
-  --ring: #171717;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #0F172A;
   --radius: 0.85rem;
-}
-
-/* Dark Theme (Activated when you toggle dark mode) */
-.dark {
-  --background: #09090b;
-  --foreground: #f4f4f5;
-
-  --card: #121214;
-  --card-foreground: #f4f4f5;
-
-  --popover: #121214;
-  --popover-foreground: #f4f4f5;
-
-  --primary: #f4f4f5;
-  --primary-foreground: #09090b;
-
-  --secondary: #1c1c1f;
-  --secondary-foreground: #f4f4f5;
-
-  --muted: #18181b;
-  --muted-foreground: #a1a1aa;
-
-  --accent: #1c1c1f;
-  --accent-foreground: #f4f4f5;
-
-  --destructive: #7f1d1d;
-  --destructive-foreground: #fef2f2;
-
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #d4d4d8;
 }
 
 @theme inline {
@@ -95,7 +62,60 @@ html {
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: #F8FAFC;
+  color: #0F172A;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* 🖨️ Clean Order Print Styles (Excludes Layout Chrome: Sidebar, Header, Buttons) */
+@media print {
+  /* Hide all dashboard layout elements */
+  header,
+  aside,
+  nav,
+  .print-hidden,
+  button,
+  [title="Toggle Sidebar"],
+  [title="Back to Orders"],
+  [title="Edit Payment"],
+  [title="Appearance Mode"],
+  [title="Color Theme"] {
+    display: none !important;
+  }
+
+  /* Reset document background to pure white */
+  html,
+  body {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 11pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Make main content full width without md:pl-64 offset */
+  main,
+  div[class*="md:pl-64"] {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Prevent page splits inside order cards */
+  .rounded-2xl,
+  table,
+  tr,
+  tbody {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Crisp borders on printed cards */
+  .rounded-2xl {
+    box-shadow: none !important;
+    border: 1px solid #CBD5E1 !important;
+  }
 }

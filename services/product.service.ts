@@ -120,11 +120,19 @@ export async function getProducts(params: GetProductsParams = {}) {
     };
   }
 
-  if (search) {
-    where.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      { description: { contains: search, mode: "insensitive" } },
-    ];
+  if (search && search.trim()) {
+    const trimmed = search.trim();
+    const singular = trimmed.endsWith("s") && trimmed.length > 3 ? trimmed.slice(0, -1) : trimmed;
+    const plural = trimmed.endsWith("s") ? trimmed : `${trimmed}s`;
+    const searchTerms = Array.from(new Set([trimmed, singular, plural]));
+
+    where.OR = searchTerms.flatMap((term) => [
+      { name: { contains: term, mode: "insensitive" } },
+      { description: { contains: term, mode: "insensitive" } },
+      { dressStyle: { contains: term, mode: "insensitive" } },
+      { category: { name: { contains: term, mode: "insensitive" } } },
+      { category: { slug: { contains: term, mode: "insensitive" } } },
+    ]);
   }
 
   // Build order by

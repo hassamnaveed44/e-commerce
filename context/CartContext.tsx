@@ -31,7 +31,10 @@ interface CartContextType {
   isHydrated: boolean;
   promoCode: string;
   promoDiscountPercent: number;
-  applyPromoCode: (code: string) => boolean;
+  promoLabel: string | null;
+  isAutoApplied: boolean;
+  applyPromoCode: (code: string, customLabel?: string) => boolean;
+  removePromoCode: () => void;
   addToCart: (item: {
     variantId: string;
     quantity: number;
@@ -56,6 +59,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const USER_CACHE_KEY = "shopco_cart_cache";
 const GUEST_CART_KEY = "shopco_guest_cart";
+const PROMO_STORAGE_KEY = "shopco_active_promo";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { user, isLoaded } = useUser();
@@ -66,19 +70,117 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [promoCode, setPromoCode] = useState("");
   const [promoDiscountPercent, setPromoDiscountPercent] = useState(0);
+  const [promoLabel, setPromoLabel] = useState<string | null>(null);
+  const [isAutoApplied, setIsAutoApplied] = useState(false);
 
-  // Read initial cache on client mount
+  // Apply promo code with anti-stacking logic
+  const applyPromoCode = useCallback((code: string, customLabel?: string) => {
+    const cleaned = code.trim().toUpperCase();
+
+    // 20% First-Order / Welcome / VIP discounts
+    if (
+      cleaned === "WELCOME20" ||
+      cleaned === "FIRST20" ||
+      cleaned === "SHOP20" ||
+      cleaned === "DISCOUNT20"
+    ) {
+      setPromoCode(cleaned);
+      setPromoDiscountPercent(20);
+      setPromoLabel(customLabel || "🎉 20% First-Order Welcome Discount Applied!");
+      setIsAutoApplied(Boolean(customLabel));
+      try {
+        localStorage.setItem(
+          PROMO_STORAGE_KEY,
+          JSON.stringify({
+            code: cleaned,
+            percent: 20,
+            label: customLabel || "20% Discount",
+            isAuto: Boolean(customLabel),
+          })
+        );
+      } catch {}
+      return true;
+    }
+
+    // 10% Referral / Influencer / Ad discounts
+    if (
+      cleaned === "REF10" ||
+      cleaned === "SHOP10" ||
+      cleaned === "AD10" ||
+      cleaned === "TIKTOK10" ||
+      cleaned === "INSTA10"
+    ) {
+      setPromoCode(cleaned);
+      setPromoDiscountPercent(10);
+      setPromoLabel(customLabel || "🏷️ 10% Referral Discount Applied!");
+      setIsAutoApplied(Boolean(customLabel));
+      try {
+        localStorage.setItem(
+          PROMO_STORAGE_KEY,
+          JSON.stringify({
+            code: cleaned,
+            percent: 10,
+            label: customLabel || "10% Referral",
+            isAuto: Boolean(customLabel),
+          })
+        );
+      } catch {}
+      return true;
+    }
+
+    return false;
+  }, []);
+
+  const removePromoCode = useCallback(() => {
+    setPromoCode("");
+    setPromoDiscountPercent(0);
+    setPromoLabel(null);
+    setIsAutoApplied(false);
+    try {
+      localStorage.removeItem(PROMO_STORAGE_KEY);
+    } catch {}
+  }, []);
+
+  // Read initial cache & URL referral parameters on client mount
   useEffect(() => {
     try {
       const cached = localStorage.getItem(USER_CACHE_KEY);
       if (cached) {
         setCartItems(JSON.parse(cached));
       }
+
+      // Check saved promo in storage
+      const savedPromo = localStorage.getItem(PROMO_STORAGE_KEY);
+      if (savedPromo) {
+        const parsed = JSON.parse(savedPromo);
+        if (parsed.code && parsed.percent) {
+          setPromoCode(parsed.code);
+          setPromoDiscountPercent(parsed.percent);
+          setPromoLabel(parsed.label || null);
+          setIsAutoApplied(Boolean(parsed.isAuto));
+        }
+      }
+
+      // Check if arriving via Referral / Campaign link (e.g. ?ref=insta10 or ?promo=welcome20)
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const refParam = params.get("ref") || params.get("referral");
+        const promoParam = params.get("promo");
+
+        if (promoParam) {
+          applyPromoCode(promoParam, `🏷️ Campaign Discount Applied (${promoParam.toUpperCase()})`);
+        } else if (refParam) {
+          applyPromoCode("REF10", `🏷️ Referral Discount Applied (via ${refParam})`);
+        } else if (!savedPromo) {
+          // Automatic 20% First-Order Welcome for new visitors
+          applyPromoCode("WELCOME20", "🎉 20% First-Order Welcome Discount Applied!");
+        }
+      }
     } catch {
       // Ignore cache parse error
     }
     setIsHydrated(true);
-  }, []);
+  }, [applyPromoCode]);
 
   // Fetch cart from server
   const fetchServerCart = useCallback(async () => {
@@ -251,21 +353,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(GUEST_CART_KEY);
   };
 
-  const applyPromoCode = (code: string) => {
-    const cleaned = code.trim().toUpperCase();
-    if (cleaned === "SHOP20" || cleaned === "DISCOUNT20") {
-      setPromoCode(cleaned);
-      setPromoDiscountPercent(20);
-      return true;
-    }
-    if (cleaned === "SHOP10") {
-      setPromoCode(cleaned);
-      setPromoDiscountPercent(10);
-      return true;
-    }
-    return false;
-  };
-
   const totalItemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = promoDiscountPercent > 0 ? (subtotal * promoDiscountPercent) / 100 : 0;
@@ -285,7 +372,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         isHydrated,
         promoCode,
         promoDiscountPercent,
+        promoLabel,
+        isAutoApplied,
         applyPromoCode,
+        removePromoCode,
         addToCart,
         updateQuantity,
         removeItem,
