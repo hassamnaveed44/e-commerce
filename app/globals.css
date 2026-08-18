@@ -67,6 +67,7 @@ html {
   --border: #27272a;
   --input: #27272a;
   --ring: #d4d4d8;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -98,4 +99,75 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Universal Dark Mode High Contrast Overrides */
+.dark body {
+  background-color: #09090b !important;
+  color: #f4f4f5 !important;
+}
+
+.dark .bg-white {
+  background-color: #121214 !important;
+  color: #f4f4f5 !important;
+}
+
+.dark .text-slate-900,
+.dark .text-slate-800 {
+  color: #f4f4f5 !important;
+}
+
+.dark .text-slate-700,
+.dark .text-slate-600 {
+  color: #d4d4d8 !important;
+}
+
+.dark .text-slate-500,
+.dark .text-slate-400 {
+  color: #a1a1aa !important;
+}
+
+.dark .border-slate-200,
+.dark .border-slate-100,
+.dark .border-slate-200\/60,
+.dark .border-slate-200\/70,
+.dark .border-slate-200\/80,
+.dark .border-slate-200\/90,
+.dark .border-slate-300 {
+  border-color: #27272a !important;
+}
+
+.dark .bg-slate-50,
+.dark .bg-slate-50\/50,
+.dark .bg-slate-50\/70,
+.dark .bg-slate-100,
+.dark .bg-slate-100\/70 {
+  background-color: #18181b !important;
+}
+
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-slate-50\/70:hover,
+.dark .hover\:bg-slate-100:hover {
+  background-color: #27272a !important;
+}
+
+.dark .bg-\[\#FEFCE8\] {
+  background-color: #1c1917 !important;
+  border-color: #78350f !important;
+}
+
+.dark .bg-\[\#EFEFEF\] {
+  background-color: #27272a !important;
+}
+
+.dark svg line[stroke="#F1F5F9"] {
+  stroke: #27272a !important;
+}
+
+.dark svg path[stroke="#0F172A"] {
+  stroke: #f4f4f5 !important;
+}
+
+.dark svg circle[stroke="#0F172A"] {
+  stroke: #f4f4f5 !important;
 }

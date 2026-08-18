@@ -9,11 +9,10 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronsUpDown,
-  MoreVertical,
-  Layers,
+  Clock,
+  MessageSquare,
+  Package,
   Sparkles,
-  PieChart,
-  LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,148 +28,114 @@ export default function AdminSidebar({
   const pathname = usePathname();
   const [ecommerceOpen, setEcommerceOpen] = useState(true);
   const [paymentOpen, setPaymentOpen] = useState(true);
-
   const [firstProductId, setFirstProductId] = useState<string | null>(null);
-  const [firstOrderId, setFirstOrderId] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadFirstEntities() {
+    async function loadFirstProduct() {
       try {
-        const [prodRes, ordRes] = await Promise.all([
-          fetch("/api/admin/products"),
-          fetch("/api/admin/orders"),
-        ]);
-        const prodData = await prodRes.json();
-        if (prodData.success && Array.isArray(prodData.products) && prodData.products.length > 0) {
-          setFirstProductId(prodData.products[0].id);
-        }
-        const ordData = await ordRes.json();
-        if (ordData.success && Array.isArray(ordData.orders) && ordData.orders.length > 0) {
-          setFirstOrderId(ordData.orders[0].id);
+        const res = await fetch("/api/admin/products");
+        const data = await res.json();
+        if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+          setFirstProductId(data.products[0].id);
         }
       } catch (e) {
-        console.error("Sidebar load entities error:", e);
+        console.error("Sidebar load product error:", e);
       }
     }
-    loadFirstEntities();
+    loadFirstProduct();
   }, []);
 
-  // Exact sequence matching Screenshot 1:
-  // 1. Dashboard
-  // 2. Product List
-  // 3. Product Detail
-  // 4. Add Product
-  // 5. Order List
-  // 6. Order Detail
-  // 7. Inventory
-  // 8. Reviews
+  // Exact Screenshot Sequence
   const ecommerceSubItems = [
-    { title: "Dashboard", href: "/admin" },
-    { title: "Product List", href: "/admin/products" },
+    { title: "Dashboard", href: "/admin", exact: true },
+    { title: "Product List", href: "/admin/products", exact: true },
     {
       title: "Product Detail",
       href: firstProductId ? `/admin/products/${firstProductId}` : "/admin/products",
       isDetail: true,
     },
-    { title: "Add Product", href: "/admin/products/new" },
-    { title: "Order List", href: "/admin/orders" },
-    {
-      title: "Order Detail",
-      href: "/admin/orders",
-      isOrderDetail: true,
-    },
-    { title: "Inventory", href: "/admin/inventory" },
-    { title: "Reviews", href: "/admin/reviews" },
+    { title: "Add Product", href: "/admin/products/new", exact: true },
+    { title: "Order List", href: "/admin/orders", exact: true },
+    { title: "Order Detail", href: "/admin/orders", isOrderDetail: true },
   ];
 
   const paymentSubItems = [
-    { title: "Balances & Overview", href: "/admin/payments" },
-    { title: "Transactions", href: "/admin/payments/transactions" },
+    { title: "Balances & Overview", href: "/admin/payments", exact: true },
+    { title: "Transactions", href: "/admin/payments/transactions", exact: true },
   ];
 
   const sidebarContent = (
-    <div className="flex h-full flex-col justify-between p-3 select-none bg-[#F8F9FA] text-slate-900 transition-colors duration-200 font-satoshi border-r border-slate-200/90">
+    <div className="flex h-full flex-col justify-between p-3 select-none bg-muted/40 dark:bg-card text-foreground transition-colors duration-200 font-satoshi">
       {/* Top Header & Menus */}
       <div className="space-y-4">
         {/* Brand Header */}
-        <div className="flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-200/50 transition cursor-pointer">
+        <div className="flex items-center justify-between p-1.5 rounded-xl hover:bg-muted transition cursor-pointer">
           <Link href="/admin" className="flex items-center gap-2.5 flex-1 min-w-0">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black text-white font-integral text-sm font-black shadow-xs shrink-0">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black dark:bg-white text-white dark:text-black font-integral text-sm font-black shadow-xs shrink-0">
               S.
             </div>
             <div className="flex flex-col truncate">
-              <span className="font-integral text-sm font-extrabold tracking-tight text-slate-900 truncate">
+              <span className="font-integral text-sm font-extrabold tracking-tight text-foreground truncate">
                 SHOP.CO Admin
               </span>
-              <span className="text-[10px] text-slate-400 -mt-0.5">Fashion Store</span>
+              <span className="text-[10px] text-muted-foreground -mt-0.5">Fashion Store</span>
             </div>
           </Link>
-          <ChevronsUpDown className="h-4 w-4 text-slate-400 shrink-0" />
+          <ChevronsUpDown className="h-4 w-4 text-muted-foreground shrink-0" />
         </div>
 
-        {/* Dashboards Section Title */}
-        <p className="px-2 text-[11px] font-medium text-slate-400">Dashboards</p>
+        {/* Dashboards Section Title (Screenshot Match) */}
+        <p className="px-2 text-[11px] font-semibold text-muted-foreground/80">Dashboards</p>
 
         {/* Menu Navigation */}
-        <div className="space-y-1.5">
-          {/* Classic Dashboard Top Link */}
+        <div className="space-y-1">
+          {/* 1. Classic Dashboard (Screenshot Match) */}
           <Link
             href="/admin"
             onClick={onMobileClose}
             className={cn(
-              "flex w-full items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer",
+              "flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors",
               pathname === "/admin"
-                ? "bg-slate-200/80 text-slate-900 font-bold shadow-2xs"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                ? "bg-muted dark:bg-muted/80 text-foreground font-bold shadow-2xs"
+                : "text-foreground/80 hover:text-foreground hover:bg-muted/60"
             )}
           >
-            <PieChart className="h-4 w-4 text-slate-500" />
+            <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
             <span>Classic Dashboard</span>
           </Link>
 
-          {/* E-COMMERCE SECTION */}
-          <div>
+          {/* 2. E-COMMERCE SECTION (Screenshot Match) */}
+          <div className="pt-1">
             <button
               type="button"
               onClick={() => setEcommerceOpen(!ecommerceOpen)}
-              className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-800 hover:bg-slate-200/50 transition cursor-pointer"
+              className="flex w-full items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold text-foreground/80 hover:bg-muted transition cursor-pointer"
             >
-              <div className="flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4 text-slate-500" />
+              <div className="flex items-center gap-2.5">
+                <ShoppingBag className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span>E-commerce</span>
               </div>
               {ecommerceOpen ? (
-                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
               ) : (
-                <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               )}
             </button>
 
             {ecommerceOpen && (
-              <div className="mt-1 ml-4 pl-2.5 border-l border-slate-200 space-y-0.5">
+              <div className="mt-1 ml-4 pl-3 border-l border-border/80 space-y-0.5">
                 {ecommerceSubItems.map((item) => {
-                  const isProductDetailActive =
-                    item.isDetail &&
-                    pathname.startsWith("/admin/products/") &&
-                    pathname !== "/admin/products/new" &&
-                    pathname !== "/admin/products";
-
-                  const isAddProductActive =
-                    item.title === "Add Product" &&
-                    (pathname === "/admin/products/new" || pathname === "/admin/products/create");
-
-                  const isProductListActive =
-                    item.title === "Product List" && pathname === "/admin/products";
-
-                  const isOrderListActive =
-                    item.title === "Order List" && pathname === "/admin/orders";
-
-                  const isActive =
-                    pathname === item.href ||
-                    isProductDetailActive ||
-                    isAddProductActive ||
-                    isProductListActive ||
-                    isOrderListActive;
+                  let isActive = false;
+                  if (item.exact) {
+                    isActive = pathname === item.href;
+                  } else if (item.isDetail) {
+                    isActive =
+                      pathname.startsWith("/admin/products/") &&
+                      pathname !== "/admin/products/new" &&
+                      pathname !== "/admin/products";
+                  } else if (item.isOrderDetail) {
+                    isActive = pathname.startsWith("/admin/orders/") && pathname !== "/admin/orders";
+                  }
 
                   return (
                     <Link
@@ -178,10 +143,10 @@ export default function AdminSidebar({
                       href={item.href}
                       onClick={onMobileClose}
                       className={cn(
-                        "block px-3 py-1.5 rounded-xl text-xs transition-colors",
+                        "block px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
                         isActive
-                          ? "bg-slate-200/80 text-slate-900 font-bold shadow-2xs"
-                          : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 font-medium"
+                          ? "bg-muted dark:bg-muted/80 text-foreground font-bold shadow-2xs"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                       )}
                     >
                       {item.title}
@@ -192,26 +157,26 @@ export default function AdminSidebar({
             )}
           </div>
 
-          {/* PAYMENT SECTION */}
-          <div>
+          {/* 3. PAYMENT DASHBOARD SECTION */}
+          <div className="pt-1">
             <button
               type="button"
               onClick={() => setPaymentOpen(!paymentOpen)}
-              className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-800 hover:bg-slate-200/50 transition cursor-pointer"
+              className="flex w-full items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold text-foreground/80 hover:bg-muted transition cursor-pointer"
             >
-              <div className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-slate-500" />
+              <div className="flex items-center gap-2.5">
+                <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span>Payment Dashboard</span>
               </div>
               {paymentOpen ? (
-                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
               ) : (
-                <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               )}
             </button>
 
             {paymentOpen && (
-              <div className="mt-1 ml-4 pl-2.5 border-l border-slate-200 space-y-0.5">
+              <div className="mt-1 ml-4 pl-3 border-l border-border/80 space-y-0.5">
                 {paymentSubItems.map((item) => {
                   const isActive = pathname === item.href;
                   return (
@@ -220,10 +185,10 @@ export default function AdminSidebar({
                       href={item.href}
                       onClick={onMobileClose}
                       className={cn(
-                        "block px-3 py-1.5 rounded-xl text-xs transition-colors",
+                        "block px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
                         isActive
-                          ? "bg-slate-200/80 text-slate-900 font-bold shadow-2xs"
-                          : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 font-medium"
+                          ? "bg-muted dark:bg-muted/80 text-foreground font-bold shadow-2xs"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                       )}
                     >
                       {item.title}
@@ -233,64 +198,77 @@ export default function AdminSidebar({
               </div>
             )}
           </div>
+
+          {/* 4. REVIEWS */}
+          <Link
+            href="/admin/reviews"
+            onClick={onMobileClose}
+            className={cn(
+              "flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors",
+              pathname === "/admin/reviews"
+                ? "bg-muted dark:bg-muted/80 text-foreground font-bold shadow-2xs"
+                : "text-foreground/80 hover:text-foreground hover:bg-muted/60"
+            )}
+          >
+            <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span>Reviews</span>
+          </Link>
+
+          {/* 5. INVENTORY */}
+          <Link
+            href="/admin/inventory"
+            onClick={onMobileClose}
+            className={cn(
+              "flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors",
+              pathname === "/admin/inventory"
+                ? "bg-muted dark:bg-muted/80 text-foreground font-bold shadow-2xs"
+                : "text-foreground/80 hover:text-foreground hover:bg-muted/60"
+            )}
+          >
+            <Package className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span>Inventory</span>
+          </Link>
         </div>
       </div>
 
-      {/* Bottom Section: Theme-responsive Promo Card & Profile */}
-      <div className="space-y-3 pt-2">
-        {/* Unlock Everything Promo Card */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-2">
-          <div className="flex items-center gap-1.5">
-            <Sparkles size={14} className="text-amber-500" />
-            <h4 className="font-extrabold text-xs text-slate-900 font-integral">
-              Unlock Everything
-            </h4>
-          </div>
-          <p className="text-[11px] text-slate-500 leading-relaxed">
-            Get instant access to all premium dashboards, templates, and UI components. Pay once, use forever.
-          </p>
-          <button
-            type="button"
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-black text-white py-2.5 text-xs font-semibold hover:bg-black/80 transition shadow-xs cursor-pointer"
-          >
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Get Full Access</span>
-          </button>
-        </div>
-
-        {/* User Profile Bar */}
-        <div className="flex items-center justify-between p-1.5 px-2 rounded-xl hover:bg-slate-200/50 transition">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-white font-integral text-xs font-bold shrink-0">
-              AD 
-            </div>
-            <div className="flex flex-col truncate">
-              <span className="font-semibold text-xs text-slate-900 truncate">Admin User</span>
-              <span className="text-[10px] text-slate-400 truncate">admin@shop.co</span>
-            </div>  
-          </div>
-          <button type="button" className="text-slate-400 hover:text-slate-700 p-1 rounded-md cursor-pointer">
-            <MoreVertical className="h-4 w-4" />
-          </button>
-        </div>
+      {/* Bottom Profile / Quick Link */}
+      <div className="pt-3 border-t border-border space-y-2">
+        <Link
+          href="/"
+          target="_blank"
+          className="flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition"
+        >
+          <span className="flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+            <span>View Live Store</span>
+          </span>
+          <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded border border-border">
+            ↗
+          </span>
+        </Link>
       </div>
     </div>
   );
 
   return (
     <>
-      {/* 100% Fixed Sticky Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 z-30 border-r border-slate-200/90 overflow-y-auto bg-[#F8F9FA] transition-colors duration-200">
+      {/* Desktop Fixed Sticky Sidebar */}
+      <aside className="fixed left-0 top-0 hidden h-screen w-64 border-r border-border bg-card z-30 md:block">
         {sidebarContent}
       </aside>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer Overlay */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={onMobileClose} />
-          <aside className="fixed inset-y-0 left-0 w-72 shadow-2xl z-50 animate-in slide-in-from-left h-full overflow-y-auto bg-[#F8F9FA] border-r border-slate-200 transition-colors duration-200">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs md:hidden animate-in fade-in"
+          onClick={onMobileClose}
+        >
+          <div
+            className="fixed inset-y-0 left-0 w-64 bg-card shadow-2xl z-50 animate-in slide-in-from-left duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             {sidebarContent}
-          </aside>
+          </div>
         </div>
       )}
     </>

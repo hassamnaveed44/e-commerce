@@ -172,11 +172,10 @@ export default function TransactionsPage() {
                       setIsDateDropdownOpen(false);
                       showToast(`Filtered by ${range}`);
                     }}
-                    className={`w-full px-3.5 py-2 text-left hover:bg-slate-50 flex items-center justify-between ${
-                      dateRangeLabel === range
+                    className={`w-full px-3.5 py-2 text-left hover:bg-slate-50 flex items-center justify-between ${dateRangeLabel === range
                         ? "font-bold text-slate-900 bg-slate-50"
                         : "text-slate-600"
-                    }`}
+                      }`}
                   >
                     <span>{range}</span>
                     {dateRangeLabel === range && (
@@ -207,22 +206,20 @@ export default function TransactionsPage() {
           <button
             type="button"
             onClick={() => handleTabSwitch("Latest")}
-            className={`font-semibold pb-1.5 transition cursor-pointer ${
-              activeTab === "Latest"
+            className={`font-semibold pb-1.5 transition cursor-pointer ${activeTab === "Latest"
                 ? "text-slate-900 border-b-2 border-slate-900"
                 : "text-slate-400 hover:text-slate-600"
-            }`}
+              }`}
           >
             Latest ({latestTransactions.length})
           </button>
           <button
             type="button"
             onClick={() => handleTabSwitch("Upcoming")}
-            className={`font-semibold pb-1.5 transition cursor-pointer ${
-              activeTab === "Upcoming"
+            className={`font-semibold pb-1.5 transition cursor-pointer ${activeTab === "Upcoming"
                 ? "text-slate-900 border-b-2 border-slate-900"
                 : "text-slate-400 hover:text-slate-600"
-            }`}
+              }`}
           >
             Upcoming ({upcomingTransactions.length})
           </button>
@@ -260,9 +257,8 @@ export default function TransactionsPage() {
                 {/* Right: Amount & Chevron Button */}
                 <div className="flex items-center gap-3 shrink-0">
                   <span
-                    className={`text-xs font-bold font-mono ${
-                      tx.isPositive ? "text-emerald-600" : "text-rose-500"
-                    }`}
+                    className={`text-xs font-bold font-mono ${tx.isPositive ? "text-emerald-600" : "text-rose-500"
+                      }`}
                   >
                     {tx.amount}
                   </span>
@@ -319,11 +315,10 @@ export default function TransactionsPage() {
                   key={pageNum}
                   type="button"
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`w-7 h-7 rounded-lg font-semibold transition ${
-                    currentPage === pageNum
+                  className={`w-7 h-7 rounded-lg font-semibold transition ${currentPage === pageNum
                       ? "bg-black text-white shadow-2xs"
                       : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
+                    }`}
                 >
                   {pageNum}
                 </button>
@@ -369,9 +364,8 @@ export default function TransactionsPage() {
               <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 text-center">
                 <span className="text-[11px] text-slate-400 block">Total Settlement</span>
                 <span
-                  className={`text-2xl font-bold font-mono mt-1 block ${
-                    selectedTx.isPositive ? "text-emerald-600" : "text-rose-600"
-                  }`}
+                  className={`text-2xl font-bold font-mono mt-1 block ${selectedTx.isPositive ? "text-emerald-600" : "text-rose-600"
+                    }`}
                 >
                   {selectedTx.amount}
                 </span>
