@@ -111,8 +111,9 @@ export default function ProductDetailPage({
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Reviews Load More State
-  const [visibleReviewsCount, setVisibleReviewsCount] = useState(4);
+  // Reviews Load More State (7 reviews per page in place)
+  const REVIEWS_PER_PAGE = 7;
+  const [reviewsPage, setReviewsPage] = useState(0);
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -727,57 +728,60 @@ export default function ProductDetailPage({
 
             {/* Reviews 2-Column Grid inside Parent Container */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
-              {/* Left Column: Customer Review Cards List */}
+              {/* Left Column: Customer Review Cards List (7 per page in place) */}
               <div className="md:col-span-7 space-y-3.5">
-                {product.reviews.slice(0, visibleReviewsCount).map((rev) => {
-                  const initial = (rev.authorName || "C").trim().charAt(0).toUpperCase();
+                {product.reviews
+                  .slice(reviewsPage * REVIEWS_PER_PAGE, (reviewsPage + 1) * REVIEWS_PER_PAGE)
+                  .map((rev) => {
+                    const initial = (rev.authorName || "C").trim().charAt(0).toUpperCase();
 
-                  return (
-                    <div
-                      key={rev.id}
-                      className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs space-y-2.5"
-                    >
-                      {/* Review Header: Initial Letter Avatar, Name, Rating, Time */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200/90 shrink-0 flex items-center justify-center font-bold text-slate-700 text-sm shadow-2xs">
-                            {initial}
-                          </div>
-                          <div>
-                            <span className="font-bold text-slate-900 text-xs sm:text-[13px] block">
-                              {rev.authorName}
-                            </span>
-                            <div className="inline-flex items-center gap-1 bg-white text-slate-800 border border-amber-300 px-2 py-0.5 rounded-full text-[10px] font-bold mt-0.5 shadow-2xs">
-                              <Star size={10} className="fill-amber-400 text-amber-400" />
-                              <span>{rev.rating}</span>
+                    return (
+                      <div
+                        key={rev.id}
+                        className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs space-y-2.5"
+                      >
+                        {/* Review Header: Initial Letter Avatar, Name, Rating, Time */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200/90 shrink-0 flex items-center justify-center font-bold text-slate-700 text-sm shadow-2xs">
+                              {initial}
+                            </div>
+                            <div>
+                              <span className="font-bold text-slate-900 text-xs sm:text-[13px] block">
+                                {rev.authorName}
+                              </span>
+                              <div className="inline-flex items-center gap-1 bg-white text-slate-800 border border-amber-300 px-2 py-0.5 rounded-full text-[10px] font-bold mt-0.5 shadow-2xs">
+                                <Star size={10} className="fill-amber-400 text-amber-400" />
+                                <span>{rev.rating}</span>
+                              </div>
                             </div>
                           </div>
+
+                          <span className="text-[11px] text-slate-400 font-normal">
+                            {rev.createdAt}
+                          </span>
                         </div>
 
-                        <span className="text-[11px] text-slate-400 font-normal">
-                          {rev.createdAt}
-                        </span>
+                        {/* Review Title & Body */}
+                        <h4 className="font-bold text-slate-900 text-xs sm:text-[13px]">
+                          {rev.title}
+                        </h4>
+                        <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                          {rev.comment}
+                        </p>
                       </div>
+                    );
+                  })}
 
-                      {/* Review Title & Body */}
-                      <h4 className="font-bold text-slate-900 text-xs sm:text-[13px]">
-                        {rev.title}
-                      </h4>
-                      <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                        {rev.comment}
-                      </p>
-                    </div>
-                  );
-                })}
-
-                {/* Load more button */}
-                {product.reviews.length > visibleReviewsCount && (
+                {/* Load more button (Shows next available 7 reviews in place) */}
+                {product.reviews.length > REVIEWS_PER_PAGE && (
                   <div className="text-center pt-2">
                     <button
                       type="button"
-                      onClick={() =>
-                        setVisibleReviewsCount((prev) => prev + 3)
-                      }
+                      onClick={() => {
+                        const totalPages = Math.ceil(product.reviews.length / REVIEWS_PER_PAGE);
+                        setReviewsPage((prev) => (prev + 1) % totalPages);
+                      }}
                       className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-lg px-4 py-2 text-xs font-semibold shadow-2xs transition cursor-pointer"
                     >
                       Load more..

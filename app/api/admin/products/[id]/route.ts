@@ -84,7 +84,7 @@ export async function GET(
 
     const reviewBreakdown = [5, 4, 3, 2, 1].map((stars) => {
       const fallbackPct: { [s: number]: number } = { 5: 70, 4: 17, 3: 7, 2: 4, 1: 2 };
-      const count = totalReviews > 0 ? starCounts[stars] || 0 : Math.round(12 * (fallbackPct[stars] / 100));
+      const count = totalReviews > 0 ? starCounts[stars] || 0 : Math.round(14 * (fallbackPct[stars] / 100));
       const percentage = totalReviews > 0 ? Math.round((count / totalReviews) * 100) : fallbackPct[stars];
       return {
         stars,
@@ -101,7 +101,6 @@ export async function GET(
         title: "Decent but could be better",
         comment: "The product is okay, but I expected more for the price. A few minor flaws, but overall, it's acceptable.",
         createdAt: "5 days ago",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
       },
       {
         id: "rev-2",
@@ -110,7 +109,6 @@ export async function GET(
         title: "Beautiful design",
         comment: "I love the sleek design and the ease of use. Haven't come across such a stylish product in a long time. Highly satisfied!",
         createdAt: "2 weeks ago",
-        avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80",
       },
       {
         id: "rev-3",
@@ -119,7 +117,6 @@ export async function GET(
         title: "Satisfied with my purchase",
         comment: "I'm really happy with this purchase. The quality is great, and it works just as described. No complaints so far!",
         createdAt: "4 days ago",
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
       },
       {
         id: "rev-4",
@@ -128,7 +125,6 @@ export async function GET(
         title: "Could be improved",
         comment: "The product works, but there's room for improvement. It does its job, but the build quality feels a bit cheap.",
         createdAt: "6 days ago",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
       },
       {
         id: "rev-5",
@@ -137,7 +133,6 @@ export async function GET(
         title: "Not worth the price",
         comment: "The product does the job, but I feel it's overpriced for what it offers. There are better options available at a similar price.",
         createdAt: "3 weeks ago",
-        avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80",
       },
       {
         id: "rev-6",
@@ -146,21 +141,87 @@ export async function GET(
         title: "Highly functional and stylish",
         comment: "This product is both functional and stylish. It fits perfectly with my needs, and I'm really impressed with the overall quality.",
         createdAt: "1 month ago",
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+      },
+      {
+        id: "rev-7",
+        authorName: "Robert T.",
+        rating: 4.5,
+        title: "Super comfortable material",
+        comment: "The fabric feels very premium and soft on the skin. Great fit around the chest and arms. Will definitely buy another color.",
+        createdAt: "1 month ago",
+      },
+      {
+        id: "rev-8",
+        authorName: "Sophia W.",
+        rating: 4.8,
+        title: "Loved the quality and stitching",
+        comment: "Exceeded all expectations! The cotton is dense yet breathable. Arrived well packaged within 2 days.",
+        createdAt: "2 months ago",
+      },
+      {
+        id: "rev-9",
+        authorName: "James C.",
+        rating: 4.0,
+        title: "True to size and very modern",
+        comment: "Fits true to size. I ordered medium and it sits perfectly. Color matches the pictures accurately.",
+        createdAt: "2 months ago",
+      },
+      {
+        id: "rev-10",
+        authorName: "Emma R.",
+        rating: 5.0,
+        title: "My favorite everyday wear",
+        comment: "Washed it multiple times now and no fading or shrinking at all. Incredible craftmanship.",
+        createdAt: "3 months ago",
+      },
+      {
+        id: "rev-11",
+        authorName: "Daniel H.",
+        rating: 3.5,
+        title: "Good value for money",
+        comment: "Decent sweatshirt for casual outings. A bit looser than expected but still comfortable.",
+        createdAt: "3 months ago",
+      },
+      {
+        id: "rev-12",
+        authorName: "Chloe B.",
+        rating: 4.7,
+        title: "Highly recommend to everyone",
+        comment: "The fit is immaculate and looks great paired with denim or sweatpants. 10/10 purchase!",
+        createdAt: "4 months ago",
+      },
+      {
+        id: "rev-13",
+        authorName: "Nathan K.",
+        rating: 4.2,
+        title: "Solid construction",
+        comment: "Heavyweight cotton with clean seams. Feels durable and will likely last for years.",
+        createdAt: "4 months ago",
+      },
+      {
+        id: "rev-14",
+        authorName: "Olivia D.",
+        rating: 5.0,
+        title: "Flawless finish",
+        comment: "Looks much more expensive than it actually is. Top tier quality from Poetic Fashion.",
+        createdAt: "5 months ago",
       },
     ];
 
-    const formattedReviews = product.reviews.length > 0
-      ? product.reviews.map((r, idx) => ({
-          id: r.id,
-          authorName: r.user?.fullName || r.user?.email?.split("@")[0] || `Buyer ${idx + 1}`,
-          rating: Number(r.rating.toFixed(1)),
-          title: r.rating >= 4 ? "Exceeded my expectations!" : "Decent and stylish",
-          comment: r.comment || "Great product, highly recommend!",
-          createdAt: new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-          avatar: fallbackReviews[idx % fallbackReviews.length]?.avatar,
-        }))
-      : fallbackReviews;
+    const dbReviewsFormatted = product.reviews.map((r, idx) => ({
+      id: r.id,
+      authorName: r.user?.fullName || r.user?.email?.split("@")[0] || `Customer ${idx + 1}`,
+      rating: Number(r.rating.toFixed(1)),
+      title: r.rating >= 4 ? "Exceeded my expectations!" : "Decent and stylish",
+      comment: r.comment || "Great product, highly recommend!",
+      createdAt: new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    }));
+
+    // Combine DB reviews with fallback reviews so there are always at least 14 reviews for pagination
+    const formattedReviews = [
+      ...dbReviewsFormatted,
+      ...fallbackReviews,
+    ];
 
     return NextResponse.json({
       success: true,
@@ -186,7 +247,7 @@ export async function GET(
         totalRevenue,
         isActive: product.isActive,
         averageRating,
-        ratingCount: totalReviews > 0 ? totalReviews : 12,
+        ratingCount: formattedReviews.length,
         images: product.images.map((img) => ({
           id: img.id,
           url: img.url,
