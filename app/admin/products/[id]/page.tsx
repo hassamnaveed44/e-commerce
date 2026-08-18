@@ -9,7 +9,6 @@ import {
   ChevronRight,
   Edit,
   Trash2,
-  DollarSign,
   Truck,
   Layers,
   CircleDollarSign,
@@ -48,6 +47,15 @@ interface ReviewItem {
   comment: string;
   createdAt: string;
   avatar?: string;
+}
+
+interface OtherProduct {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  image: string;
+  category: string;
 }
 
 interface ProductDetail {
@@ -94,15 +102,8 @@ export default function ProductDetailPage({
   const productId = resolvedParams.id;
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
+  const [otherProducts, setOtherProducts] = useState<OtherProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Static fashion carousel items matching screenshot
-  const staticCarouselImages = [
-    { id: "img-1", url: "/images/product-1.png", alt: "Hoodie" },
-    { id: "img-2", url: "/images/product-2.png", alt: "T-Shirt" },
-    { id: "img-3", url: "/images/product-3.png", alt: "Sweatpants" },
-    { id: "img-4", url: "/images/product-4.png", alt: "Cap" },
-  ];
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [selectedColor, setSelectedColor] = useState("#10B981");
@@ -145,9 +146,11 @@ export default function ProductDetailPage({
       const data = await res.json();
       if (data.success && data.product) {
         setProduct(data.product);
+        setOtherProducts(data.otherProducts || []);
         setEditName(data.product.name);
         setEditPrice(String(data.product.price));
         setEditDescription(data.product.description);
+        setActiveImageIdx(0);
       }
     } catch (err) {
       console.error("Failed to load product:", err);
@@ -233,7 +236,7 @@ export default function ProductDetailPage({
         title: reviewTitle,
         comment: reviewComment,
         createdAt: "Just now",
-        avatar: undefined,
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
       };
 
       setProduct((prev) =>
@@ -252,19 +255,6 @@ export default function ProductDetailPage({
     } finally {
       setIsSubmittingReview(false);
     }
-  };
-
-  // Carousel navigation
-  const prevImage = () => {
-    setActiveImageIdx((prev) =>
-      prev === 0 ? staticCarouselImages.length - 1 : prev - 1
-    );
-  };
-
-  const nextImage = () => {
-    setActiveImageIdx((prev) =>
-      prev === staticCarouselImages.length - 1 ? 0 : prev + 1
-    );
   };
 
   if (isLoading) {
@@ -291,7 +281,28 @@ export default function ProductDetailPage({
     );
   }
 
-  const activeImage = staticCarouselImages[activeImageIdx] || staticCarouselImages[0];
+  // 🖼️ DYNAMIC CAROUSEL IMAGES
+  // If the product has multiple images, show all its images.
+  // Otherwise, thumbnail 1 is this product, and thumbnails 2..4 are other active products!
+  const hasMultipleImages = product.images && product.images.length > 1;
+
+  const currentMainImage = hasMultipleImages
+    ? product.images[activeImageIdx]?.url || product.images[0]?.url
+    : product.images[0]?.url || "/images/product-1.png";
+
+  const totalImageCount = hasMultipleImages ? product.images.length : 1;
+
+  const prevImage = () => {
+    if (hasMultipleImages) {
+      setActiveImageIdx((prev) => (prev === 0 ? totalImageCount - 1 : prev - 1));
+    }
+  };
+
+  const nextImage = () => {
+    if (hasMultipleImages) {
+      setActiveImageIdx((prev) => (prev === totalImageCount - 1 ? 0 : prev + 1));
+    }
+  };
 
   return (
     <div className="space-y-6 pb-20 font-satoshi text-slate-900 max-w-7xl mx-auto">
@@ -349,62 +360,103 @@ export default function ProductDetailPage({
 
       {/* 2️⃣ Main 2-Column Section: Sticky Left Carousel + All Content in Single Scrolling Right Column */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Static Sticky Fashion Image Carousel (Does not move away on scroll) */}
+        {/* Left Column: Dynamic Sticky Image Carousel (Stays fixed on scroll) */}
         <div className="lg:col-span-5 space-y-3.5 lg:sticky lg:top-6 lg:self-start">
           {/* Big Featured Image Container */}
           <div className="relative w-full aspect-square rounded-2xl bg-[#EFEFEF] overflow-hidden border border-slate-200 shadow-xs flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={activeImage.url}
-              alt={activeImage.alt}
+              src={currentMainImage}
+              alt={product.name}
               className="w-full h-full object-cover transition duration-300"
             />
 
-            {/* Left Chevron Button */}
-            <button
-              type="button"
-              onClick={prevImage}
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-slate-800 flex items-center justify-center shadow-md transition cursor-pointer"
-            >
-              <ChevronLeft size={18} />
-            </button>
+            {/* Left Chevron Button (Active if multiple images) */}
+            {hasMultipleImages && (
+              <button
+                type="button"
+                onClick={prevImage}
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-slate-800 flex items-center justify-center shadow-md transition cursor-pointer"
+              >
+                <ChevronLeft size={18} />
+              </button>
+            )}
 
-            {/* Right Chevron Button */}
-            <button
-              type="button"
-              onClick={nextImage}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-slate-800 flex items-center justify-center shadow-md transition cursor-pointer"
-            >
-              <ChevronRight size={18} />
-            </button>
+            {/* Right Chevron Button (Active if multiple images) */}
+            {hasMultipleImages && (
+              <button
+                type="button"
+                onClick={nextImage}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-slate-800 flex items-center justify-center shadow-md transition cursor-pointer"
+              >
+                <ChevronRight size={18} />
+              </button>
+            )}
           </div>
 
-          {/* 4 Bottom Thumbnails (Hoodie, T-Shirt, Sweatpants, Cap) */}
+          {/* 4 Thumbnails Below Main Grid */}
           <div className="grid grid-cols-4 gap-2.5">
-            {staticCarouselImages.map((img, idx) => {
-              const isActive = activeImageIdx === idx;
-              return (
-                <button
-                  key={img.id}
-                  type="button"
-                  onClick={() => setActiveImageIdx(idx)}
-                  className={`aspect-square rounded-xl bg-[#EFEFEF] overflow-hidden border-2 transition cursor-pointer ${
-                    isActive ? "border-slate-900 shadow-xs" : "border-transparent opacity-70 hover:opacity-100"
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={img.url}
-                    alt={img.alt}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              );
-            })}
+            {hasMultipleImages
+              ? // Case A: Product has multiple images
+                product.images.slice(0, 4).map((img, idx) => {
+                  const isActive = activeImageIdx === idx;
+                  return (
+                    <button
+                      key={img.id}
+                      type="button"
+                      onClick={() => setActiveImageIdx(idx)}
+                      className={`aspect-square rounded-xl bg-[#EFEFEF] overflow-hidden border-2 transition cursor-pointer ${
+                        isActive ? "border-slate-900 shadow-xs" : "border-transparent opacity-70 hover:opacity-100"
+                      }`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={img.url}
+                        alt={`View ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  );
+                })
+              : // Case B: 1 image on this product -> Show this product + other active store products!
+                [
+                  { id: product.id, image: currentMainImage, isCurrent: true, name: product.name },
+                  ...otherProducts.slice(0, 3).map((op) => ({
+                    id: op.id,
+                    image: op.image,
+                    isCurrent: false,
+                    name: op.name,
+                  })),
+                ].map((item, idx) => {
+                  return (
+                    <button
+                      key={item.id + idx}
+                      type="button"
+                      onClick={() => {
+                        if (!item.isCurrent) {
+                          router.push(`/admin/products/${item.id}`);
+                        }
+                      }}
+                      className={`aspect-square rounded-xl bg-[#EFEFEF] overflow-hidden border-2 transition cursor-pointer ${
+                        item.isCurrent
+                          ? "border-slate-900 shadow-xs"
+                          : "border-transparent opacity-75 hover:opacity-100 hover:border-slate-400"
+                      }`}
+                      title={item.isCurrent ? product.name : `View ${item.name}`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  );
+                })}
           </div>
         </div>
 
-        {/* Right Column: 4 KPI Cards + Spec & Details Card + Reviews Section (All in one unified flow!) */}
+        {/* Right Column: 4 KPI Cards + Spec & Details Card + Reviews Parent Container */}
         <div className="lg:col-span-7 space-y-6">
           {/* 1. Top 4 Mini Metric Cards with Soft Grey Background (Screenshot 1 Match) */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
@@ -598,10 +650,11 @@ export default function ProductDetailPage({
             </div>
           </div>
 
-          {/* 3. Reviews Section (Nested Directly Inside Right Column - Screenshot 2 Match!) */}
-          <div className="space-y-4 pt-2">
+          {/* 3. 📦 REVIEWS IN UNIFIED PARENT CONTAINER (Exact Match to User Screenshot!) */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-5">
+            {/* Reviews Header inside Parent Container */}
             <div className="flex items-center justify-between">
-              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
+              <h2 className="text-xl font-bold tracking-tight text-slate-900">
                 Reviews
               </h2>
 
@@ -615,9 +668,9 @@ export default function ProductDetailPage({
               </button>
             </div>
 
-            {/* Reviews 2-Column Grid inside Right Column (Screenshot 2 Match) */}
+            {/* Reviews 2-Column Grid inside Parent Container */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
-              {/* Left Column: Customer Review Cards List (Screenshot 2 Match) */}
+              {/* Left Column: Customer Review Cards List */}
               <div className="md:col-span-7 space-y-3.5">
                 {product.reviews.slice(0, visibleReviewsCount).map((rev, idx) => {
                   const fallbackAvatars = [
@@ -689,7 +742,7 @@ export default function ProductDetailPage({
                 )}
               </div>
 
-              {/* Right Column: Review Breakdown Summary Card (Screenshot 2 Match) */}
+              {/* Right Column: Review Breakdown Summary Card (Screenshot Match) */}
               <div className="md:col-span-5 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-4">
                 {/* Header: 4.3 (12 reviews) & Stars */}
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">

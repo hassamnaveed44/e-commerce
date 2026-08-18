@@ -15,8 +15,8 @@ export async function GET(
 
     const { id } = await context.params;
 
-    // Search by either ID or Slug and aggregate related order items
-    const [product, orderItems] = await Promise.all([
+    // Search by either ID or Slug and aggregate related order items & other active products
+    const [product, orderItems, otherProducts] = await Promise.all([
       prisma.product.findFirst({
         where: {
           OR: [{ id }, { slug: id }],
@@ -37,6 +37,19 @@ export async function GET(
             product: { OR: [{ id }, { slug: id }] },
           },
           order: { orderStatus: { not: "CANCELLED" } },
+        },
+      }),
+      prisma.product.findMany({
+        where: {
+          isActive: true,
+          NOT: {
+            OR: [{ id }, { slug: id }],
+          },
+        },
+        take: 8,
+        include: {
+          images: { where: { isPrimary: true }, take: 1 },
+          category: true,
         },
       }),
     ]);
@@ -88,7 +101,7 @@ export async function GET(
         title: "Decent but could be better",
         comment: "The product is okay, but I expected more for the price. A few minor flaws, but overall, it's acceptable.",
         createdAt: "5 days ago",
-        avatar: "/images/review-avatar-1.png",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
       },
       {
         id: "rev-2",
@@ -97,7 +110,7 @@ export async function GET(
         title: "Beautiful design",
         comment: "I love the sleek design and the ease of use. Haven't come across such a stylish product in a long time. Highly satisfied!",
         createdAt: "2 weeks ago",
-        avatar: "/images/review-avatar-2.png",
+        avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80",
       },
       {
         id: "rev-3",
@@ -106,7 +119,7 @@ export async function GET(
         title: "Satisfied with my purchase",
         comment: "I'm really happy with this purchase. The quality is great, and it works just as described. No complaints so far!",
         createdAt: "4 days ago",
-        avatar: "/images/review-avatar-3.png",
+        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
       },
       {
         id: "rev-4",
@@ -115,7 +128,7 @@ export async function GET(
         title: "Could be improved",
         comment: "The product works, but there's room for improvement. It does its job, but the build quality feels a bit cheap.",
         createdAt: "6 days ago",
-        avatar: "/images/review-avatar-4.png",
+        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
       },
       {
         id: "rev-5",
@@ -124,7 +137,7 @@ export async function GET(
         title: "Not worth the price",
         comment: "The product does the job, but I feel it's overpriced for what it offers. There are better options available at a similar price.",
         createdAt: "3 weeks ago",
-        avatar: "/images/review-avatar-5.png",
+        avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80",
       },
       {
         id: "rev-6",
@@ -133,7 +146,7 @@ export async function GET(
         title: "Highly functional and stylish",
         comment: "This product is both functional and stylish. It fits perfectly with my needs, and I'm really impressed with the overall quality.",
         createdAt: "1 month ago",
-        avatar: "/images/review-avatar-6.png",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
       },
     ];
 
@@ -145,7 +158,7 @@ export async function GET(
           title: r.rating >= 4 ? "Exceeded my expectations!" : "Decent and stylish",
           comment: r.comment || "Great product, highly recommend!",
           createdAt: new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-          avatar: undefined,
+          avatar: fallbackReviews[idx % fallbackReviews.length]?.avatar,
         }))
       : fallbackReviews;
 
@@ -195,6 +208,14 @@ export async function GET(
           year: "numeric",
         }),
       },
+      otherProducts: otherProducts.map((p) => ({
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        price: Number(p.price),
+        image: p.images[0]?.url || "/images/product-1.png",
+        category: p.category.name,
+      })),
     });
   } catch (error) {
     console.error("Get single product error:", error);
