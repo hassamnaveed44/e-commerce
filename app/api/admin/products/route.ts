@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, description, price, originalPrice, discountPercent, dressStyle, categoryId, variants, images } = body;
+    const { name, description, price, originalPrice, discountPercent, dressStyle, categoryId, variants, images, status, sku } = body;
 
     if (!name || !description || !price || !categoryId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -161,39 +161,59 @@ export async function POST(req: NextRequest) {
 
     // Generate unique slug
     let baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    let slug = baseSlug;
+    let productSlug = baseSlug;
     let counter = 1;
-    while (await prisma.product.findUnique({ where: { slug } })) {
-      slug = `${baseSlug}-${counter}`;
+    while (await prisma.product.findUnique({ where: { slug: productSlug } })) {
+      productSlug = `${baseSlug}-${counter}`;
       counter++;
     }
+
+    const isProductActive = status === "DRAFT" ? false : true;
 
     const product = await prisma.product.create({
       data: {
         name,
-        slug,
+        slug: productSlug,
         description,
         price: parseFloat(price),
         originalPrice: originalPrice ? parseFloat(originalPrice) : null,
-        discountPercent: discountPercent ? parseInt(discountPercent) : undefined,
+        discountPercent: discountPercent ? parseInt(discountPercent) : 0,
         dressStyle: dressStyle || "Casual",
         categoryId,
-        isActive: true,
+        isActive: isProductActive,
         variants: {
-          create: (variants || []).map((v: any) => ({
-            size: v.size || "M",
-            colorName: v.colorName || "Black",
-            colorHex: v.colorHex || "#000000",
-            stockQuantity: parseInt(v.stockQuantity) || 0,
-            sku: v.sku || `${slug}-${v.size || "M"}`.toUpperCase(),
-          })),
+          create: (variants && variants.length > 0)
+            ? variants.map((v: any) => ({
+                size: v.size || v.value || "M",
+                colorName: v.colorName || "Black",
+                colorHex: v.colorHex || "#000000",
+                stockQuantity: parseInt(v.stockQuantity) || 50,
+                sku: v.sku || sku || `${productSlug}-${v.size || v.value || "M"}`.toUpperCase(),
+              }))
+            : [
+                {
+                  size: "M",
+                  colorName: "Black",
+                  colorHex: "#000000",
+                  stockQuantity: 50,
+                  sku: sku || `${productSlug}-M`.toUpperCase(),
+                },
+              ],
         },
         images: {
-          create: (images || []).map((img: any, idx: number) => ({
-            url: typeof img === "string" ? img : img.url,
-            isPrimary: typeof img === "object" ? img.isPrimary : idx === 0,
-            altText: name,
-          })),
+          create: (images && images.length > 0)
+            ? images.map((img: any, idx: number) => ({
+                url: typeof img === "string" ? img : img.url,
+                isPrimary: typeof img === "object" ? Boolean(img.isPrimary) : idx === 0,
+                altText: name,
+              }))
+            : [
+                {
+                  url: "/images/product-1.png",
+                  isPrimary: true,
+                  altText: name,
+                },
+              ],
         },
       },
       include: {
