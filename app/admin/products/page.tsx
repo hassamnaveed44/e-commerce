@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   X,
   RefreshCw,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -769,19 +770,22 @@ export default function AdminProductsPage() {
                       {/* Product Thumbnail & Name (Screenshot 1 Match) */}
                       {visibleColumns.productName && (
                         <td className="py-3.5 px-3">
-                          <div className="flex items-center gap-3">
+                          <Link
+                            href={`/admin/products/${p.id}`}
+                            className="flex items-center gap-3 group"
+                          >
                             <div className="relative w-10 h-10 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-200/80 flex items-center justify-center">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={p.image}
                                 alt={p.name}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
                               />
                             </div>
-                            <span className="font-bold text-slate-900 text-xs sm:text-[13px]">
+                            <span className="font-bold text-slate-900 text-xs sm:text-[13px] group-hover:underline">
                               {p.name}
                             </span>
-                          </div>
+                          </Link>
                         </td>
                       )}
 
@@ -842,6 +846,14 @@ export default function AdminProductsPage() {
                         {/* Dropdown Menu */}
                         {isMenuOpen && (
                           <div className="absolute right-3 top-9 z-50 w-44 rounded-xl bg-white border border-slate-200 shadow-xl py-1 text-left text-xs animate-in fade-in zoom-in-95">
+                            <Link
+                              href={`/admin/products/${p.id}`}
+                              className="w-full px-3 py-1.5 text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                            >
+                              <Eye size={13} className="text-slate-400" />
+                              <span>View Details</span>
+                            </Link>
+
                             <Link
                               href={`/product/${p.slug}`}
                               target="_blank"

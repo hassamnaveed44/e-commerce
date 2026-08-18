@@ -2,27 +2,28 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  Edit2,
+  Edit,
   Trash2,
   DollarSign,
-  Package,
+  Truck,
   Layers,
+  CircleDollarSign,
+  HandCoins,
   Star,
-  CheckCircle2,
-  Loader2,
-  Plus,
-  Save,
-  AlertTriangle,
-  UploadCloud,
+  PlusCircle,
+  Heart,
+  ShoppingCart,
+  Check,
   X,
+  AlertTriangle,
+  RefreshCw,
+  Save,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 interface ProductVariant {
@@ -40,39 +41,48 @@ interface ProductImage {
   isPrimary: boolean;
 }
 
-interface Review {
+interface ReviewItem {
   id: string;
-  rating: number;
-  comment: string;
   authorName: string;
+  rating: number;
+  title: string;
+  comment: string;
   createdAt: string;
-  isVerifiedPurchase: boolean;
+  avatar?: string;
 }
 
 interface ProductDetail {
   id: string;
   name: string;
   slug: string;
+  seller: string;
+  sku: string;
   description: string;
   price: number;
   originalPrice: number | null;
   discountPercent: number | null;
+  dressStyle: string;
+  category: string;
   categoryId: string;
-  categoryName: string;
+  categorySlug: string;
+  brand: string;
+  color: string;
+  weight: string;
+  ordersCount: number;
+  stock: number;
+  totalRevenue: number;
   isActive: boolean;
   averageRating: number;
   ratingCount: number;
-  stock: number;
   images: ProductImage[];
   variants: ProductVariant[];
-  reviews: Review[];
+  reviewBreakdown: {
+    stars: number;
+    count: number;
+    percentage: number;
+  }[];
+  reviews: ReviewItem[];
   createdAt: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
 }
 
 export default function ProductDetailPage({
@@ -85,765 +95,848 @@ export default function ProductDetailPage({
   const productId = resolvedParams.id;
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+
+  // Static fashion carousel items
+  const staticCarouselImages = [
+    { id: "img-1", url: "/images/product-1.png", alt: "Hoodie" },
+    { id: "img-2", url: "/images/product-2.png", alt: "T-Shirt" },
+    { id: "img-3", url: "/images/product-3.png", alt: "Sweatpants" },
+    { id: "img-4", url: "/images/product-4.png", alt: "Cap" },
+  ];
+
   const [activeImageIdx, setActiveImageIdx] = useState(0);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState("#10B981");
+  const [selectedSize, setSelectedSize] = useState("MD");
 
-  // Editable Form State
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState<number | string>("");
-  const [originalPrice, setOriginalPrice] = useState<number | string>("");
-  const [discountPercent, setDiscountPercent] = useState<number | string>("");
-  const [categoryId, setCategoryId] = useState("");
-  const [dressStyle, setDressStyle] = useState("Casual");
-  const [isActive, setIsActive] = useState(true);
-  const [variants, setVariants] = useState<ProductVariant[]>([]);
-  const [images, setImages] = useState<ProductImage[]>([]);
-  const [customImageUrl, setCustomImageUrl] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
+  // Reviews Load More State
+  const [visibleReviewsCount, setVisibleReviewsCount] = useState(4);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editStock, setEditStock] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Delete Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Submit Review Modal State
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewName, setReviewName] = useState("");
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState("");
+  const [reviewComment, setReviewComment] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  // Fetch single product details
+  const fetchProduct = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/admin/products/${productId}`);
+      const data = await res.json();
+      if (data.success && data.product) {
+        setProduct(data.product);
+        setEditName(data.product.name);
+        setEditPrice(String(data.product.price));
+        setEditDescription(data.product.description);
+        setEditStock(String(data.product.stock));
+      }
+    } catch (err) {
+      console.error("Failed to load product:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const [prodRes, catRes] = await Promise.all([
-          fetch(`/api/admin/products/${productId}`),
-          fetch("/api/admin/products"),
-        ]);
-
-        const prodData = await prodRes.json();
-        
-        let catList: Category[] = [];
-        try {
-          const catAdminRes = await fetch("/api/admin/categories");
-          const catAdminData = await catAdminRes.json();
-          if (catAdminData.success && Array.isArray(catAdminData.categories)) {
-            catList = catAdminData.categories;
-          } else {
-            const catData = await catRes.json();
-            catList = catData.categories || [];
-          }
-        } catch (e) {
-          const catData = await catRes.json();
-          catList = catData.categories || [];
-        }
-
-        setCategories(catList);
-
-        if (prodData.success && prodData.product) {
-          const p = prodData.product;
-          setProduct(p);
-          setName(p.name);
-          setDescription(p.description || "");
-          setPrice(p.price);
-          setOriginalPrice(p.originalPrice || "");
-          setDiscountPercent(p.discountPercent || "");
-          setCategoryId(p.categoryId);
-          setDressStyle(p.dressStyle || "Casual");
-          setIsActive(p.isActive);
-          setVariants(p.variants || []);
-          setImages(p.images || [{ id: "1", url: "/images/product-1.png", isPrimary: true }]);
-        }
-      } catch (err) {
-        console.error("Failed to load product detail:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadData();
+    fetchProduct();
   }, [productId]);
 
-  // Image Management
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/admin/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (data.success && data.url) {
-        const newImg: ProductImage = {
-          id: `new-${Date.now()}`,
-          url: data.url,
-          isPrimary: images.length === 0,
-        };
-        setImages((prev) => [
-          ...prev.map((img) => ({ ...img, isPrimary: false })),
-          { ...newImg, isPrimary: true },
-        ]);
-        setActiveImageIdx(images.length);
-        showToast("Image uploaded! Click 'Save Changes' to update store.");
-      } else {
-        alert(data.error || "Image upload failed");
-      }
-    } catch (err) {
-      console.error("Upload error:", err);
-      alert("Failed to upload image");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleAddPresetImage = (url: string) => {
-    const newImg: ProductImage = {
-      id: `img-${Date.now()}`,
-      url,
-      isPrimary: true,
-    };
-    setImages((prev) => [
-      ...prev.map((img) => ({ ...img, isPrimary: false })),
-      newImg,
-    ]);
-    setActiveImageIdx(images.length);
-    showToast("Hoodie image added as Primary! Click 'Save Changes'.");
-  };
-
-  const handleAddCustomImageUrl = () => {
-    if (!customImageUrl.trim()) return;
-    const newImg: ProductImage = {
-      id: `img-${Date.now()}`,
-      url: customImageUrl.trim(),
-      isPrimary: images.length === 0,
-    };
-    setImages((prev) => [...prev, newImg]);
-    setCustomImageUrl("");
-    setActiveImageIdx(images.length);
-  };
-
-  const handleSetPrimaryImage = (index: number) => {
-    setImages((prev) =>
-      prev.map((img, idx) => ({ ...img, isPrimary: idx === index }))
-    );
-    setActiveImageIdx(index);
-    showToast("Primary cover image updated! Click 'Save Changes'.");
-  };
-
-  const handleRemoveImage = (index: number) => {
-    if (images.length <= 1) {
-      alert("A product should have at least one image");
-      return;
-    }
-    setImages((prev) => {
-      const filtered = prev.filter((_, idx) => idx !== index);
-      if (filtered.length > 0 && !filtered.some((img) => img.isPrimary)) {
-        filtered[0].isPrimary = true;
-      }
-      return filtered;
-    });
-    setActiveImageIdx(0);
-  };
-
-  const handleStockChange = (variantId: string, newQty: number) => {
-    const safeQty = Math.max(0, newQty);
-    setVariants((prev) =>
-      prev.map((v) => (v.id === variantId ? { ...v, stockQuantity: safeQty } : v))
-    );
-  };
-
-  const handleAddVariant = () => {
-    const newVariant: ProductVariant = {
-      id: `new-${Date.now()}`,
-      size: "Medium",
-      colorName: "Black",
-      colorHex: "#000000",
-      stockQuantity: 15,
-      sku: `${name.slice(0, 4).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`,
-    };
-    setVariants((prev) => [...prev, newVariant]);
-  };
-
-  const handleRemoveVariant = (variantId: string) => {
-    if (variants.length <= 1) {
-      alert("A product must have at least one variant");
-      return;
-    }
-    setVariants((prev) => prev.filter((v) => v.id !== variantId));
-  };
-
-  const handleSaveChanges = async () => {
+  // Handle Edit Save
+  const handleSaveEdit = async () => {
     if (!product) return;
     setIsSaving(true);
-
     try {
-      const payload = {
-        name,
-        description,
-        price: Number(price),
-        originalPrice: originalPrice ? Number(originalPrice) : null,
-        discountPercent: discountPercent ? Number(discountPercent) : null,
-        categoryId,
-        dressStyle,
-        isActive,
-        images: images.map((img) => ({
-          url: img.url,
-          isPrimary: img.isPrimary,
-        })),
-        variants: variants.map((v) => ({
-          id: v.id.startsWith("new-") ? undefined : v.id,
-          size: v.size,
-          colorName: v.colorName,
-          colorHex: v.colorHex,
-          stockQuantity: Number(v.stockQuantity),
-          sku: v.sku,
-        })),
-      };
-
       const res = await fetch(`/api/admin/products/${product.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          name: editName,
+          price: parseFloat(editPrice) || product.price,
+          description: editDescription,
+        }),
       });
-
       const data = await res.json();
       if (data.success) {
-        showToast("Product changes saved successfully!");
-      } else {
-        alert(data.error || "Failed to save product");
+        setProduct((prev) =>
+          prev
+            ? {
+                ...prev,
+                name: editName,
+                price: parseFloat(editPrice) || prev.price,
+                description: editDescription,
+              }
+            : null
+        );
+        setIsEditModalOpen(false);
       }
     } catch (err) {
-      console.error("Save error:", err);
-      alert("An error occurred while saving");
+      console.error("Failed to save product:", err);
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (isLoading || !product) {
+  // Handle Delete
+  const handleDeleteProduct = async () => {
+    if (!product) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/products/${product.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        router.push("/admin/products");
+      }
+    } catch (err) {
+      console.error("Failed to delete product:", err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Handle Submit Review
+  const handleSubmitReview = async () => {
+    if (!product || !reviewTitle || !reviewComment) return;
+    setIsSubmittingReview(true);
+    try {
+      const newRev: ReviewItem = {
+        id: `rev-${Date.now()}`,
+        authorName: reviewName || "Verified Buyer",
+        rating: reviewRating,
+        title: reviewTitle,
+        comment: reviewComment,
+        createdAt: "Just now",
+        avatar: undefined,
+      };
+
+      setProduct((prev) =>
+        prev
+          ? {
+              ...prev,
+              reviews: [newRev, ...prev.reviews],
+              ratingCount: prev.ratingCount + 1,
+            }
+          : null
+      );
+      setIsReviewModalOpen(false);
+      setReviewTitle("");
+      setReviewComment("");
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  // Carousel navigation
+  const prevImage = () => {
+    setActiveImageIdx((prev) =>
+      prev === 0 ? staticCarouselImages.length - 1 : prev - 1
+    );
+  };
+
+  const nextImage = () => {
+    setActiveImageIdx((prev) =>
+      prev === staticCarouselImages.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  if (isLoading) {
     return (
-      <div className="space-y-6 animate-pulse max-w-7xl mx-auto pb-12">
-        <div className="h-8 bg-muted rounded-md w-64" />
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7 h-96 bg-muted rounded-2xl" />
-          <div className="lg:col-span-5 h-96 bg-muted rounded-2xl" />
-        </div>
+      <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-400 font-satoshi">
+        <RefreshCw size={20} className="animate-spin text-slate-600" />
+        <span className="text-sm font-medium">Loading product details...</span>
       </div>
     );
   }
 
-  const currentImage =
-    images[activeImageIdx] ||
-    images[0] || { id: "1", url: "/images/product-1.png", isPrimary: true };
+  if (!product) {
+    return (
+      <div className="py-16 text-center font-satoshi text-slate-600 space-y-3">
+        <h2 className="text-xl font-bold text-slate-900">Product not found</h2>
+        <Link
+          href="/admin/products"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-black underline"
+        >
+          <ArrowLeft size={13} />
+          <span>Back to Products</span>
+        </Link>
+      </div>
+    );
+  }
+
+  const activeImage = staticCarouselImages[activeImageIdx] || staticCarouselImages[0];
 
   return (
-    <div className="space-y-6 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 font-satoshi">
-      {/* Toast message */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-black text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs font-semibold animate-in fade-in slide-in-from-bottom-2">
-          <CheckCircle2 size={16} className="text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link href="/admin/products">
-            <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl shrink-0 cursor-pointer">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-sans">
-                {product.name}
-              </h1>
-              <span
-                className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                  isActive
-                    ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                    : "bg-gray-100 text-gray-700 border-gray-300"
-                }`}
-              >
-                {isActive ? "Active" : "Hidden"}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Category: {product.categoryName} · Total Stock: {variants.reduce((s, v) => s + v.stockQuantity, 0)} units
-            </p>
+    <div className="space-y-6 pb-16 font-satoshi text-slate-900 max-w-7xl mx-auto">
+      {/* 1️⃣ Top Header: Title, Metadata, Edit & Delete Buttons (Screenshot 1 Match) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+            {product.name}
+          </h1>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-1.5 text-xs text-slate-500 font-normal">
+            <span>
+              <strong className="text-slate-800 font-medium">Seller :</strong>{" "}
+              {product.seller || "Poetic Fashion"}
+            </span>
+            <span>
+              <strong className="text-slate-800 font-medium">Published :</strong>{" "}
+              {product.createdAt || "20 Oct, 2024"}
+            </span>
+            <span>
+              <strong className="text-slate-800 font-medium">SKU :</strong>{" "}
+              {product.sku || "WH1000XM4"}
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <Button
-            onClick={handleSaveChanges}
-            disabled={isSaving}
-            size="sm"
-            className="rounded-xl bg-black text-white dark:bg-white dark:text-black hover:opacity-90 font-medium cursor-pointer disabled:opacity-50"
+        {/* Top Right Action Buttons */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setIsEditModalOpen(true)}
+            className="bg-black text-white hover:bg-black/80 rounded-lg px-3.5 py-2 text-xs font-semibold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
           >
-            {isSaving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                <span>Saving...</span>
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-1.5" />
-                <span>Save Changes</span>
-              </>
-            )}
-          </Button>
+            <Edit size={13} />
+            <span>Edit</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="bg-[#DC2626] text-white hover:bg-red-700 rounded-lg p-2 text-xs font-semibold flex items-center justify-center shadow-xs transition cursor-pointer"
+            title="Delete Product"
+          >
+            <Trash2 size={15} />
+          </button>
         </div>
       </div>
 
-      {/* Main Grid: Gallery & Editor */}
+      {/* 2️⃣ Main 2-Column Section: Left Carousel + Right Details & Metrics (Screenshots 1 & 2) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column (5 cols): Media Gallery & Customer Reviews */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Gallery Card & Image Manager */}
-          <Card className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-foreground font-sans">
-                Product Media & Cover
-              </h2>
-              <span className="text-[10px] text-muted-foreground">
-                ★ Star = Primary Cover Image
+        {/* Left Column: Static Fashion Image Carousel (Screenshot 1 Match) */}
+        <div className="lg:col-span-5 space-y-3.5">
+          {/* Big Featured Image Container */}
+          <div className="relative w-full aspect-square rounded-2xl bg-[#EFEFEF] overflow-hidden border border-slate-200 shadow-xs flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={activeImage.url}
+              alt={activeImage.alt}
+              className="w-full h-full object-cover"
+            />
+
+            {/* Left Chevron Button */}
+            <button
+              type="button"
+              onClick={prevImage}
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/70 hover:bg-white text-slate-800 flex items-center justify-center shadow-md transition cursor-pointer"
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            {/* Right Chevron Button */}
+            <button
+              type="button"
+              onClick={nextImage}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/70 hover:bg-white text-slate-800 flex items-center justify-center shadow-md transition cursor-pointer"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+
+          {/* 4 Bottom Thumbnails (Hoodie, T-Shirt, Sweatpants, Cap) */}
+          <div className="grid grid-cols-4 gap-2.5">
+            {staticCarouselImages.map((img, idx) => {
+              const isActive = activeImageIdx === idx;
+              return (
+                <button
+                  key={img.id}
+                  type="button"
+                  onClick={() => setActiveImageIdx(idx)}
+                  className={`aspect-square rounded-xl bg-[#EFEFEF] overflow-hidden border-2 transition cursor-pointer ${
+                    isActive ? "border-slate-900 shadow-xs" : "border-transparent opacity-70 hover:opacity-100"
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img.url}
+                    alt={img.alt}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right Column: 4 KPI Cards + Spec Table & Description (Screenshots 1 & 2) */}
+        <div className="lg:col-span-7 space-y-4">
+          {/* Top 4 Mini Metric Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {/* Card 1: Price */}
+            <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                <CircleDollarSign size={18} />
+              </div>
+              <div>
+                <span className="text-[11px] text-slate-400 font-normal block">
+                  Price
+                </span>
+                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  ${product.price.toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            {/* Card 2: No. of Orders */}
+            <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                <Truck size={17} />
+              </div>
+              <div>
+                <span className="text-[11px] text-slate-400 font-normal block">
+                  No. of Orders
+                </span>
+                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  {product.ordersCount.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Card 3: Available Stocks */}
+            <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                <Layers size={17} />
+              </div>
+              <div>
+                <span className="text-[11px] text-slate-400 font-normal block">
+                  Available Stocks
+                </span>
+                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  {product.stock.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Card 4: Total Revenue */}
+            <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                <HandCoins size={17} />
+              </div>
+              <div>
+                <span className="text-[11px] text-slate-400 font-normal block">
+                  Total Revenue
+                </span>
+                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  ${product.totalRevenue.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* White Details Container (Spec Table, Description, Key Features, Colors, Sizes, Add to Card) */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-5">
+            {/* Top Row: Description & Spec Table */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+              {/* Left Column: Description & Key Features */}
+              <div className="md:col-span-7 space-y-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 mb-1.5">
+                    Description:
+                  </h3>
+                  <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed font-normal">
+                    {product.description ||
+                      "Tommy Hilfiger men striped pink sweatshirt. Crafted with cotton. Material composition is 100% organic cotton."}
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 mb-2">
+                    Key Features:
+                  </h3>
+                  <ul className="space-y-1 text-xs sm:text-[13px] text-slate-600 list-disc list-inside">
+                    <li>100% Premium Organic Combed Cotton</li>
+                    <li>Pre-shrunk fabric for consistent long-lasting fit</li>
+                    <li>Reinforced double-stitched collar & hems</li>
+                    <li>Breathable, hypoallergenic and gentle on skin</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Right Column: Specification Mini Table (Screenshot 1 Match) */}
+              <div className="md:col-span-5 rounded-xl border border-slate-200 bg-white overflow-hidden text-xs">
+                <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-slate-100">
+                  <span className="font-bold text-slate-800">Category</span>
+                  <span className="text-slate-600 font-normal">{product.category || "T-Shirt"}</span>
+                </div>
+                <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-slate-100">
+                  <span className="font-bold text-slate-800">Brand</span>
+                  <span className="text-slate-600 font-normal">{product.brand || "Tommy Hilfiger"}</span>
+                </div>
+                <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-slate-100">
+                  <span className="font-bold text-slate-800">Color</span>
+                  <span className="text-slate-600 font-normal">{product.color || "Purple"}</span>
+                </div>
+                <div className="flex items-center justify-between px-3.5 py-2.5">
+                  <span className="font-bold text-slate-800">Weight</span>
+                  <span className="text-slate-600 font-normal">{product.weight || "140 Gr"}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Colors Selector (Screenshot 2 Match) */}
+            <div>
+              <h3 className="text-xs font-bold text-slate-900 mb-2">Colors:</h3>
+              <div className="flex items-center gap-2.5">
+                {[
+                  { hex: "#10B981", name: "Emerald" },
+                  { hex: "#6366F1", name: "Indigo" },
+                  { hex: "#A855F7", name: "Purple" },
+                ].map((c) => {
+                  const isSel = selectedColor === c.hex;
+                  return (
+                    <button
+                      key={c.hex}
+                      type="button"
+                      onClick={() => setSelectedColor(c.hex)}
+                      style={{ backgroundColor: c.hex }}
+                      className={`w-7 h-7 rounded-full transition cursor-pointer ${
+                        isSel ? "ring-2 ring-offset-2 ring-slate-900 scale-105" : "hover:scale-105 opacity-90"
+                      }`}
+                      title={c.name}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Sizes Selector (Screenshot 2 Match) */}
+            <div>
+              <h3 className="text-xs font-bold text-slate-900 mb-2">Sizes:</h3>
+              <div className="flex items-center gap-2">
+                {["SM", "MD", "LG", "XL", "XXL"].map((sz) => {
+                  const isSel = selectedSize === sz;
+                  return (
+                    <button
+                      key={sz}
+                      type="button"
+                      onClick={() => setSelectedSize(sz)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                        isSel
+                          ? "border-2 border-slate-900 bg-white text-slate-900 shadow-2xs"
+                          : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                      }`}
+                    >
+                      {sz}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bottom Actions: Add to Card & Wishlist (Screenshot 2 Match) */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                className="bg-black text-white hover:bg-black/80 rounded-lg px-5 py-2.5 text-xs font-semibold flex items-center gap-2 shadow-xs transition cursor-pointer"
+              >
+                <ShoppingCart size={14} />
+                <span>Add to Card</span>
+              </button>
+
+              <button
+                type="button"
+                className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-lg px-4 py-2.5 text-xs font-semibold flex items-center gap-2 shadow-2xs transition cursor-pointer"
+              >
+                <Heart size={14} />
+                <span>Wishlist</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3️⃣ Reviews Section (Screenshots 3, 4, 5 Match) */}
+      <div className="space-y-4 pt-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900">
+            Reviews
+          </h2>
+
+          <button
+            type="button"
+            onClick={() => setIsReviewModalOpen(true)}
+            className="border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 rounded-lg px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+          >
+            <PlusCircle size={13} />
+            <span>Submit Review</span>
+          </button>
+        </div>
+
+        {/* Reviews 2-Column Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Customer Review Cards List (Screenshots 3, 4, 5) */}
+          <div className="lg:col-span-8 space-y-3.5">
+            {product.reviews.slice(0, visibleReviewsCount).map((rev) => (
+              <div
+                key={rev.id}
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-2.5"
+              >
+                {/* Review Header: Avatar, Name, Rating, Time */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center font-bold text-slate-600 text-xs">
+                      {rev.authorName.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-900 text-xs sm:text-sm block">
+                        {rev.authorName}
+                      </span>
+                      <div className="inline-flex items-center gap-1 bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.2 rounded-full text-[10px] font-bold mt-0.5">
+                        <Star size={10} className="fill-amber-400 text-amber-400" />
+                        <span>{rev.rating}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <span className="text-[11px] text-slate-400 font-normal">
+                    {rev.createdAt}
+                  </span>
+                </div>
+
+                {/* Review Title & Body */}
+                <h4 className="font-bold text-slate-900 text-xs sm:text-sm">
+                  {rev.title}
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                  {rev.comment}
+                </p>
+              </div>
+            ))}
+
+            {/* Load more button (Screenshot 5 Match) */}
+            {product.reviews.length > visibleReviewsCount && (
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setVisibleReviewsCount((prev) => prev + 3)
+                  }
+                  className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-lg px-4 py-2 text-xs font-semibold shadow-2xs transition cursor-pointer"
+                >
+                  Load more..
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: Review Breakdown Summary Card (Screenshot 3 Match) */}
+          <div className="lg:col-span-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
+            {/* Header: Stars & Average Rating */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-1 text-amber-400">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    size={15}
+                    className={
+                      i < Math.round(product.averageRating)
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-slate-200"
+                    }
+                  />
+                ))}
+              </div>
+              <span className="text-xs font-bold text-slate-700">
+                {product.averageRating} ({product.ratingCount} reviews)
               </span>
             </div>
 
-            {/* Main Preview Box */}
-            <div className="relative aspect-square rounded-xl bg-muted/40 overflow-hidden border border-border">
-              <Image
-                src={currentImage.url}
-                alt={product.name}
-                fill
-                className="object-cover"
-              />
-              {currentImage.isPrimary && (
-                <div className="absolute top-2.5 left-2.5 bg-black text-white dark:bg-white dark:text-black text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
-                  PRIMARY COVER
-                </div>
-              )}
-            </div>
-
-            {/* Thumbnail Carousel & Actions */}
-            <div className="space-y-2">
-              <p className="text-[11px] font-semibold text-foreground">
-                Gallery Images ({images.length})
-              </p>
-              <div className="flex items-center gap-2.5 overflow-x-auto pb-1">
-                {images.map((img, idx) => (
-                  <div
-                    key={img.id || idx}
-                    className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 shrink-0 group ${
-                      activeImageIdx === idx
-                        ? "border-black dark:border-white shadow-xs"
-                        : "border-border opacity-80 hover:opacity-100"
-                    }`}
-                  >
-                    <Image
-                      src={img.url}
-                      alt={`Thumbnail ${idx}`}
-                      fill
-                      className="object-cover cursor-pointer"
-                      onClick={() => setActiveImageIdx(idx)}
+            {/* Star Distribution Progress Bars */}
+            <div className="space-y-2.5 text-xs text-slate-600">
+              {product.reviewBreakdown.map((item) => (
+                <div key={item.stars} className="flex items-center gap-3">
+                  <span className="w-12 font-medium text-slate-700 shrink-0">
+                    {item.stars} {item.stars === 1 ? "star" : "stars"}
+                  </span>
+                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      style={{ width: `${item.percentage}%` }}
+                      className="h-full bg-slate-900 rounded-full transition-all duration-300"
                     />
-
-                    {/* Action overlay */}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-1">
-                      <button
-                        type="button"
-                        onClick={() => handleSetPrimaryImage(idx)}
-                        className={`p-1 rounded-full text-[10px] shadow cursor-pointer ${
-                          img.isPrimary
-                            ? "bg-amber-400 text-black"
-                            : "bg-white/80 hover:bg-white text-black"
-                        }`}
-                        title="Set as primary storefront cover"
-                      >
-                        <Star size={11} fill={img.isPrimary ? "currentColor" : "none"} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(idx)}
-                        className="p-1 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-[10px] shadow cursor-pointer"
-                        title="Remove image"
-                      >
-                        <X size={11} />
-                      </button>
-                    </div>
-
-                    {img.isPrimary && (
-                      <div className="absolute bottom-1 right-1 bg-amber-400 text-black p-0.5 rounded-full shadow-xs">
-                        <Star size={8} fill="currentColor" />
-                      </div>
-                    )}
                   </div>
-                ))}
-              </div>
+                  <span className="w-8 text-right font-medium text-slate-500 shrink-0">
+                    {item.percentage}%
+                  </span>
+                </div>
+              ))}
             </div>
-
-            {/* Quick Store Presets */}
-            <div className="pt-2 border-t border-border space-y-1.5">
-              <label className="block text-[11px] font-semibold text-foreground">
-                Quick Preset Images:
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleAddPresetImage("/images/product-8.png")}
-                  className="px-2.5 py-1 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-[11px] font-semibold transition cursor-pointer flex items-center gap-1"
-                >
-                  <span>🧥 Set Hoodie Image</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddPresetImage("/images/product-1.png")}
-                  className="px-2.5 py-1 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-[11px] font-medium transition cursor-pointer flex items-center gap-1"
-                >
-                  <span>👕 Set T-Shirt Image</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddPresetImage("/images/product-2.png")}
-                  className="px-2.5 py-1 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-[11px] font-medium transition cursor-pointer flex items-center gap-1"
-                >
-                  <span>👖 Set Jeans Image</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Upload or Add URL */}
-            <div className="pt-2 border-t border-border space-y-2">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Paste image URL (e.g. /images/product-8.png)"
-                  value={customImageUrl}
-                  onChange={(e) => setCustomImageUrl(e.target.value)}
-                  className="flex-1 h-8 rounded-lg border border-border bg-card px-2.5 text-xs text-foreground focus:outline-none focus:border-ring"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddCustomImageUrl}
-                  className="h-8 rounded-lg text-xs font-semibold cursor-pointer"
-                >
-                  Add URL
-                </Button>
-              </div>
-
-              <div>
-                <input
-                  type="file"
-                  id="detail-file-upload"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <label
-                  htmlFor="detail-file-upload"
-                  className="w-full py-2 px-3 border border-dashed border-border hover:border-foreground/50 rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold text-foreground bg-muted/20 hover:bg-muted/40 transition cursor-pointer"
-                >
-                  <UploadCloud size={14} className="text-muted-foreground" />
-                  <span>{isUploading ? "Uploading..." : "Upload photo from your computer"}</span>
-                </label>
-              </div>
-            </div>
-          </Card>
-
-          {/* Customer Reviews Section */}
-          <Card className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-xs">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-foreground font-sans">
-                Verified Reviews ({product.reviews.length})
-              </h2>
-              <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
-                <Star size={14} fill="currentColor" />
-                <span>{product.averageRating.toFixed(1)}</span>
-              </div>
-            </div>
-
-            {product.reviews.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4 text-center">
-                No customer reviews yet for this product.
-              </p>
-            ) : (
-              <div className="space-y-3 max-h-72 overflow-y-auto divide-y divide-border">
-                {product.reviews.map((r) => (
-                  <div key={r.id} className="pt-3 text-xs space-y-1">
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold text-foreground">{r.authorName}</p>
-                      <div className="flex items-center gap-0.5 text-amber-400">
-                        {[...Array(r.rating)].map((_, i) => (
-                          <Star key={i} size={11} fill="currentColor" />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground text-[11px] leading-relaxed">
-                      &ldquo;{r.comment}&rdquo;
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
+          </div>
         </div>
+      </div>
 
-        {/* Right Column (7 cols): Editable Details & Variant Inventory */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* Details Card */}
-          <Card className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-xs">
-            <h2 className="text-base font-bold text-foreground font-sans mb-4">
-              Product Details
-            </h2>
+      {/* 4️⃣ Edit Product Modal */}
+      {isEditModalOpen && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsEditModalOpen(false);
+          }}
+        >
+          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 text-slate-900 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <Edit size={15} />
+                <span>Edit Product Details</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
+              >
+                <X size={14} />
+              </button>
+            </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1.5">
+                <label className="font-semibold block text-slate-700 mb-1">
                   Product Name
                 </label>
                 <input
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full h-9 rounded-xl border border-border bg-card px-3 text-xs text-foreground focus:outline-none focus:border-ring"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-slate-400"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1.5">
+                <label className="font-semibold block text-slate-700 mb-1">
+                  Price ($)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editPrice}
+                  onChange={(e) => setEditPrice(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-slate-400"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold block text-slate-700 mb-1">
                   Description
                 </label>
                 <textarea
                   rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-card p-3 text-xs text-foreground focus:outline-none focus:border-ring resize-y"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-slate-400"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditModalOpen(false)}
+                className="rounded-lg text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveEdit}
+                disabled={isSaving}
+                className="bg-black hover:bg-black/80 text-white rounded-lg text-xs font-semibold"
+              >
+                {isSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5️⃣ Delete Product Modal */}
+      {isDeleteModalOpen && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsDeleteModalOpen(false);
+          }}
+        >
+          <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 text-slate-900 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <AlertTriangle size={16} className="text-rose-500" />
+                <span>Delete Product</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to permanently delete{" "}
+              <strong className="text-slate-900">{product.name}</strong>? This action cannot be undone.
+            </p>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="rounded-lg text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleDeleteProduct}
+                disabled={isDeleting}
+                className="bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold"
+              >
+                {isDeleting ? "Deleting..." : "Delete Permanently"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6️⃣ Submit Review Modal */}
+      {isReviewModalOpen && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsReviewModalOpen(false);
+          }}
+        >
+          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 text-slate-900 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <Star size={15} className="text-amber-500 fill-amber-400" />
+                <span>Submit Product Review</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsReviewModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-semibold block text-slate-700 mb-1">
+                  Your Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Alex M."
+                  value={reviewName}
+                  onChange={(e) => setReviewName(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-slate-400"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Price ($)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className="w-full h-9 rounded-xl border border-border bg-card px-3 text-xs font-bold text-foreground focus:outline-none focus:border-ring"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Original Price ($)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={originalPrice}
-                    onChange={(e) => setOriginalPrice(e.target.value)}
-                    className="w-full h-9 rounded-xl border border-border bg-card px-3 text-xs text-foreground focus:outline-none focus:border-ring"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Discount (%)
-                  </label>
-                  <input
-                    type="number"
-                    value={discountPercent}
-                    onChange={(e) => setDiscountPercent(e.target.value)}
-                    className="w-full h-9 rounded-xl border border-border bg-card px-3 text-xs text-foreground focus:outline-none focus:border-ring"
-                  />
-                </div>
-              </div>
-
-              {/* Parent Category & Garment Subcategory Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                {/* Parent Category (Dress Style) */}
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Parent Category (Dress Style)
-                  </label>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {["Casual", "Formal", "Party", "Gym", "Men", "Women", "Kids", "Unisex"].map((style) => (
-                      <button
-                        key={style}
-                        type="button"
-                        onClick={() => setDressStyle(style)}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition cursor-pointer border ${
-                          dressStyle.toLowerCase() === style.toLowerCase()
-                            ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-semibold shadow-xs"
-                            : "bg-muted/40 hover:bg-muted text-foreground border-border"
-                        }`}
-                      >
-                        {style}
-                      </button>
-                    ))}
-                  </div>
-                  <select
-                    value={dressStyle}
-                    onChange={(e) => setDressStyle(e.target.value)}
-                    className="w-full h-9 rounded-xl border border-border bg-card px-3 text-xs text-foreground focus:outline-none cursor-pointer"
-                  >
-                    {["Casual", "Formal", "Party", "Gym", "Men", "Women", "Kids", "Unisex"].map((style) => (
-                      <option key={style} value={style}>
-                        {style}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Garment Subcategory */}
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Subcategory (Garment Type)
-                  </label>
-                  {categories.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {categories.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => setCategoryId(c.id)}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition cursor-pointer border ${
-                            categoryId === c.id
-                              ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-semibold shadow-xs"
-                              : "bg-muted/40 hover:bg-muted text-foreground border-border"
-                          }`}
-                        >
-                          {c.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <select
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
-                    className="w-full h-9 rounded-xl border border-border bg-card px-3 text-xs text-foreground focus:outline-none cursor-pointer"
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Visibility Status */}
-              <div className="pt-1">
-                <label className="block text-xs font-semibold text-foreground mb-1.5">
-                  Visibility Status
+              <div>
+                <label className="font-semibold block text-slate-700 mb-1">
+                  Rating
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setIsActive(!isActive)}
-                  className={`w-full sm:w-auto px-4 h-9 rounded-xl text-xs font-semibold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                    isActive
-                      ? "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200"
-                      : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
-                  }`}
-                >
-                  {isActive ? "✓ Active (Public in Store)" : "✕ Hidden (Draft)"}
-                </button>
+                <div className="flex items-center gap-1.5 text-amber-400">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      className="cursor-pointer transition hover:scale-110"
+                    >
+                      <Star
+                        size={20}
+                        className={
+                          star <= reviewRating
+                            ? "fill-amber-400 text-amber-400"
+                            : "text-slate-200"
+                        }
+                      />
+                    </button>
+                  ))}
+                  <span className="ml-2 font-bold text-slate-700 text-xs">
+                    {reviewRating} out of 5
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-semibold block text-slate-700 mb-1">
+                  Review Headline
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Highly functional and stylish"
+                  value={reviewTitle}
+                  onChange={(e) => setReviewTitle(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-slate-400"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold block text-slate-700 mb-1">
+                  Review Comments
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Share your thoughts about this product..."
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-slate-400"
+                />
               </div>
             </div>
-          </Card>
 
-          {/* Variants & Stock Management Card */}
-          <Card className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-xs">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-base font-bold text-foreground font-sans">
-                  Variants & Stock Inventory
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Adjust individual variant stock quantities with immediate save
-                </p>
-              </div>
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
               <Button
-                type="button"
                 variant="outline"
                 size="sm"
-                onClick={handleAddVariant}
-                className="rounded-xl text-xs flex items-center gap-1 cursor-pointer"
+                onClick={() => setIsReviewModalOpen(false)}
+                className="rounded-lg text-xs"
               >
-                <Plus size={13} />
-                <span>Add Variant</span>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSubmitReview}
+                disabled={isSubmittingReview || !reviewTitle || !reviewComment}
+                className="bg-black hover:bg-black/80 text-white rounded-lg text-xs font-semibold"
+              >
+                {isSubmittingReview ? "Submitting..." : "Submit Review"}
               </Button>
             </div>
-
-            <div className="space-y-2.5">
-              {variants.map((v) => (
-                <div
-                  key={v.id}
-                  className="p-3 rounded-xl border border-border bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span
-                      className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0"
-                      style={{ backgroundColor: v.colorHex || "#000" }}
-                    />
-                    <div>
-                      <p className="font-bold text-foreground">
-                        {v.size} · {v.colorName || "Default"}
-                      </p>
-                      <p className="text-[11px] font-mono text-muted-foreground">
-                        SKU: {v.sku || "N/A"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Stock Quantity Controls */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleStockChange(v.id, v.stockQuantity - 1)}
-                      className="w-7 h-7 rounded-lg border border-border bg-card flex items-center justify-center font-bold text-foreground hover:bg-muted cursor-pointer"
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      value={v.stockQuantity}
-                      onChange={(e) => handleStockChange(v.id, parseInt(e.target.value) || 0)}
-                      className="w-16 h-7 rounded-lg border border-border bg-card text-center font-bold text-xs text-foreground focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleStockChange(v.id, v.stockQuantity + 1)}
-                      className="w-7 h-7 rounded-lg border border-border bg-card flex items-center justify-center font-bold text-foreground hover:bg-muted cursor-pointer"
-                    >
-                      +
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveVariant(v.id)}
-                      className="p-1.5 text-muted-foreground hover:text-rose-600 transition cursor-pointer ml-1"
-                      title="Remove variant"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
