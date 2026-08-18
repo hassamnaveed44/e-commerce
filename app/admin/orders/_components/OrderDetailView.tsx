@@ -207,17 +207,29 @@ export default function OrderDetailView({ orderId }: { orderId?: string }) {
     : "123 Main St, Anytown, AN 12345";
 
   return (
-    <div className="space-y-6 pb-20 font-satoshi text-slate-900 max-w-6xl mx-auto">
+    <div className="space-y-6 pb-20 font-satoshi text-slate-900 max-w-6xl mx-auto print:p-0 print:m-0 print:max-w-none print:space-y-4 print:pb-0">
       {/* Toast */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-[999999] bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4">
+        <div className="fixed bottom-6 right-6 z-[999999] bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4 print:hidden">
           <Check size={14} className="text-emerald-400" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* 1️⃣ Top Actions Bar (Screenshot 4 Match) */}
-      <div className="flex items-center justify-between gap-4">
+      {/* 🖨️ Print-Only Official Invoice Header */}
+      <div className="hidden print:flex items-center justify-between pb-4 border-b border-slate-300 mb-4">
+        <div>
+          <h1 className="font-extrabold text-2xl tracking-tight text-black">SHOP.CO</h1>
+          <p className="text-xs text-slate-500 font-medium">Official Order Invoice & Receipt</p>
+        </div>
+        <div className="text-right text-xs text-slate-600">
+          <p className="font-bold text-sm text-black font-mono">{order.orderNumber}</p>
+          <p>{formattedLongDate}</p>
+        </div>
+      </div>
+
+      {/* 1️⃣ Top Actions Bar (Screenshot 4 Match - Hidden in Print) */}
+      <div className="flex items-center justify-between gap-4 print:hidden">
         <Link
           href="/admin/orders"
           className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 transition shadow-2xs"

@@ -70,3 +70,56 @@ body {
 h1, h2, h3, h4, h5, h6 {
   color: #0F172A;
 }
+
+/* 🖨️ Clean Order Print Styles (Excludes Layout Chrome: Sidebar, Header, Buttons) */
+@media print {
+  /* Hide all dashboard layout elements */
+  header,
+  aside,
+  nav,
+  .print-hidden,
+  button,
+  [title="Toggle Sidebar"],
+  [title="Back to Orders"],
+  [title="Edit Payment"],
+  [title="Appearance Mode"],
+  [title="Color Theme"] {
+    display: none !important;
+  }
+
+  /* Reset document background to pure white */
+  html,
+  body {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 11pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Make main content full width without md:pl-64 offset */
+  main,
+  div[class*="md:pl-64"] {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Prevent page splits inside order cards */
+  .rounded-2xl,
+  table,
+  tr,
+  tbody {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Crisp borders on printed cards */
+  .rounded-2xl {
+    box-shadow: none !important;
+    border: 1px solid #CBD5E1 !important;
+  }
+}

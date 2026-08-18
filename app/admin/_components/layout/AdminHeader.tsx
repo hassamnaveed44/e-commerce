@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -121,6 +122,11 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [authorizedStaff, setAuthorizedStaff] = useState<any[]>([]);
   const [isLoadingStaff, setIsLoadingStaff] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Compute dynamic initials from logged-in admin user
   const getInitials = () => {
@@ -606,180 +612,183 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
         </div>
       </div>
 
-      {/* 👥 Staff Access Requests & Approvals Modal (Exact Match to Screenshot 2) */}
-      {isStaffModalOpen && (
-        <div
-          className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setIsStaffModalOpen(false);
-          }}
-        >
-          <div className="w-full max-w-xl bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 text-slate-900 space-y-6 max-h-[90vh] overflow-y-auto font-satoshi animate-in zoom-in-95">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between pb-4 border-b border-slate-100">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-extrabold text-base text-slate-950">
-                    Authorized Staff & Access Requests
-                  </h3>
-                  {pendingStaffCount > 0 && (
-                    <span className="bg-[#7F1D1D] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full">
-                      {pendingStaffCount} Pending
-                    </span>
+      {/* 👥 Staff Access Requests & Approvals Modal (Exact Match to Screenshot 2 - Mounted via Portal to document.body) */}
+      {mounted && isStaffModalOpen && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[9999999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setIsStaffModalOpen(false);
+              }}
+            >
+              <div className="w-full max-w-xl bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-7 text-slate-900 space-y-6 max-h-[88vh] overflow-y-auto font-satoshi animate-in zoom-in-95 my-auto">
+                {/* Modal Header */}
+                <div className="flex items-start justify-between pb-4 border-b border-slate-100">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-extrabold text-base text-slate-950">
+                        Authorized Staff & Access Requests
+                      </h3>
+                      {pendingStaffCount > 0 && (
+                        <span className="bg-[#7F1D1D] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+                          {pendingStaffCount} Pending
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 font-normal mt-1">
+                      Authorize store staff with 1 click without ever opening Clerk dashboard
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsStaffModalOpen(false)}
+                    className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center transition shrink-0"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+
+                {/* PENDING ACCESS REQUESTS Section */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    PENDING ACCESS REQUESTS ({pendingRequests.length})
+                  </h4>
+
+                  {pendingRequests.length === 0 ? (
+                    <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50 text-center space-y-1">
+                      <CheckCircle2 size={20} className="text-emerald-500 mx-auto" />
+                      <p className="text-xs font-semibold text-slate-700">No pending access requests</p>
+                      <p className="text-[11px] text-slate-400">All staff requests have been approved or processed.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {pendingRequests.map((req) => {
+                        const reqEmail = req.email || req.user?.email || req.userEmail || "user@example.com";
+                        const reqName = req.name || req.user?.fullName || req.user?.name || (reqEmail ? reqEmail.split("@")[0] : "Staff Member");
+
+                        return (
+                          <div
+                            key={req.id}
+                            className="p-4 rounded-2xl border border-[#C2B5A5] bg-[#EFE9E1] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs"
+                          >
+                            <div className="space-y-0.5">
+                              <div className="text-sm font-bold text-slate-900">
+                                <span>{reqName}</span>
+                                {reqEmail && (
+                                  <span className="text-slate-500 font-normal text-xs ml-1.5">
+                                    ({reqEmail})
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-700 italic">
+                                &ldquo;{req.reason || "Requesting staff access to manage store"}&rdquo;
+                              </p>
+                              <p className="text-[11px] text-slate-500 pt-0.5">
+                                Requested on {req.createdAt ? new Date(req.createdAt).toLocaleDateString("en-US") : "Today"}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                disabled={isLoadingStaff}
+                                onClick={() => handleAccessAction(req.id, req.userId, "APPROVE")}
+                                className="bg-white text-slate-900 hover:bg-slate-50 font-bold text-xs px-4 py-2 rounded-full border border-slate-200 shadow-2xs flex items-center gap-1.5 transition cursor-pointer"
+                              >
+                                <Check size={14} className="stroke-[2.5]" />
+                                <span>Approve as Admin</span>
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isLoadingStaff}
+                                onClick={() => handleAccessAction(req.id, req.userId, "REJECT")}
+                                className="bg-slate-200/70 hover:bg-slate-300 text-slate-700 font-medium text-xs px-4 py-2 rounded-full border border-slate-300 transition cursor-pointer"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 font-normal mt-1">
-                  Authorize store staff with 1 click without ever opening Clerk dashboard
-                </p>
-              </div>
 
-              <button
-                type="button"
-                onClick={() => setIsStaffModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center transition shrink-0"
-              >
-                <X size={15} />
-              </button>
-            </div>
+                {/* CURRENT ACTIVE ADMINS Section */}
+                <div className="space-y-3 pt-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    CURRENT ACTIVE ADMINS ({authorizedStaff.length > 0 ? authorizedStaff.length : 1})
+                  </h4>
 
-            {/* PENDING ACCESS REQUESTS Section */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                PENDING ACCESS REQUESTS ({pendingRequests.length})
-              </h4>
-
-              {pendingRequests.length === 0 ? (
-                <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50 text-center space-y-1">
-                  <CheckCircle2 size={20} className="text-emerald-500 mx-auto" />
-                  <p className="text-xs font-semibold text-slate-700">No pending access requests</p>
-                  <p className="text-[11px] text-slate-400">All staff requests have been approved or processed.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {pendingRequests.map((req) => {
-                    const reqEmail = req.email || req.user?.email || req.userEmail || "user@example.com";
-                    const reqName = req.name || req.user?.fullName || req.user?.name || (reqEmail ? reqEmail.split("@")[0] : "Staff Member");
-
-                    return (
-                      <div
-                        key={req.id}
-                        className="p-4 rounded-2xl border border-[#C2B5A5] bg-[#EFE9E1] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs"
-                      >
-                        <div className="space-y-0.5">
-                          <div className="text-sm font-bold text-slate-900">
-                            <span>{reqName}</span>
-                            {reqEmail && (
-                              <span className="text-slate-500 font-normal text-xs ml-1.5">
-                                ({reqEmail})
+                  <div className="space-y-2.5">
+                    {authorizedStaff.length > 0 ? (
+                      authorizedStaff.map((staff, idx) => (
+                        <div
+                          key={staff.id || idx}
+                          className="p-4 rounded-2xl border border-slate-900 bg-white flex items-center justify-between shadow-2xs"
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm text-slate-950">
+                                {staff.name || staff.fullName || "hassam naveed"}
                               </span>
-                            )}
+                              <span className="bg-[#064E3B] text-[#A7F3D0] text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                                ADMIN
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              {staff.email || "hassamnaveed44@gmail.com"}
+                            </p>
                           </div>
-                          <p className="text-xs text-slate-700 italic">
-                            &ldquo;{req.reason || "Requesting staff access to manage store"}&rdquo;
-                          </p>
-                          <p className="text-[11px] text-slate-500 pt-0.5">
-                            Requested on {req.createdAt ? new Date(req.createdAt).toLocaleDateString("en-US") : "Today"}
-                          </p>
-                        </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            type="button"
-                            disabled={isLoadingStaff}
-                            onClick={() => handleAccessAction(req.id, req.userId, "APPROVE")}
-                            className="bg-white text-slate-900 hover:bg-slate-50 font-bold text-xs px-4 py-2 rounded-full border border-slate-200 shadow-2xs flex items-center gap-1.5 transition cursor-pointer"
-                          >
-                            <Check size={14} className="stroke-[2.5]" />
-                            <span>Approve as Admin</span>
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isLoadingStaff}
-                            onClick={() => handleAccessAction(req.id, req.userId, "REJECT")}
-                            className="bg-slate-200/70 hover:bg-slate-300 text-slate-700 font-medium text-xs px-4 py-2 rounded-full border border-slate-300 transition cursor-pointer"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* CURRENT ACTIVE ADMINS Section */}
-            <div className="space-y-3 pt-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                CURRENT ACTIVE ADMINS ({authorizedStaff.length > 0 ? authorizedStaff.length : 1})
-              </h4>
-
-              <div className="space-y-2.5">
-                {authorizedStaff.length > 0 ? (
-                  authorizedStaff.map((staff, idx) => (
-                    <div
-                      key={staff.id || idx}
-                      className="p-4 rounded-2xl border border-slate-900 bg-white flex items-center justify-between shadow-2xs"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-slate-950">
-                            {staff.name || "hassam naveed"}
-                          </span>
-                          <span className="bg-[#064E3B] text-[#A7F3D0] text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-                            ADMIN
+                          <span className="text-xs text-slate-600 font-medium">
+                            {idx === 0 ? "Primary Owner" : "Staff Admin"}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          {staff.email || "hassamnaveed44@gmail.com"}
-                        </p>
-                      </div>
+                      ))
+                    ) : (
+                      <div className="p-4 rounded-2xl border border-slate-900 bg-white flex items-center justify-between shadow-2xs">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-slate-950">
+                              {user?.fullName || "hassam naveed"}
+                            </span>
+                            <span className="bg-[#064E3B] text-[#A7F3D0] text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                              ADMIN
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {user?.primaryEmailAddress?.emailAddress || "hassamnaveed44@gmail.com"}
+                          </p>
+                        </div>
 
-                      <span className="text-xs text-slate-600 font-medium">
-                        {idx === 0 ? "Primary Owner" : "Staff Admin"}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-4 rounded-2xl border border-slate-900 bg-white flex items-center justify-between shadow-2xs">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-slate-950">
-                          {user?.fullName || "hassam naveed"}
-                        </span>
-                        <span className="bg-[#064E3B] text-[#A7F3D0] text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-                          ADMIN
+                        <span className="text-xs text-slate-600 font-medium">
+                          Primary Owner
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {user?.primaryEmailAddress?.emailAddress || "hassamnaveed44@gmail.com"}
-                      </p>
-                    </div>
-
-                    <span className="text-xs text-slate-600 font-medium">
-                      Primary Owner
-                    </span>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
 
-            {/* Modal Footer */}
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
-                All changes take effect immediately in database
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsStaffModalOpen(false)}
-                className="rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-900 font-bold text-xs px-6 py-2 shadow-2xs transition cursor-pointer"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                {/* Modal Footer */}
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-xs text-slate-500">
+                    All changes take effect immediately in database
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsStaffModalOpen(false)}
+                    className="rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-900 font-bold text-xs px-6 py-2 shadow-2xs transition cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </header>
   );
 }
