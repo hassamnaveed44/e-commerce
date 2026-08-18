@@ -5,68 +5,66 @@ html {
 }
 
 :root {
-  /* SHOP.CO Signature Crisp Light Theme */
-  --background: #F9FAFB;
-  --foreground: #171717;
+  /* SHOP.CO Crisp High-Contrast Light Theme */
+  --background: #F8FAFC;
+  --foreground: #0F172A;
 
-  --card: #ffffff;
-  --card-foreground: #171717;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
 
-  --popover: #ffffff;
-  --popover-foreground: #171717;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
 
-  /* SHOP.CO Pitch Black Brand Color */
-  --primary: #171717;
-  --primary-foreground: #ffffff;
+  --primary: #0F172A;
+  --primary-foreground: #FFFFFF;
 
-  /* SHOP.CO Soft Surfaces (#F0EEED / #F2F0F1) */
-  --secondary: #F0EEED;
-  --secondary-foreground: #171717;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #0F172A;
 
-  --muted: #F3F4F6;
-  --muted-foreground: #737373;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
 
-  --accent: #F0EEED;
-  --accent-foreground: #171717;
+  --accent: #F1F5F9;
+  --accent-foreground: #0F172A;
 
   --destructive: #EF4444;
-  --destructive-foreground: #ffffff;
+  --destructive-foreground: #FFFFFF;
 
-  --border: #E5E7EB;
-  --input: #E5E7EB;
-  --ring: #171717;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #0F172A;
   --radius: 0.85rem;
 }
 
-/* Dark Theme (Activated when you toggle dark mode) */
+/* Dark Theme */
 .dark {
-  --background: #09090b;
-  --foreground: #f8fafc;
+  --background: #09090B;
+  --foreground: #F8FAFC;
 
   --card: #121214;
-  --card-foreground: #f8fafc;
+  --card-foreground: #F8FAFC;
 
   --popover: #121214;
-  --popover-foreground: #f8fafc;
+  --popover-foreground: #F8FAFC;
 
-  --primary: #f8fafc;
-  --primary-foreground: #09090b;
+  --primary: #F8FAFC;
+  --primary-foreground: #09090B;
 
-  --secondary: #1c1c1f;
-  --secondary-foreground: #f8fafc;
+  --secondary: #1C1C1F;
+  --secondary-foreground: #F8FAFC;
 
-  --muted: #18181b;
-  --muted-foreground: #cbd5e1;
+  --muted: #18181B;
+  --muted-foreground: #94A3B8;
 
-  --accent: #1c1c1f;
-  --accent-foreground: #f8fafc;
+  --accent: #1C1C1F;
+  --accent-foreground: #F8FAFC;
 
-  --destructive: #7f1d1d;
-  --destructive-foreground: #fef2f2;
+  --destructive: #7F1D1D;
+  --destructive-foreground: #FEF2F2;
 
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #d4d4d8;
+  --border: #27272A;
+  --input: #27272A;
+  --ring: #D4D4D8;
   color-scheme: dark;
 }
 
@@ -101,109 +99,101 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Universal Dark Mode Light Typography & High Contrast Rules */
-.dark body,
-.dark main {
-  background-color: #09090b !important;
-  color: #f8fafc !important;
+/* Clean Dark Mode Specific Overrides (Only activated when html has .dark class) */
+html.dark body,
+html.dark main {
+  background-color: #09090B !important;
+  color: #F8FAFC !important;
 }
 
-.dark h1,
-.dark h2,
-.dark h3,
-.dark h4,
-.dark h5,
-.dark h6 {
-  color: #ffffff !important;
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6 {
+  color: #FFFFFF !important;
 }
 
-.dark p,
-.dark span,
-.dark td,
-.dark th,
-.dark label {
-  color: #e2e8f0;
-}
-
-.dark .bg-white {
+html.dark .bg-white {
   background-color: #121214 !important;
-  color: #f8fafc !important;
+  color: #F8FAFC !important;
 }
 
-.dark .text-slate-900,
-.dark .text-slate-800 {
-  color: #f8fafc !important;
-}
-
-.dark .text-slate-700,
-.dark .text-slate-600 {
-  color: #e2e8f0 !important;
-}
-
-.dark .text-slate-500,
-.dark .text-slate-400 {
-  color: #cbd5e1 !important;
-}
-
-.dark .border-slate-200,
-.dark .border-slate-100,
-.dark .border-slate-200\/60,
-.dark .border-slate-200\/70,
-.dark .border-slate-200\/80,
-.dark .border-slate-200\/90,
-.dark .border-slate-300 {
-  border-color: #27272a !important;
-}
-
-.dark .bg-slate-50,
-.dark .bg-slate-50\/50,
-.dark .bg-slate-50\/70,
-.dark .bg-slate-100,
-.dark .bg-slate-100\/70 {
-  background-color: #18181b !important;
-}
-
-.dark .hover\:bg-slate-50:hover,
-.dark .hover\:bg-slate-50\/70:hover,
-.dark .hover\:bg-slate-100:hover {
-  background-color: #27272a !important;
-}
-
-.dark input,
-.dark select,
-.dark textarea {
+html.dark .bg-\[\#F8FAFC\] {
   background-color: #121214 !important;
-  color: #f8fafc !important;
-  border-color: #27272a !important;
+  border-color: #27272A !important;
 }
 
-.dark select option {
+html.dark .bg-\[\#FEFCE8\] {
+  background-color: #1C1917 !important;
+  border-color: #78350F !important;
+}
+
+html.dark .bg-\[\#EFEFEF\] {
+  background-color: #27272A !important;
+}
+
+html.dark .text-slate-900,
+html.dark .text-slate-800 {
+  color: #FFFFFF !important;
+}
+
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
+  color: #E2E8F0 !important;
+}
+
+html.dark .text-slate-500,
+html.dark .text-slate-400 {
+  color: #94A3B8 !important;
+}
+
+html.dark .border-slate-200,
+html.dark .border-slate-100,
+html.dark .border-slate-200\/60,
+html.dark .border-slate-200\/70,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-200\/90,
+html.dark .border-slate-300 {
+  border-color: #27272A !important;
+}
+
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/50,
+html.dark .bg-slate-50\/70,
+html.dark .bg-slate-100,
+html.dark .bg-slate-100\/70 {
+  background-color: #18181B !important;
+}
+
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-50\/70:hover,
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #27272A !important;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
   background-color: #121214 !important;
-  color: #f8fafc !important;
+  color: #F8FAFC !important;
+  border-color: #27272A !important;
 }
 
-.dark .bg-\[\#F8FAFC\] {
+html.dark select option {
   background-color: #121214 !important;
-  border-color: #27272a !important;
+  color: #F8FAFC !important;
 }
 
-.dark .bg-\[\#FEFCE8\] {
-  background-color: #1c1917 !important;
-  border-color: #78350f !important;
+html.dark svg line[stroke="#F1F5F9"] {
+  stroke: #27272A !important;
 }
 
-.dark .bg-\[\#EFEFEF\] {
-  background-color: #27272a !important;
+html.dark svg path[stroke="#0F172A"] {
+  stroke: #F4F4F5 !important;
 }
 
-.dark svg line[stroke="#F1F5F9"] {
-  stroke: #27272a !important;
-}
-
-.dark svg path[stroke="#0F172A"] {
-  stroke: #f4f4f5 !important;
-}
-
-.dark svg circle[stroke="#0F172A"] {
-  stroke: #f4f4f5 !important;
+html.dark svg circle[stroke="#0F172A"] {
+  stroke: #F4F4F5 !important;
 }
