@@ -254,20 +254,6 @@ export default function EcommerceDashboardPage() {
             <Download size={13} />
             <span>Download</span>
           </Button>
-
-          {/* Refresh Action */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchAnalytics(true)}
-            className="rounded-lg h-8 w-8 p-0 border-slate-200 cursor-pointer hover:bg-slate-50"
-            title="Refresh analytics"
-          >
-            <RefreshCw
-              size={13}
-              className={`text-slate-600 ${isRefreshing ? "animate-spin" : ""}`}
-            />
-          </Button>
         </div>
       </div>
 
@@ -526,10 +512,10 @@ export default function EcommerceDashboardPage() {
               <h3 className="text-sm sm:text-base font-bold text-slate-900">Returning Rate</h3>
               <div className="mt-1 flex items-baseline gap-2">
                 <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                  $42,379
+                  ${data?.overview.returningRateValue?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "42,379.00"}
                 </span>
                 <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
-                  +2.5%
+                  +{data?.overview.returningRateGrowth || 2.5}%
                 </span>
               </div>
             </div>
