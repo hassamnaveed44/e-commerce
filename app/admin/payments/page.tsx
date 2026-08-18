@@ -252,7 +252,7 @@ export default function PaymentsPage() {
               </div>
 
               <Link
-                href="/admin/orders"
+                href="/admin/payments/transactions"
                 className="text-xs font-semibold text-slate-700 hover:text-black flex items-center gap-1 transition"
               >
                 <span>View all</span>
