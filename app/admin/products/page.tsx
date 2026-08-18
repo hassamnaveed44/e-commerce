@@ -889,13 +889,19 @@ export default function AdminProductsPage() {
           </table>
         </div>
 
-        {/* 5️⃣ Footer & Pagination (Screenshot 2 Match) */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-xs text-slate-500 bg-white">
-          <span>
-            {selectedIds.length} of {filteredProducts.length} row(s) selected.
-          </span>
-
+        {/* 5️⃣ Footer & Pagination with Dynamic Page Numbers */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-100 text-xs text-slate-500 bg-white">
           <div className="flex items-center gap-2">
+            <span>
+              {selectedIds.length} of {filteredProducts.length} row(s) selected.
+            </span>
+            <span className="text-slate-300">|</span>
+            <span className="font-medium text-slate-700">
+              Page {currentPage} of {totalPages}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
             <Button
               variant="outline"
               size="sm"
@@ -905,6 +911,23 @@ export default function AdminProductsPage() {
             >
               Previous
             </Button>
+
+            {/* Dynamic Page Numbers (starts from 1, changes on click/Next) */}
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              <button
+                key={pageNum}
+                type="button"
+                onClick={() => setCurrentPage(pageNum)}
+                className={`h-8 w-8 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center justify-center ${
+                  currentPage === pageNum
+                    ? "bg-black text-white shadow-xs"
+                    : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
+
             <Button
               variant="outline"
               size="sm"
