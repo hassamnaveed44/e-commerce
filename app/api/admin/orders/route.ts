@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { OrderStatus, Prisma } from "@prisma/client";
+import { sendOrderNotificationEmail } from "@/services/email.service";
 
 export async function GET(req: NextRequest) {
   try {
@@ -210,10 +211,84 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
     }
 
+    // 1. Fetch existing order details for comparison
+    const existingOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        user: true,
+        payment: true,
+        items: true,
+        shippingAddress: true,
+      },
+    });
+
+    if (!existingOrder) {
+      return NextResponse.json({ success: false, error: "Order not found" }, { status: 404 });
+    }
+
+    // 2. Update order status
     const updated = await prisma.order.update({
       where: { id: orderId },
       data: { orderStatus: orderStatus as OrderStatus },
+      include: {
+        user: true,
+        payment: true,
+        items: true,
+        shippingAddress: true,
+      },
     });
+
+    // 3. If delivered, automatically mark payment successful if applicable
+    if (orderStatus === "DELIVERED" && existingOrder.payment && existingOrder.payment.status !== "SUCCESSFUL") {
+      await prisma.payment.update({
+        where: { id: existingOrder.payment.id },
+        data: { status: "SUCCESSFUL" },
+      }).catch((e) => console.error("Auto payment update error:", e));
+    }
+
+    // 4. Trigger Non-Blocking Customer Status Update Email
+    const customerEmail = updated.user?.email;
+    if (customerEmail && !customerEmail.includes("@guest.shop.co")) {
+      const emailPayload = {
+        orderNumber: updated.orderNumber,
+        customerName: updated.user?.fullName || "Customer",
+        customerEmail,
+        customerPhone: updated.shippingAddress?.phoneNumber || "",
+        orderDate: new Date(updated.createdAt).toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        }),
+        orderStatus,
+        paymentMethod: updated.paymentMethod === "CARD" ? "Credit Card (Stripe)" : "Cash on Delivery",
+        paymentStatus: updated.payment?.status || (orderStatus === "DELIVERED" ? "SUCCESSFUL" : "PENDING"),
+        transactionId: updated.payment?.transactionId || undefined,
+        subtotal: Number(updated.subtotal),
+        deliveryFee: Number(updated.deliveryFee),
+        discount: Math.max(0, Number(updated.subtotal) + Number(updated.deliveryFee) - Number(updated.totalAmount)),
+        totalAmount: Number(updated.totalAmount),
+        shippingAddress: {
+          street: updated.shippingAddress?.streetAddress || "",
+          city: updated.shippingAddress?.city || "",
+          state: updated.shippingAddress?.state || "",
+          postalCode: updated.shippingAddress?.postalCode || "",
+          country: updated.shippingAddress?.country || "United States",
+          phone: updated.shippingAddress?.phoneNumber || "",
+        },
+        items: (updated.items || []).map((i) => ({
+          name: i.productName,
+          quantity: i.quantity,
+          unitPrice: Number(i.unitPrice),
+        })),
+      };
+
+      sendOrderNotificationEmail({
+        order: emailPayload,
+        type: "STATUS_UPDATE",
+        newStatus: orderStatus,
+        previousStatus: existingOrder.orderStatus,
+      }).catch((err) => console.error("Async status email dispatch error:", err));
+    }
 
     return NextResponse.json({ success: true, order: updated });
   } catch (error) {
