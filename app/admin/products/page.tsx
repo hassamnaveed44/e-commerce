@@ -19,8 +19,6 @@ import {
   Check,
   AlertTriangle,
   X,
-  Package,
-  Eye,
   RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -97,6 +95,17 @@ export default function AdminProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [priceRangeFilter, setPriceRangeFilter] = useState("ALL");
 
+  // Dynamic Column Visibility State
+  const [visibleColumns, setVisibleColumns] = useState({
+    productName: true,
+    price: true,
+    category: true,
+    stock: true,
+    sku: true,
+    rating: true,
+    status: true,
+  });
+
   // Filter Dropdown Open States
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
@@ -157,6 +166,11 @@ export default function AdminProductsPage() {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  // Toggle Column Visibility
+  const toggleColumn = (col: keyof typeof visibleColumns) => {
+    setVisibleColumns((prev) => ({ ...prev, [col]: !prev[col] }));
+  };
 
   // Handle Sort
   const handleSort = (field: "name" | "price" | "category" | "stock" | "status") => {
@@ -262,14 +276,14 @@ export default function AdminProductsPage() {
   const getStatusBadge = (status: string) => {
     if (status === "Active") {
       return (
-        <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-medium bg-emerald-50/60 text-emerald-600 border border-emerald-400">
+        <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-medium bg-emerald-50/70 text-[#10B981] border border-[#10B981]">
           Active
         </span>
       );
     }
     if (status === "Out Of Stock") {
       return (
-        <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-medium bg-amber-50/60 text-amber-600 border border-amber-400">
+        <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-medium bg-amber-50/70 text-amber-600 border border-amber-400">
           Out Of Stock
         </span>
       );
@@ -281,17 +295,29 @@ export default function AdminProductsPage() {
     );
   };
 
+  // Calculated visible column count for colSpan
+  const visibleColumnCount =
+    1 + // Checkbox column
+    (visibleColumns.productName ? 1 : 0) +
+    (visibleColumns.price ? 1 : 0) +
+    (visibleColumns.category ? 1 : 0) +
+    (visibleColumns.stock ? 1 : 0) +
+    (visibleColumns.sku ? 1 : 0) +
+    (visibleColumns.rating ? 1 : 0) +
+    (visibleColumns.status ? 1 : 0) +
+    1; // Actions column
+
   return (
     <div ref={menuRef} className="space-y-5 sm:space-y-6 pb-12 font-satoshi text-slate-900">
-      {/* 1️⃣ Header with Title & Add Product Button */}
+      {/* 1️⃣ Header with Title & Add Product Button (Screenshot 1 Match) */}
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-2xl sm:text-[26px] font-bold tracking-tight text-slate-900">
           Products
         </h1>
 
         <Link
           href="/admin/products/new"
-          className="bg-black text-white hover:bg-black/80 rounded-lg px-4 py-2 text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+          className="bg-black text-white hover:bg-black/80 rounded-lg px-3.5 py-1.5 text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
         >
           <Plus size={15} />
           <span>Add Product</span>
@@ -301,68 +327,68 @@ export default function AdminProductsPage() {
       {/* 2️⃣ Top 4 Metric KPI Cards (Exact Match to Screenshot 1) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 sm:gap-4">
         {/* Card 1: Total Sales */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between min-h-[125px]">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between min-h-[120px]">
           <div className="flex items-center justify-between">
-            <span className="text-xs sm:text-sm text-slate-500 font-normal">
+            <span className="text-xs sm:text-[13px] text-slate-500 font-normal">
               Total Sales
             </span>
-            <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
               +{stats.totalSalesGrowth}%
             </span>
           </div>
-          <div className="mt-2.5">
-            <span className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight font-mono">
+          <div className="mt-2">
+            <span className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight">
               ${stats.totalSales.toLocaleString()}
             </span>
           </div>
         </div>
 
         {/* Card 2: Number of Sales */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between min-h-[125px]">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between min-h-[120px]">
           <div className="flex items-center justify-between">
-            <span className="text-xs sm:text-sm text-slate-500 font-normal">
+            <span className="text-xs sm:text-[13px] text-slate-500 font-normal">
               Number of Sales
             </span>
-            <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
               +{stats.numberOfSalesGrowth}
             </span>
           </div>
-          <div className="mt-2.5">
-            <span className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight font-mono">
+          <div className="mt-2">
+            <span className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight">
               {stats.numberOfSales.toLocaleString()}
             </span>
           </div>
         </div>
 
         {/* Card 3: Affiliate */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between min-h-[125px]">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between min-h-[120px]">
           <div className="flex items-center justify-between">
-            <span className="text-xs sm:text-sm text-slate-500 font-normal">
+            <span className="text-xs sm:text-[13px] text-slate-500 font-normal">
               Affiliate
             </span>
-            <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
               +{stats.affiliateSalesGrowth}%
             </span>
           </div>
-          <div className="mt-2.5">
-            <span className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight font-mono">
+          <div className="mt-2">
+            <span className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight">
               ${stats.affiliateSales.toLocaleString()}
             </span>
           </div>
         </div>
 
         {/* Card 4: Discounts */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between min-h-[125px]">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between min-h-[120px]">
           <div className="flex items-center justify-between">
-            <span className="text-xs sm:text-sm text-slate-500 font-normal">
+            <span className="text-xs sm:text-[13px] text-slate-500 font-normal">
               Discounts
             </span>
-            <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-rose-50 text-rose-600 border border-rose-200">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-600 border border-rose-200">
               {stats.totalDiscountsGrowth}%
             </span>
           </div>
-          <div className="mt-2.5">
-            <span className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight font-mono">
+          <div className="mt-2">
+            <span className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight">
               ${stats.totalDiscounts.toLocaleString()}
             </span>
           </div>
@@ -553,7 +579,7 @@ export default function AdminProductsPage() {
           </div>
         </div>
 
-        {/* Right Columns Button (Screenshot 1) */}
+        {/* Right Columns Dropdown Button (Screenshot 2 Match) */}
         <div className="relative">
           <button
             type="button"
@@ -569,23 +595,42 @@ export default function AdminProductsPage() {
             <SlidersHorizontal size={13} className="text-slate-500" />
           </button>
 
+          {/* Toggle Columns Popover (Screenshot 2 Match) */}
           {isColumnsOpen && (
-            <div className="absolute right-0 top-9 z-50 w-40 rounded-xl bg-white border border-slate-200 shadow-xl p-2 text-xs animate-in fade-in zoom-in-95">
-              <span className="text-[10px] font-bold uppercase text-slate-400 block px-2 mb-1">
-                Toggle Columns
+            <div className="absolute right-0 top-9 z-50 w-44 rounded-xl bg-white border border-slate-200 shadow-xl p-2 text-xs animate-in fade-in zoom-in-95">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block px-2 py-1 mb-0.5">
+                TOGGLE COLUMNS
               </span>
-              <div className="space-y-1 text-slate-700">
-                {["Product Name", "Price", "Category", "Stock", "SKU", "Rating", "Status"].map(
-                  (col) => (
-                    <label
-                      key={col}
-                      className="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-50 cursor-pointer"
+              <div className="space-y-0.5 text-slate-700">
+                {[
+                  { id: "productName", label: "Product Name" },
+                  { id: "price", label: "Price" },
+                  { id: "category", label: "Category" },
+                  { id: "stock", label: "Stock" },
+                  { id: "sku", label: "SKU" },
+                  { id: "rating", label: "Rating" },
+                  { id: "status", label: "Status" },
+                ].map((col) => {
+                  const isChecked = visibleColumns[col.id as keyof typeof visibleColumns];
+                  return (
+                    <div
+                      key={col.id}
+                      onClick={() => toggleColumn(col.id as keyof typeof visibleColumns)}
+                      className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer text-xs transition select-none"
                     >
-                      <input type="checkbox" defaultChecked className="rounded border-slate-300" />
-                      <span>{col}</span>
-                    </label>
-                  )
-                )}
+                      <div
+                        className={`w-4 h-4 rounded border flex items-center justify-center transition ${
+                          isChecked
+                            ? "bg-[#2563EB] border-[#2563EB] text-white"
+                            : "bg-white border-slate-300"
+                        }`}
+                      >
+                        {isChecked && <Check size={11} strokeWidth={3} />}
+                      </div>
+                      <span className="font-medium text-slate-800">{col.label}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -609,60 +654,90 @@ export default function AdminProductsPage() {
                     className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-0 cursor-pointer"
                   />
                 </th>
-                <th
-                  onClick={() => handleSort("name")}
-                  className="py-3 px-3 font-medium cursor-pointer hover:text-slate-900 transition"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Product Name</span>
-                    <ArrowUpDown size={12} className="text-slate-400" />
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort("price")}
-                  className="py-3 px-3 font-medium cursor-pointer hover:text-slate-900 transition"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Price</span>
-                    <ArrowUpDown size={12} className="text-slate-400" />
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort("category")}
-                  className="py-3 px-3 font-medium cursor-pointer hover:text-slate-900 transition"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Category</span>
-                    <ArrowUpDown size={12} className="text-slate-400" />
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort("stock")}
-                  className="py-3 px-3 font-medium cursor-pointer hover:text-slate-900 transition"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Stock</span>
-                    <ArrowUpDown size={12} className="text-slate-400" />
-                  </div>
-                </th>
-                <th className="py-3 px-3 font-medium">SKU</th>
-                <th className="py-3 px-3 font-medium">Rating</th>
-                <th
-                  onClick={() => handleSort("status")}
-                  className="py-3 px-3 font-medium cursor-pointer hover:text-slate-900 transition"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Status</span>
-                    <ArrowUpDown size={12} className="text-slate-400" />
-                  </div>
-                </th>
+
+                {/* Product Name Column */}
+                {visibleColumns.productName && (
+                  <th
+                    onClick={() => handleSort("name")}
+                    className="py-3 px-3 font-medium cursor-pointer hover:text-slate-900 transition"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Product Name</span>
+                      <ArrowUpDown size={12} className="text-slate-400" />
+                    </div>
+                  </th>
+                )}
+
+                {/* Price Column */}
+                {visibleColumns.price && (
+                  <th
+                    onClick={() => handleSort("price")}
+                    className="py-3 px-3 font-medium cursor-pointer hover:text-slate-900 transition"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Price</span>
+                      <ArrowUpDown size={12} className="text-slate-400" />
+                    </div>
+                  </th>
+                )}
+
+                {/* Category Column */}
+                {visibleColumns.category && (
+                  <th
+                    onClick={() => handleSort("category")}
+                    className="py-3 px-3 font-medium cursor-pointer hover:text-slate-900 transition"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Category</span>
+                      <ArrowUpDown size={12} className="text-slate-400" />
+                    </div>
+                  </th>
+                )}
+
+                {/* Stock Column */}
+                {visibleColumns.stock && (
+                  <th
+                    onClick={() => handleSort("stock")}
+                    className="py-3 px-3 font-medium cursor-pointer hover:text-slate-900 transition"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Stock</span>
+                      <ArrowUpDown size={12} className="text-slate-400" />
+                    </div>
+                  </th>
+                )}
+
+                {/* SKU Column */}
+                {visibleColumns.sku && (
+                  <th className="py-3 px-3 font-medium">SKU</th>
+                )}
+
+                {/* Rating Column */}
+                {visibleColumns.rating && (
+                  <th className="py-3 px-3 font-medium">Rating</th>
+                )}
+
+                {/* Status Column */}
+                {visibleColumns.status && (
+                  <th
+                    onClick={() => handleSort("status")}
+                    className="py-3 px-3 font-medium cursor-pointer hover:text-slate-900 transition"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Status</span>
+                      <ArrowUpDown size={12} className="text-slate-400" />
+                    </div>
+                  </th>
+                )}
+
+                {/* Actions Column */}
                 <th className="py-3 px-3.5 text-right font-medium w-10"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
+                  <td colSpan={visibleColumnCount} className="py-12 text-center text-slate-400">
                     <div className="flex items-center justify-center gap-2">
                       <RefreshCw size={15} className="animate-spin text-slate-500" />
                       <span>Loading products...</span>
@@ -692,52 +767,66 @@ export default function AdminProductsPage() {
                       </td>
 
                       {/* Product Thumbnail & Name (Screenshot 1 Match) */}
-                      <td className="py-3.5 px-3">
-                        <div className="flex items-center gap-3">
-                          <div className="relative w-11 h-11 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-200 flex items-center justify-center">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={p.image}
-                              alt={p.name}
-                              className="w-full h-full object-cover"
-                            />
+                      {visibleColumns.productName && (
+                        <td className="py-3.5 px-3">
+                          <div className="flex items-center gap-3">
+                            <div className="relative w-10 h-10 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-200/80 flex items-center justify-center">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={p.image}
+                                alt={p.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <span className="font-bold text-slate-900 text-xs sm:text-[13px]">
+                              {p.name}
+                            </span>
                           </div>
-                          <span className="font-semibold text-slate-900 text-xs sm:text-sm">
-                            {p.name}
-                          </span>
-                        </div>
-                      </td>
+                        </td>
+                      )}
 
                       {/* Price */}
-                      <td className="py-3.5 px-3 font-mono font-medium text-slate-900">
-                        {p.price}
-                      </td>
+                      {visibleColumns.price && (
+                        <td className="py-3.5 px-3 font-medium text-slate-900 text-xs sm:text-[13px]">
+                          {p.price}
+                        </td>
+                      )}
 
                       {/* Category */}
-                      <td className="py-3.5 px-3 text-slate-600 font-normal">
-                        {p.category}
-                      </td>
+                      {visibleColumns.category && (
+                        <td className="py-3.5 px-3 text-slate-600 font-normal text-xs sm:text-[13px]">
+                          {p.category}
+                        </td>
+                      )}
 
                       {/* Stock */}
-                      <td className="py-3.5 px-3 font-mono font-medium text-slate-800">
-                        {p.stock}
-                      </td>
+                      {visibleColumns.stock && (
+                        <td className="py-3.5 px-3 text-slate-700 font-normal text-xs sm:text-[13px]">
+                          {p.stock}
+                        </td>
+                      )}
 
                       {/* SKU */}
-                      <td className="py-3.5 px-3 font-mono text-xs text-slate-600">
-                        {p.sku}
-                      </td>
+                      {visibleColumns.sku && (
+                        <td className="py-3.5 px-3 font-medium text-xs text-slate-600">
+                          {p.sku}
+                        </td>
+                      )}
 
                       {/* Rating */}
-                      <td className="py-3.5 px-3">
-                        <div className="flex items-center gap-1 text-amber-500 font-semibold text-xs">
-                          <Star size={13} className="fill-amber-400 text-amber-400" />
-                          <span>{p.rating}</span>
-                        </div>
-                      </td>
+                      {visibleColumns.rating && (
+                        <td className="py-3.5 px-3">
+                          <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
+                            <Star size={13} className="fill-amber-400 text-amber-400" />
+                            <span>{p.rating}</span>
+                          </div>
+                        </td>
+                      )}
 
                       {/* Status */}
-                      <td className="py-3.5 px-3">{getStatusBadge(p.status)}</td>
+                      {visibleColumns.status && (
+                        <td className="py-3.5 px-3">{getStatusBadge(p.status)}</td>
+                      )}
 
                       {/* Actions */}
                       <td className="py-3.5 px-3.5 text-right relative">
@@ -791,7 +880,7 @@ export default function AdminProductsPage() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
+                  <td colSpan={visibleColumnCount} className="py-12 text-center text-slate-400">
                     No products found matching your filters.
                   </td>
                 </tr>
