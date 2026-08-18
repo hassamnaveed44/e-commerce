@@ -356,10 +356,6 @@ export default function FiltersSidebar({
           <div className="grid grid-cols-5 gap-3.5 pt-1">
             {colors.map((color) => {
               const isSelected = selectedColor === color.hex || selectedColor === color.name;
-              const isInStock =
-                inStockColors.length === 0 ||
-                inStockColors.includes(color.hex.toLowerCase()) ||
-                inStockColors.includes(color.name.toLowerCase());
 
               return (
                 <button
@@ -373,9 +369,9 @@ export default function FiltersSidebar({
                   style={{ backgroundColor: color.hex }}
                   className={`w-9 h-9 rounded-full flex items-center justify-center transition-transform hover:scale-105 cursor-pointer relative ${
                     color.border ? "border border-black/20" : ""
-                  } ${!isInStock ? "opacity-45 ring-1 ring-dashed ring-gray-400" : ""}`}
+                  }`}
                   aria-label={`Select color ${color.name}`}
-                  title={`${color.name}${!isInStock ? " (0 products available)" : ""}`}
+                  title={color.name}
                 >
                   {isSelected && (
                     <Check
@@ -384,9 +380,6 @@ export default function FiltersSidebar({
                         color.hex === "#FFFFFF" ? "text-black" : "text-white"
                       } stroke-[3]`}
                     />
-                  )}
-                  {!isInStock && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full ring-1 ring-white" />
                   )}
                 </button>
               );
@@ -415,9 +408,6 @@ export default function FiltersSidebar({
           <div className="flex flex-wrap gap-2 pt-1">
             {sizes.map((size) => {
               const isSelected = selectedSize?.toLowerCase() === size.toLowerCase();
-              const isInStock =
-                inStockSizes.length === 0 ||
-                inStockSizes.some((s) => s.toLowerCase() === size.toLowerCase());
 
               return (
                 <button
@@ -428,14 +418,12 @@ export default function FiltersSidebar({
                     setSelectedSize(newSize);
                     pushFilters({ size: newSize });
                   }}
-                  className={`px-4 sm:px-5 py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all cursor-pointer relative ${
-                    !isInStock
-                      ? "bg-gray-100 text-gray-400 line-through border border-dashed border-gray-300 opacity-60 hover:opacity-100"
-                      : isSelected
-                      ? "bg-black text-white shadow-xs"
-                      : "bg-[#F0F0F0] text-black/70 hover:bg-black/10"
+                  className={`px-4 sm:px-5 py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-black text-white shadow-xs font-semibold"
+                      : "bg-[#F0F0F0] text-black/70 hover:bg-black/10 hover:text-black"
                   }`}
-                  title={`${size}${!isInStock ? " (0 products available)" : ""}`}
+                  title={size}
                 >
                   {size}
                 </button>
