@@ -10,6 +10,10 @@ import {
   X,
   ChevronDown,
   CircleUserRound,
+  Loader2,
+  PackageX,
+  ArrowRight,
+  Sparkles,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
@@ -32,8 +36,54 @@ export default function Navbar() {
   const router = useRouter();
   const { totalItemsCount } = useCart();
 
+  // Live search state
+  const [liveResults, setLiveResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const desktopSearchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced search query
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setLiveResults([]);
+      setIsSearching(false);
+      setHasSearched(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setIsSearchOpen(true);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/products?search=${encodeURIComponent(q)}&limit=5`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.products)) {
+          setLiveResults(data.products);
+        } else {
+          setLiveResults([]);
+        }
+      } catch (err) {
+        console.error("Live search error:", err);
+        setLiveResults([]);
+      } finally {
+        setIsSearching(false);
+        setHasSearched(true);
+      }
+    }, 250);
+
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchQuery]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -43,6 +93,14 @@ export default function Navbar() {
         !dropdownRef.current.contains(event.target as Node)
       ) {
         setShopDropdownOpen(false);
+      }
+      if (
+        desktopSearchRef.current &&
+        !desktopSearchRef.current.contains(event.target as Node) &&
+        mobileSearchRef.current &&
+        !mobileSearchRef.current.contains(event.target as Node)
+      ) {
+        setIsSearchOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -67,6 +125,7 @@ export default function Navbar() {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setIsSearchOpen(false);
       setMobileSearchOpen(false);
     }
   };
@@ -226,25 +285,125 @@ export default function Navbar() {
         </nav>
 
         {/* Search Bar (Desktop) */}
-        <form
-          onSubmit={handleSearch}
-          className="hidden md:flex items-center bg-[#F0F0F0] rounded-full px-4 py-3 flex-1 max-w-md space-x-3"
-        >
-          <button
-            type="submit"
-            aria-label="Search"
-            className="text-black/40 hover:text-black transition cursor-pointer"
+        <div ref={desktopSearchRef} className="relative hidden md:flex flex-1 max-w-md">
+          <form
+            onSubmit={handleSearch}
+            className="flex items-center bg-[#F0F0F0] rounded-full px-4 py-3 w-full space-x-3 focus-within:ring-2 focus-within:ring-black/10 transition"
           >
-            <Search size={20} />
-          </button>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search for products..."
-            className="bg-transparent border-none outline-none text-sm w-full text-black placeholder:text-black/40"
-          />
-        </form>
+            <button
+              type="submit"
+              aria-label="Search"
+              className="text-black/40 hover:text-black transition cursor-pointer"
+            >
+              <Search size={20} />
+            </button>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => {
+                if (searchQuery.trim()) setIsSearchOpen(true);
+              }}
+              placeholder="Search for products..."
+              className="bg-transparent border-none outline-none text-sm w-full text-black placeholder:text-black/40"
+            />
+            {isSearching && (
+              <Loader2 size={16} className="animate-spin text-black/40 shrink-0" />
+            )}
+          </form>
+
+          {/* Desktop Live Search Dropdown */}
+          {isSearchOpen && searchQuery.trim().length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-black/10 shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 font-satoshi">
+              {isSearching ? (
+                <div className="p-6 flex items-center justify-center gap-2.5 text-xs text-slate-500 font-medium">
+                  <Loader2 size={16} className="animate-spin text-slate-700" />
+                  <span>Searching products for &ldquo;{searchQuery}&rdquo;...</span>
+                </div>
+              ) : liveResults.length > 0 ? (
+                <div className="divide-y divide-slate-100">
+                  <div className="p-3 bg-slate-50 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <span>Matching Products ({liveResults.length})</span>
+                    <span className="text-slate-400">Available In Store</span>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto">
+                    {liveResults.map((product) => {
+                      const img = product.images?.[0]?.url || "/images/placeholder.png";
+                      return (
+                        <Link
+                          key={product.id}
+                          href={`/shop/product/${product.slug}`}
+                          onClick={() => {
+                            setIsSearchOpen(false);
+                            setMobileSearchOpen(false);
+                          }}
+                          className="p-3 flex items-center gap-3 hover:bg-slate-50 transition cursor-pointer group"
+                        >
+                          <div className="w-11 h-11 rounded-lg bg-[#F0EEED] overflow-hidden shrink-0 flex items-center justify-center">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={img}
+                              alt={product.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-xs text-slate-900 truncate group-hover:text-black">
+                              {product.name}
+                            </p>
+                            <p className="text-[10px] text-slate-400 font-medium truncate">
+                              {product.category?.name || product.dressStyle || "Apparel"}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-xs font-bold text-slate-900 font-mono">
+                              ${Number(product.price).toFixed(2)}
+                            </span>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  <div className="p-2.5 bg-slate-50 border-t border-slate-100 text-center">
+                    <button
+                      type="button"
+                      onClick={handleSearch}
+                      className="text-xs font-bold text-slate-900 hover:text-black flex items-center justify-center gap-1 w-full cursor-pointer py-1"
+                    >
+                      <span>View all results for &ldquo;{searchQuery}&rdquo;</span>
+                      <ArrowRight size={13} />
+                    </button>
+                  </div>
+                </div>
+              ) : hasSearched ? (
+                <div className="p-6 text-center space-y-2.5">
+                  <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mx-auto">
+                    <PackageX size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">This product is unavailable</p>
+                    <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">
+                      We couldn&apos;t find any products matching &ldquo;<strong className="text-slate-800">{searchQuery}</strong>&rdquo;. Try searching for &ldquo;shirts&rdquo;, &ldquo;t-shirts&rdquo;, or &ldquo;three piece&rdquo;.
+                    </p>
+                  </div>
+                  <div className="pt-1">
+                    <Link
+                      href="/category/all"
+                      onClick={() => {
+                        setIsSearchOpen(false);
+                        setMobileSearchOpen(false);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-black underline hover:opacity-75"
+                    >
+                      <span>Explore all available items</span>
+                      <ArrowRight size={12} />
+                    </Link>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
 
         {/* Right Icons: Search (Mobile), Cart with Hydration-Safe Badge, User */}
         <div className="flex items-center space-x-3 md:space-x-4">
@@ -282,7 +441,7 @@ export default function Navbar() {
 
       {/* Mobile Search Bar Dropdown */}
       {mobileSearchOpen && (
-        <div className="md:hidden px-4 pb-3 bg-white border-b border-black/10">
+        <div ref={mobileSearchRef} className="relative md:hidden px-4 pb-3 bg-white border-b border-black/10">
           <form
             onSubmit={handleSearch}
             className="flex items-center bg-[#F0F0F0] rounded-full px-4 py-2.5 space-x-3"
@@ -296,7 +455,81 @@ export default function Navbar() {
               className="bg-transparent border-none outline-none text-sm w-full text-black placeholder:text-black/40"
               autoFocus
             />
+            {isSearching && (
+              <Loader2 size={16} className="animate-spin text-black/40 shrink-0" />
+            )}
           </form>
+
+          {/* Mobile Live Search Dropdown */}
+          {isSearchOpen && searchQuery.trim().length > 0 && (
+            <div className="mt-2 bg-white rounded-2xl border border-black/10 shadow-2xl overflow-hidden z-50 animate-in fade-in font-satoshi">
+              {isSearching ? (
+                <div className="p-4 flex items-center justify-center gap-2 text-xs text-slate-500 font-medium">
+                  <Loader2 size={14} className="animate-spin text-slate-700" />
+                  <span>Searching &ldquo;{searchQuery}&rdquo;...</span>
+                </div>
+              ) : liveResults.length > 0 ? (
+                <div className="divide-y divide-slate-100">
+                  <div className="p-2.5 bg-slate-50 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <span>Matching Products ({liveResults.length})</span>
+                    <span className="text-slate-400">In Store</span>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {liveResults.map((product) => {
+                      const img = product.images?.[0]?.url || "/images/placeholder.png";
+                      return (
+                        <Link
+                          key={product.id}
+                          href={`/shop/product/${product.slug}`}
+                          onClick={() => {
+                            setIsSearchOpen(false);
+                            setMobileSearchOpen(false);
+                          }}
+                          className="p-2.5 flex items-center gap-2.5 hover:bg-slate-50 transition cursor-pointer"
+                        >
+                          <div className="w-10 h-10 rounded-lg bg-[#F0EEED] overflow-hidden shrink-0 flex items-center justify-center">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={img}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-xs text-slate-900 truncate">
+                              {product.name}
+                            </p>
+                            <p className="text-[10px] text-slate-400 truncate">
+                              ${Number(product.price).toFixed(2)}
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  <div className="p-2 bg-slate-50 text-center">
+                    <button
+                      type="button"
+                      onClick={handleSearch}
+                      className="text-xs font-bold text-slate-900 flex items-center justify-center gap-1 w-full cursor-pointer py-1"
+                    >
+                      <span>View all results →</span>
+                    </button>
+                  </div>
+                </div>
+              ) : hasSearched ? (
+                <div className="p-5 text-center space-y-2">
+                  <div className="w-8 h-8 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mx-auto">
+                    <PackageX size={18} />
+                  </div>
+                  <p className="text-xs font-bold text-slate-900">This product is unavailable</p>
+                  <p className="text-[11px] text-slate-500">
+                    No items found for &ldquo;{searchQuery}&rdquo;.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       )}
 
