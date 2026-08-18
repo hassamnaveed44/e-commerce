@@ -29,20 +29,28 @@ export default function AdminSidebar({
   const [ecommerceOpen, setEcommerceOpen] = useState(true);
   const [paymentOpen, setPaymentOpen] = useState(true);
   const [firstProductId, setFirstProductId] = useState<string | null>(null);
+  const [firstOrderId, setFirstOrderId] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadFirstProduct() {
+    async function loadFirstEntities() {
       try {
-        const res = await fetch("/api/admin/products");
-        const data = await res.json();
-        if (data.success && Array.isArray(data.products) && data.products.length > 0) {
-          setFirstProductId(data.products[0].id);
+        const [pRes, oRes] = await Promise.all([
+          fetch("/api/admin/products"),
+          fetch("/api/admin/orders"),
+        ]);
+        const pData = await pRes.json();
+        const oData = await oRes.json();
+        if (pData.success && Array.isArray(pData.products) && pData.products.length > 0) {
+          setFirstProductId(pData.products[0].id);
+        }
+        if (oData.success && Array.isArray(oData.orders) && oData.orders.length > 0) {
+          setFirstOrderId(oData.orders[0].id);
         }
       } catch (e) {
-        console.error("Sidebar load product error:", e);
+        console.error("Sidebar load error:", e);
       }
     }
-    loadFirstProduct();
+    loadFirstEntities();
   }, []);
 
   // Exact Screenshot Sequence
@@ -56,7 +64,11 @@ export default function AdminSidebar({
     },
     { title: "Add Product", href: "/admin/products/new", exact: true },
     { title: "Order List", href: "/admin/orders", exact: true },
-    { title: "Order Detail", href: "/admin/orders/detail", isOrderDetail: true },
+    {
+      title: "Order Detail",
+      href: firstOrderId ? `/admin/orders/${firstOrderId}` : "/admin/orders/detail",
+      isOrderDetail: true,
+    },
   ];
 
   const paymentSubItems = [
@@ -134,7 +146,9 @@ export default function AdminSidebar({
                       pathname !== "/admin/products/new" &&
                       pathname !== "/admin/products";
                   } else if (item.isOrderDetail) {
-                    isActive = pathname.startsWith("/admin/orders/") && pathname !== "/admin/orders";
+                    isActive =
+                      pathname === "/admin/orders/detail" ||
+                      (pathname.startsWith("/admin/orders/") && pathname !== "/admin/orders");
                   }
 
                   return (
