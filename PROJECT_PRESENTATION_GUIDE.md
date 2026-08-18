@@ -244,30 +244,57 @@ stateDiagram-v2
 
 ---
 
-## 10. Senior Engineering Decisions & Challenges Solved
+## 10. Deep-Dive: Automated Tiered Discounts & Referral Attribution Engine
+
+Unlike basic e-commerce apps where discounts require manual typing and are vulnerable to coupon-stacking exploits, SHOP.CO implements a **3-Layer Smart Promotion Engine**:
+
+```mermaid
+graph TD
+    User[Customer Enters Store] --> Detect{Channel / User Lifecycle}
+    Detect -->|1st Visit / Signup| Layer1[Layer 1: Auto 20% First-Order Welcome]
+    Detect -->|Link with ?ref=campaign| Layer2[Layer 2: Auto 10% Referral / Ad Attribution]
+    Detect -->|Manual Code Input| Layer3[Layer 3: Admin Campaign Codes e.g. SHOP20]
+
+    Layer1 --> Engine[Non-Stackable Best-Discount Engine]
+    Layer2 --> Engine
+    Layer3 --> Engine
+    Engine --> Cart[Cart & Checkout Real-Time Calculation]
+    Cart --> ServerValidate[Server-Side PostgreSQL & Stripe Validation]
+```
+
+### Key Engineering Pillars:
+1. **Frictionless First-Order Welcome**: Automatically detects new customer sessions and applies `WELCOME20` (20% off) with celebration pill feedback (`🎉 20% First-Order Welcome Discount Applied`).
+2. **Referral / Ad Campaign Attribution**: URL parameters (e.g. `?ref=influencer10` or `?promo=ad10`) are captured in session storage and auto-applied in the cart without user friction.
+3. **Anti-Stacking Margin Protection**: Enforces single best-discount precedence, preventing malicious customers from combining codes (e.g., 20% + 20% + 10% = 50% exploit).
+4. **Full Server-Side Verification**: In [`services/order.service.ts`](file:///d:/e-commerce/shop-co/services/order.service.ts), the backend independently recalculates and cryptographically validates the discount before charging Stripe or creating order records.
+
+---
+
+## 11. Senior Engineering Decisions & Challenges Solved
 
 | Challenge | Typical Junior Approach | SHOP.CO Senior Solution |
 | :--- | :--- | :--- |
 | **Vercel Ephemeral Storage** | Saving uploads to `/public/uploads` (breaks on Vercel) | Implemented **Cloudinary streaming upload** with automatic fallback. |
 | **Git Deployment Risks** | Pushing untested code directly to `main` | Used **dedicated feature branches** (`feature/*`) with full local build validation (`tsc` & `next build`) before merging to `main`. |
 | **Variant Stock Overselling** | Separate API calls that can cause race conditions | Used **`prisma.$transaction`** to atomically create orders and decrement variant inventory. |
+| **Coupon Stacking Exploits** | Blind client-side calculation | Built **anti-stacking best-discount engine** with server-side validation. |
 | **Dark Mode UI Glitches** | Ignoring dark mode classes leading to murky contrast | Refactored all badge tokens to **high-contrast pastel borders and text** (`emerald-100`, `amber-100`, `rose-100`). |
 | **COD vs. Card Accounting** | Marking all orders as "Paid" | Distinct **`PENDING_PAYMENT`** status for COD with separate financial settlement tracking. |
 
 ---
 
-## 11. 2-Minute Elevator Pitch / Live Demo Script
+## 12. 2-Minute Elevator Pitch / Live Demo Script
 
 When presenting to your mentor or examiner, follow this 5-step walkthrough:
 
 > **Step 1: Introduction (30s)**  
-> *"Good morning/afternoon. Today I'm presenting **SHOP.CO**, a full-stack fashion e-commerce platform built with Next.js 15 App Router, TypeScript, Prisma ORM, and Neon PostgreSQL. My goal was not just to build a simple UI, but to solve real-world e-commerce edge cases like color-specific variant inventory, serverless CDN uploads, automated email lifecycles, and dual-currency payment accounting."*
+> *"Good morning/afternoon. Today I'm presenting **SHOP.CO**, a full-stack fashion e-commerce platform built with Next.js 15 App Router, TypeScript, Prisma ORM, and Neon PostgreSQL. My goal was not just to build a simple UI, but to solve real-world e-commerce edge cases like color-specific variant inventory, serverless CDN uploads, automated email lifecycles, tiered promo attribution, and dual-currency payment accounting."*
 
 > **Step 2: Storefront & Variant Logic Demo (30s)**  
 > *"On the storefront, notice our multi-tier navigation supporting Men, Women, Kids, and garment categories like Full Suits and Three Piece. When viewing a product, our inventory engine dynamically evaluates size stock against the active color swatch — if White Small is out of stock, it is struck through and disabled, while switching to Black immediately enables Small."*
 
-> **Step 3: Checkout & Dual Payment Demo (30s)**  
-> *"During checkout, customers can pay via Stripe Card Checkout or Cash on Delivery. For Stripe, we use secure checkout sessions with cryptographic webhook signatures for verification. For COD, we generate an instant receipt slip and place the order in a `PENDING_PAYMENT` state."*
+> **Step 3: Smart Discounts & Checkout Demo (30s)**  
+> *"In the cart, we engineered an automated tiered promotion engine: new visitors get an instant 20% First-Order Welcome discount without typing, and referral links (like `?ref=insta10`) auto-apply 10% attribution. We enforce strict anti-stacking rules so discounts cannot be abused, verified both on the client and server-side before Stripe checkout."*
 
-> **Step 4: Admin Dashboard & Email Automation (30s)**  
-> *"In the Admin Dashboard, we have real-time product CRUD with Cloudinary image streaming, stock tracking, and financial ledgers converting USD to PKR. When an admin updates an order status from 'Processing' to 'Shipped', our backend automatically fires a branded transactional email to the customer's exact inbox."*
+> **Step 4: Admin Dashboard & Email Lifecycle (30s)**  
+> *"In the Admin Dashboard, we have real-time product CRUD with Cloudinary image streaming, stock tracking, and financial ledgers converting USD to PKR. When an admin updates an order status from 'Processing' to 'Shipped', our backend automatically fires a branded transactional email to the customer's exact inbox, with pixel-perfect tax invoice printing."*
