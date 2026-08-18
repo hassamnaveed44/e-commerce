@@ -24,7 +24,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCart } from "@/context/CartContext";
 
 interface ProductVariant {
   id: string;
@@ -93,7 +92,6 @@ export default function ProductDetailPage({
   const resolvedParams = use(params);
   const router = useRouter();
   const productId = resolvedParams.id;
-  const { addToCart } = useCart();
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -217,28 +215,9 @@ export default function ProductDetailPage({
     }
   };
 
-  // Handle Add to Cart
+  // Handle Add to Cart Preview
   const handleAddToCart = () => {
     if (!product) return;
-    const matchingVariant =
-      product.variants.find((v) => v.size === selectedSize) ||
-      product.variants[0];
-
-    addToCart({
-      variantId: matchingVariant?.id || product.id,
-      quantity: 1,
-      productId: product.id,
-      name: product.name,
-      slug: product.slug,
-      image: product.images[0]?.url || "/images/product-1.png",
-      size: selectedSize,
-      colorName: matchingVariant?.colorName || product.color,
-      colorHex: matchingVariant?.colorHex || selectedColor,
-      price: product.price,
-      originalPrice: product.originalPrice,
-      discountPercent: product.discountPercent || 0,
-      stockQuantity: product.stock,
-    });
     showToast(`Added ${product.name} (${selectedSize}) to cart!`);
   };
 
