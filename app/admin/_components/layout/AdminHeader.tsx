@@ -656,47 +656,54 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {pendingRequests.map((req) => (
-                    <div
-                      key={req.id}
-                      className="p-4 rounded-2xl border border-[#C2B5A5] bg-[#EFE9E1] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs"
-                    >
-                      <div className="space-y-0.5">
-                        <div className="text-sm font-bold text-slate-900">
-                          <span>{req.user?.name || req.userEmail.split("@")[0] || "seomaster"}</span>
-                          <span className="text-slate-500 font-normal text-xs ml-1.5">
-                            ({req.userEmail})
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-700 italic">
-                          &ldquo;{req.reason || "Requesting staff access to manage store"}&rdquo;
-                        </p>
-                        <p className="text-[11px] text-slate-500 pt-0.5">
-                          Requested on {new Date(req.createdAt).toLocaleDateString("en-US")}
-                        </p>
-                      </div>
+                  {pendingRequests.map((req) => {
+                    const reqEmail = req.email || req.user?.email || req.userEmail || "user@example.com";
+                    const reqName = req.name || req.user?.fullName || req.user?.name || (reqEmail ? reqEmail.split("@")[0] : "Staff Member");
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          disabled={isLoadingStaff}
-                          onClick={() => handleAccessAction(req.id, req.userId, "APPROVE")}
-                          className="bg-white text-slate-900 hover:bg-slate-50 font-bold text-xs px-4 py-2 rounded-full border border-slate-200 shadow-2xs flex items-center gap-1.5 transition cursor-pointer"
-                        >
-                          <Check size={14} className="stroke-[2.5]" />
-                          <span>Approve as Admin</span>
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isLoadingStaff}
-                          onClick={() => handleAccessAction(req.id, req.userId, "REJECT")}
-                          className="bg-slate-200/70 hover:bg-slate-300 text-slate-700 font-medium text-xs px-4 py-2 rounded-full border border-slate-300 transition cursor-pointer"
-                        >
-                          Reject
-                        </button>
+                    return (
+                      <div
+                        key={req.id}
+                        className="p-4 rounded-2xl border border-[#C2B5A5] bg-[#EFE9E1] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-bold text-slate-900">
+                            <span>{reqName}</span>
+                            {reqEmail && (
+                              <span className="text-slate-500 font-normal text-xs ml-1.5">
+                                ({reqEmail})
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-700 italic">
+                            &ldquo;{req.reason || "Requesting staff access to manage store"}&rdquo;
+                          </p>
+                          <p className="text-[11px] text-slate-500 pt-0.5">
+                            Requested on {req.createdAt ? new Date(req.createdAt).toLocaleDateString("en-US") : "Today"}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            disabled={isLoadingStaff}
+                            onClick={() => handleAccessAction(req.id, req.userId, "APPROVE")}
+                            className="bg-white text-slate-900 hover:bg-slate-50 font-bold text-xs px-4 py-2 rounded-full border border-slate-200 shadow-2xs flex items-center gap-1.5 transition cursor-pointer"
+                          >
+                            <Check size={14} className="stroke-[2.5]" />
+                            <span>Approve as Admin</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isLoadingStaff}
+                            onClick={() => handleAccessAction(req.id, req.userId, "REJECT")}
+                            className="bg-slate-200/70 hover:bg-slate-300 text-slate-700 font-medium text-xs px-4 py-2 rounded-full border border-slate-300 transition cursor-pointer"
+                          >
+                            Reject
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
