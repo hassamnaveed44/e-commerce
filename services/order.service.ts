@@ -158,8 +158,8 @@ export async function createOrder(data: CreateOrderInput) {
       const orderNumber = `ORD-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
       const mappedPaymentMethod = paymentMethod === "CARD" ? PaymentMethod.CARD : PaymentMethod.COD;
-      const mappedOrderStatus =
-        paymentMethod === "COD" ? OrderStatus.PROCESSING : OrderStatus.PENDING_PAYMENT;
+      // All orders start in initial Pending state (Awaiting verification / processing)
+      const mappedOrderStatus = OrderStatus.PENDING_PAYMENT;
 
       // 7. Create Order Record
       const order = await tx.order.create({

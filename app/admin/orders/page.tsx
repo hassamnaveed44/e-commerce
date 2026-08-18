@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import PrintableInvoiceSlip from "@/app/components/order/PrintableInvoiceSlip";
 
 interface OrderItemProduct {
   id: string;
@@ -92,7 +93,7 @@ interface OrdersOverview {
 
 const ORDER_STATUS_CONFIG = {
   PENDING_PAYMENT: {
-    label: "Pending Payment",
+    label: "Pending",
     color: "bg-amber-100 text-amber-900 border-amber-300",
     dot: "bg-amber-500",
     next: ["PROCESSING", "CANCELLED"],
@@ -122,7 +123,7 @@ const ORDER_STATUS_CONFIG = {
     next: [],
   },
   RETURNED_REFUSED: {
-    label: "Returned / Refused",
+    label: "Returned",
     color: "bg-gray-200 text-gray-800 border-gray-300",
     dot: "bg-gray-500",
     next: [],
@@ -141,14 +142,13 @@ export default function AdminOrdersPage() {
     cancelledCount: 0,
   });
 
-  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [sortOption, setSortOption] = useState("newest");
-
-  // Selected Order for Detail Modal
   const [selectedOrder, setSelectedOrder] = useState<OrderData | null>(null);
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -632,11 +632,12 @@ export default function AdminOrdersPage() {
                           onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
                           className={`h-7 px-2.5 rounded-full text-xs font-bold border cursor-pointer focus:outline-none transition ${statusConf.color}`}
                         >
-                          <option value="PENDING_PAYMENT">Pending Payment</option>
+                          <option value="PENDING_PAYMENT">Pending</option>
                           <option value="PROCESSING">Processing</option>
                           <option value="SHIPPED">Shipped</option>
                           <option value="DELIVERED">Delivered</option>
                           <option value="CANCELLED">Cancelled</option>
+                          <option value="RETURNED_REFUSED">Returned</option>
                         </select>
                       </td>
 
@@ -850,11 +851,11 @@ export default function AdminOrdersPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.print()}
-                className="rounded-xl text-xs font-semibold cursor-pointer"
+                onClick={() => setIsInvoiceModalOpen(true)}
+                className="rounded-xl text-xs font-semibold cursor-pointer gap-1.5"
               >
-                <Printer size={13} className="mr-1.5" />
-                <span>Print Packing Slip</span>
+                <Printer size={13} />
+                <span>Print Official Slip</span>
               </Button>
 
               <Button
@@ -866,6 +867,16 @@ export default function AdminOrdersPage() {
               </Button>
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* Dedicated Clean Printable Invoice Modal (Screenshot 4 design) */}
+      {isInvoiceModalOpen && selectedOrder && (
+        <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto font-satoshi">
+          <PrintableInvoiceSlip
+            order={selectedOrder}
+            onClose={() => setIsInvoiceModalOpen(false)}
+          />
         </div>
       )}
     </div>
