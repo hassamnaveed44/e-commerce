@@ -27,6 +27,27 @@ import { Button } from "@/components/ui/button";
 import PrintableInvoiceSlip from "@/app/components/order/PrintableInvoiceSlip";
 import type { AdminAnalyticsData } from "@/services/analytics.service";
 
+// Custom Folder Export Icon matching Screenshot 2
+function FolderExportIcon({ size = 13, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
+      <path d="M12 10v6" />
+      <path d="m9 13 3-3 3 3" />
+    </svg>
+  );
+}
+
 export default function EcommerceDashboardPage() {
   const { user } = useUser();
   const [data, setData] = useState<AdminAnalyticsData | null>(null);
@@ -43,8 +64,9 @@ export default function EcommerceDashboardPage() {
   const ordersPerPage = 8;
   const productsPerPage = 8;
 
-  // Hover state for Bar Chart
+  // Hover states for Charts
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
+  const [hoveredTrendIdx, setHoveredTrendIdx] = useState<number>(3); // Defaults to June (idx 3)
 
   // Row Dropdown & Detail Modal States
   const [activeOrderMenu, setActiveOrderMenu] = useState<string | null>(null);
@@ -376,7 +398,7 @@ export default function EcommerceDashboardPage() {
         </div>
       </div>
 
-      {/* 3️⃣ Middle Row (2 Charts - Exact Match to Screenshots 1 & 2 Hover Tooltips) */}
+      {/* 3️⃣ Middle Row (2 Charts - Dynamic Interactive Movement & Tooltips) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
         {/* Left Chart: Total Revenue Bar Chart (6 Cols) */}
         <div className="lg:col-span-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
@@ -406,18 +428,18 @@ export default function EcommerceDashboardPage() {
             </div>
           </div>
 
-          {/* SVG Bar Chart with Rounded Bars Matching Screenshot 1 */}
+          {/* SVG Bar Chart with Elevated Rounded Bars Matching Screenshot 1 */}
           <div className="h-52 w-full flex items-end justify-between gap-2 pt-6 px-1 sm:px-3 relative">
             {(data?.monthlyRevenueChart || [
-              { month: "January", h1: 60, h2: 55, desktopOrders: 90, mobileOrders: 110, desktop: 11000, mobile: 10000 },
-              { month: "February", h1: 85, h2: 70, desktopOrders: 140, mobileOrders: 120, desktop: 15000, mobile: 13000 },
-              { month: "March", h1: 90, h2: 45, desktopOrders: 130, mobileOrders: 95, desktop: 16000, mobile: 8000 },
-              { month: "April", h1: 45, h2: 65, desktopOrders: 85, mobileOrders: 115, desktop: 8000, mobile: 11000 },
-              { month: "May", h1: 40, h2: 50, desktopOrders: 110, mobileOrders: 130, desktop: 7000, mobile: 9000 },
-              { month: "June", h1: 92, h2: 58, desktopOrders: 155, mobileOrders: 140, desktop: 17000, mobile: 14000 },
+              { month: "January", h1: 65, h2: 55, desktopOrders: 110, mobileOrders: 130 },
+              { month: "February", h1: 88, h2: 72, desktopOrders: 145, mobileOrders: 125 },
+              { month: "March", h1: 85, h2: 48, desktopOrders: 135, mobileOrders: 98 },
+              { month: "April", h1: 52, h2: 68, desktopOrders: 92, mobileOrders: 118 },
+              { month: "May", h1: 45, h2: 56, desktopOrders: 110, mobileOrders: 130 },
+              { month: "June", h1: 94, h2: 60, desktopOrders: 160, mobileOrders: 145 },
             ]).map((bar: any, idx: number) => {
-              const h1Val = bar.h1 || Math.max(30, Math.round((bar.desktop / (data?.overview.totalRevenue || 40000)) * 180));
-              const h2Val = bar.h2 || Math.max(25, Math.round((bar.mobile / (data?.overview.totalRevenue || 40000)) * 160));
+              const h1Val = bar.h1 || 60;
+              const h2Val = bar.h2 || 50;
               const isHovered = hoveredBar === idx;
 
               return (
@@ -429,22 +451,22 @@ export default function EcommerceDashboardPage() {
                 >
                   {/* Desktop Bar (Dark Solid Rounded Bar) */}
                   <div
-                    style={{ height: `${Math.min(95, h1Val)}%` }}
+                    style={{ height: `${h1Val}%` }}
                     className={`w-4 sm:w-6 rounded-t-md transition-all duration-200 ${
                       isHovered ? "bg-slate-800" : "bg-[#0F172A]"
                     }`}
                   />
                   {/* Mobile Bar (Slate Grey Rounded Bar) */}
                   <div
-                    style={{ height: `${Math.min(90, h2Val)}%` }}
+                    style={{ height: `${h2Val}%` }}
                     className={`w-4 sm:w-6 rounded-t-md transition-all duration-200 ${
                       isHovered ? "bg-slate-600" : "bg-[#64748B]"
                     }`}
                   />
 
-                  {/* 🎯 Exact Screenshot 1 Hover Tooltip */}
+                  {/* 🎯 Hover Tooltip following hovered month */}
                   {isHovered && (
-                    <div className="absolute bottom-[45%] z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-2.5 text-left text-[11px] min-w-[125px] animate-in fade-in zoom-in-95 pointer-events-none">
+                    <div className="absolute bottom-[50%] z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-2.5 text-left text-[11px] min-w-[125px] animate-in fade-in zoom-in-95 pointer-events-none">
                       <p className="font-bold text-slate-900 mb-1.5 text-xs">
                         {bar.month}
                       </p>
@@ -475,7 +497,7 @@ export default function EcommerceDashboardPage() {
             })}
           </div>
 
-          {/* Months on X-Axis Matching Screenshot 1 */}
+          {/* Months on X-Axis */}
           <div className="flex justify-between px-1 sm:px-3 pt-3 border-t border-slate-100 text-[11px] font-normal text-slate-500">
             <span>January</span>
             <span>February</span>
@@ -486,7 +508,7 @@ export default function EcommerceDashboardPage() {
           </div>
         </div>
 
-        {/* Right Chart: Returning Rate Matching Screenshot 2 Hover Tooltip */}
+        {/* Right Chart: Returning Rate with Moving Dynamic Hover Point (Screenshot 2 Match) */}
         <div className="lg:col-span-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div>
@@ -501,90 +523,146 @@ export default function EcommerceDashboardPage() {
               </div>
             </div>
 
+            {/* Folder Export Button matching Screenshot 2 */}
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleExportCSV("orders")}
-              className="rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-medium gap-1.5 h-8 px-2.5 shadow-2xs"
+              className="rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 text-xs font-semibold gap-1.5 h-8 px-2.5 shadow-2xs cursor-pointer"
             >
-              <Share2 size={12} />
+              <FolderExportIcon size={14} className="text-slate-800" />
               <span>Export</span>
             </Button>
           </div>
 
-          {/* SVG Multi-Line Chart with Interactive Hover Dots (Screenshot 2) */}
-          <div className="h-52 w-full relative flex items-center justify-center pt-2">
-            <svg
-              className="w-full h-full overflow-visible"
-              viewBox="0 0 560 180"
-              preserveAspectRatio="none"
-            >
-              <line x1="0" y1="130" x2="560" y2="130" stroke="#f8fafc" strokeWidth="1" />
+          {/* SVG Multi-Line Chart with Interactive Moving Hover Points */}
+          {(() => {
+            const trendPoints = data?.returningRateTrend || [
+              { month: "March", desktop: 320, mobile: 110, cx: 0, y1: 140, y2: 160 },
+              { month: "April", desktop: 440, mobile: 125, cx: 75, y1: 120, y2: 140 },
+              { month: "May", desktop: 390, mobile: 115, cx: 155, y1: 135, y2: 155 },
+              { month: "June", desktop: 514, mobile: 140, cx: 235, y1: 90, y2: 130 },
+              { month: "July", desktop: 310, mobile: 95, cx: 315, y1: 105, y2: 145 },
+              { month: "August", desktop: 480, mobile: 130, cx: 395, y1: 70, y2: 140 },
+              { month: "October", desktop: 410, mobile: 120, cx: 475, y1: 140, y2: 155 },
+              { month: "December", desktop: 620, mobile: 180, cx: 560, y1: 40, y2: 110 },
+            ];
+            const activeTrend = trendPoints[hoveredTrendIdx] || trendPoints[3];
+            const leftPercent = Math.min(72, Math.max(5, (activeTrend.cx / 560) * 100 - 10));
 
-              {/* Line 1 (Solid Dark Line) */}
-              <path
-                d="M 0 140 L 70 120 L 140 135 L 210 90 L 280 105 L 350 70 L 420 140 L 490 100 L 560 40"
-                fill="none"
-                stroke="#0F172A"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+            return (
+              <div className="h-52 w-full relative flex items-center justify-center pt-2">
+                <svg
+                  className="w-full h-full overflow-visible"
+                  viewBox="0 0 560 180"
+                  preserveAspectRatio="none"
+                >
+                  <line x1="0" y1="130" x2="560" y2="130" stroke="#f8fafc" strokeWidth="1" />
 
-              {/* Line 2 (Secondary Slate Grey Line) */}
-              <path
-                d="M 0 160 L 70 140 L 140 155 L 210 130 L 280 145 L 350 140 L 420 155 L 490 135 L 560 110"
-                fill="none"
-                stroke="#94A3B8"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+                  {/* Line 1 (Solid Dark Line) */}
+                  <path
+                    d="M 0 140 L 70 120 L 140 135 L 210 90 L 280 105 L 350 70 L 420 140 L 490 100 L 560 40"
+                    fill="none"
+                    stroke="#0F172A"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
 
-              {/* Highlighted Active Dots for June (Screenshot 2) */}
-              <circle cx="210" cy="90" r="4.5" fill="#0F172A" stroke="#FFFFFF" strokeWidth="1.5" />
-              <circle cx="210" cy="130" r="4.5" fill="#64748B" stroke="#FFFFFF" strokeWidth="1.5" />
-            </svg>
+                  {/* Line 2 (Secondary Slate Grey Line) */}
+                  <path
+                    d="M 0 160 L 70 140 L 140 155 L 210 130 L 280 145 L 350 140 L 420 155 L 490 135 L 560 110"
+                    fill="none"
+                    stroke="#94A3B8"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
 
-            {/* 🎯 Exact Screenshot 2 Hover Tooltip on June */}
-            <div className="absolute right-[45%] top-[40%] z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-2.5 text-left text-[11px] min-w-[130px] animate-in fade-in">
-              <p className="font-bold text-slate-900 mb-1.5 text-xs">June</p>
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-slate-700">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-xs bg-[#0F172A]" />
-                    <span>Desktop</span>
-                  </span>
-                  <span className="font-mono font-bold text-slate-900">514</span>
+                  {/* Moving Interactive Active Dots */}
+                  <circle
+                    cx={activeTrend.cx}
+                    cy={activeTrend.y1}
+                    r="4.5"
+                    fill="#0F172A"
+                    stroke="#FFFFFF"
+                    strokeWidth="1.5"
+                    className="transition-all duration-200"
+                  />
+                  <circle
+                    cx={activeTrend.cx}
+                    cy={activeTrend.y2}
+                    r="4.5"
+                    fill="#64748B"
+                    stroke="#FFFFFF"
+                    strokeWidth="1.5"
+                    className="transition-all duration-200"
+                  />
+                </svg>
+
+                {/* Moving Tooltip Card that tracks active month */}
+                <div
+                  style={{
+                    left: `${leftPercent}%`,
+                    top: `${Math.min(50, Math.max(8, (activeTrend.y1 / 180) * 100 - 10))}%`,
+                  }}
+                  className="absolute z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-2.5 text-left text-[11px] min-w-[130px] transition-all duration-200 pointer-events-none"
+                >
+                  <p className="font-bold text-slate-900 mb-1.5 text-xs">{activeTrend.month}</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-slate-700">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-xs bg-[#0F172A]" />
+                        <span>Desktop</span>
+                      </span>
+                      <span className="font-mono font-bold text-slate-900">{activeTrend.desktop}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-700">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-xs bg-[#64748B]" />
+                        <span>Mobile</span>
+                      </span>
+                      <span className="font-mono font-bold text-slate-900">{activeTrend.mobile}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-slate-700">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-xs bg-[#64748B]" />
-                    <span>Mobile</span>
-                  </span>
-                  <span className="font-mono font-bold text-slate-900">140</span>
+
+                {/* Invisible Hover Columns along X-axis to drive smooth interactive movement */}
+                <div className="absolute inset-0 flex">
+                  {trendPoints.map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="flex-1 h-full cursor-pointer z-20"
+                      onMouseEnter={() => setHoveredTrendIdx(idx)}
+                    />
+                  ))}
                 </div>
               </div>
-            </div>
-          </div>
+            );
+          })()}
 
-          {/* X-Axis Months Matching Screenshot 2 */}
+          {/* X-Axis Months with individual hover triggers */}
           <div className="flex justify-between px-1 sm:px-3 pt-3 border-t border-slate-100 text-[10px] sm:text-[11px] font-normal text-slate-500">
-            <span>March</span>
-            <span>April</span>
-            <span>May</span>
-            <span>June</span>
-            <span>July</span>
-            <span>August</span>
-            <span>October</span>
-            <span>December</span>
+            {["March", "April", "May", "June", "July", "August", "October", "December"].map(
+              (m, idx) => (
+                <span
+                  key={m}
+                  onMouseEnter={() => setHoveredTrendIdx(idx)}
+                  className={`cursor-pointer transition-colors ${
+                    hoveredTrendIdx === idx ? "font-bold text-slate-900" : "hover:text-slate-800"
+                  }`}
+                >
+                  {m}
+                </span>
+              )
+            )}
           </div>
         </div>
       </div>
 
       {/* 4️⃣ Third Row (3 Analytics Cards - Dynamic Locations & Visits by Source) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
-        {/* Card 1: Sales by Location (Aggregated Directly by Customer City / Country) */}
+        {/* Card 1: Sales by Location (Aggregated Strictly by Real Customer Cities/Addresses) */}
         <div className="lg:col-span-4 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-start justify-between gap-2 mb-2">
@@ -599,49 +677,48 @@ export default function EcommerceDashboardPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => handleExportCSV("orders")}
-                className="rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-medium gap-1 h-7.5 px-2"
+                className="rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 text-xs font-semibold gap-1.5 h-7.5 px-2 cursor-pointer"
               >
-                <Share2 size={11} />
+                <FolderExportIcon size={13} className="text-slate-800" />
                 <span>Export</span>
               </Button>
             </div>
 
-            {/* Location Progress List from real database shipping addresses */}
+            {/* Real-time Location Progress List */}
             <div className="space-y-3 mt-4">
-              {(data?.salesByLocation || [
-                { country: "Canada", change: "+5.2%", percentage: 85, isPositive: true },
-                { country: "Greenland", change: "+7.8%", percentage: 80, isPositive: true },
-                { country: "Russia", change: "-2.1%", percentage: 63, isPositive: false },
-                { country: "China", change: "+3.4%", percentage: 60, isPositive: true },
-                { country: "Australia", change: "+1.2%", percentage: 45, isPositive: true },
-                { country: "Greece", change: "+1%", percentage: 40, isPositive: true },
-              ]).map((loc, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-slate-700 font-medium truncate max-w-[140px]">
-                        {loc.country}
-                      </span>
-                      <span
-                        className={`text-[9px] font-semibold px-1 py-0.2 rounded ${
-                          loc.isPositive
-                            ? "bg-emerald-50 text-emerald-600"
-                            : "bg-rose-50 text-rose-600"
-                        }`}
-                      >
-                        {loc.change}
-                      </span>
+              {data?.salesByLocation && data.salesByLocation.length > 0 ? (
+                data.salesByLocation.map((loc, idx) => (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-700 font-medium truncate max-w-[140px]">
+                          {loc.country}
+                        </span>
+                        <span
+                          className={`text-[9px] font-semibold px-1 py-0.2 rounded ${
+                            loc.isPositive
+                              ? "bg-emerald-50 text-emerald-600"
+                              : "bg-rose-50 text-rose-600"
+                          }`}
+                        >
+                          {loc.change}
+                        </span>
+                      </div>
+                      <span className="font-semibold text-slate-900">{loc.percentage}%</span>
                     </div>
-                    <span className="font-semibold text-slate-900">{loc.percentage}%</span>
+                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        style={{ width: `${loc.percentage}%` }}
+                        className="bg-slate-950 h-full rounded-full transition-all duration-500"
+                      />
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      style={{ width: `${loc.percentage}%` }}
-                      className="bg-slate-950 h-full rounded-full transition-all duration-500"
-                    />
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-slate-400 text-xs py-4 text-center">
+                  No location data recorded yet.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -847,9 +924,9 @@ export default function EcommerceDashboardPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => handleExportCSV("orders")}
-                className="rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-medium gap-1.5 h-8 px-2.5 shadow-2xs"
+                className="rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 text-xs font-semibold gap-1.5 h-8 px-2.5 shadow-2xs cursor-pointer"
               >
-                <Share2 size={12} />
+                <FolderExportIcon size={14} className="text-slate-800" />
                 <span>Export</span>
               </Button>
             </div>
@@ -1056,9 +1133,9 @@ export default function EcommerceDashboardPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => handleExportCSV("products")}
-                className="rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-medium gap-1.5 h-8 px-2.5 shadow-2xs"
+                className="rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 text-xs font-semibold gap-1.5 h-8 px-2.5 shadow-2xs cursor-pointer"
               >
-                <Share2 size={12} />
+                <FolderExportIcon size={14} className="text-slate-800" />
                 <span>Export</span>
               </Button>
             </div>
