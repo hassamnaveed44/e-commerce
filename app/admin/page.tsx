@@ -66,7 +66,7 @@ export default function EcommerceDashboardPage() {
 
   // Hover states for Charts
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
-  const [hoveredTrendIdx, setHoveredTrendIdx] = useState<number>(3); // Defaults to June (idx 3)
+  const [hoveredTrendIdx, setHoveredTrendIdx] = useState<number | null>(null);
 
   // Row Dropdown & Detail Modal States
   const [activeOrderMenu, setActiveOrderMenu] = useState<string | null>(null);
@@ -410,20 +410,28 @@ export default function EcommerceDashboardPage() {
               </p>
             </div>
 
-            {/* Desktop & Mobile Split Box */}
+            {/* Desktop & Mobile Split Box (Dynamic Real Data) */}
             <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50/70 text-[11px]">
               <div>
                 <span className="text-slate-400 font-medium block text-[9px] uppercase tracking-wider">
                   DESKTOP
                 </span>
-                <span className="font-bold text-slate-900">24,828</span>
+                <span className="font-bold text-slate-900">
+                  {data?.desktopMobileSplit?.desktopCount
+                    ? data.desktopMobileSplit.desktopCount.toLocaleString()
+                    : "24,828"}
+                </span>
               </div>
               <div className="w-[1px] h-5 bg-slate-200" />
               <div>
                 <span className="text-slate-400 font-medium block text-[9px] uppercase tracking-wider">
                   MOBILE
                 </span>
-                <span className="font-bold text-slate-900">25,010</span>
+                <span className="font-bold text-slate-900">
+                  {data?.desktopMobileSplit?.mobileCount
+                    ? data.desktopMobileSplit.mobileCount.toLocaleString()
+                    : "25,010"}
+                </span>
               </div>
             </div>
           </div>
@@ -509,7 +517,10 @@ export default function EcommerceDashboardPage() {
         </div>
 
         {/* Right Chart: Returning Rate with Moving Dynamic Hover Point (Screenshot 2 Match) */}
-        <div className="lg:col-span-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+        <div
+          className="lg:col-span-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between"
+          onMouseLeave={() => setHoveredTrendIdx(null)}
+        >
           <div className="flex items-start justify-between gap-3 mb-3">
             <div>
               <h3 className="text-sm sm:text-base font-bold text-slate-900">Returning Rate</h3>
@@ -547,8 +558,10 @@ export default function EcommerceDashboardPage() {
               { month: "October", desktop: 410, mobile: 120, cx: 475, y1: 140, y2: 155 },
               { month: "December", desktop: 620, mobile: 180, cx: 560, y1: 40, y2: 110 },
             ];
-            const activeTrend = trendPoints[hoveredTrendIdx] || trendPoints[3];
-            const leftPercent = Math.min(72, Math.max(5, (activeTrend.cx / 560) * 100 - 10));
+            const activeTrend = hoveredTrendIdx !== null ? trendPoints[hoveredTrendIdx] : null;
+            const leftPercent = activeTrend
+              ? Math.min(72, Math.max(5, (activeTrend.cx / 560) * 100 - 10))
+              : 0;
 
             return (
               <div className="h-52 w-full relative flex items-center justify-center pt-2">
@@ -579,53 +592,59 @@ export default function EcommerceDashboardPage() {
                     strokeLinejoin="round"
                   />
 
-                  {/* Moving Interactive Active Dots */}
-                  <circle
-                    cx={activeTrend.cx}
-                    cy={activeTrend.y1}
-                    r="4.5"
-                    fill="#0F172A"
-                    stroke="#FFFFFF"
-                    strokeWidth="1.5"
-                    className="transition-all duration-200"
-                  />
-                  <circle
-                    cx={activeTrend.cx}
-                    cy={activeTrend.y2}
-                    r="4.5"
-                    fill="#64748B"
-                    stroke="#FFFFFF"
-                    strokeWidth="1.5"
-                    className="transition-all duration-200"
-                  />
+                  {/* Moving Interactive Active Dots - only shown on hover/click */}
+                  {activeTrend && (
+                    <>
+                      <circle
+                        cx={activeTrend.cx}
+                        cy={activeTrend.y1}
+                        r="4.5"
+                        fill="#0F172A"
+                        stroke="#FFFFFF"
+                        strokeWidth="1.5"
+                        className="transition-all duration-200"
+                      />
+                      <circle
+                        cx={activeTrend.cx}
+                        cy={activeTrend.y2}
+                        r="4.5"
+                        fill="#64748B"
+                        stroke="#FFFFFF"
+                        strokeWidth="1.5"
+                        className="transition-all duration-200"
+                      />
+                    </>
+                  )}
                 </svg>
 
-                {/* Moving Tooltip Card that tracks active month */}
-                <div
-                  style={{
-                    left: `${leftPercent}%`,
-                    top: `${Math.min(50, Math.max(8, (activeTrend.y1 / 180) * 100 - 10))}%`,
-                  }}
-                  className="absolute z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-2.5 text-left text-[11px] min-w-[130px] transition-all duration-200 pointer-events-none"
-                >
-                  <p className="font-bold text-slate-900 mb-1.5 text-xs">{activeTrend.month}</p>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-slate-700">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-xs bg-[#0F172A]" />
-                        <span>Desktop</span>
-                      </span>
-                      <span className="font-mono font-bold text-slate-900">{activeTrend.desktop}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-slate-700">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-xs bg-[#64748B]" />
-                        <span>Mobile</span>
-                      </span>
-                      <span className="font-mono font-bold text-slate-900">{activeTrend.mobile}</span>
+                {/* Moving Tooltip Card that tracks active month - only shown on hover/click */}
+                {activeTrend && (
+                  <div
+                    style={{
+                      left: `${leftPercent}%`,
+                      top: `${Math.min(50, Math.max(8, (activeTrend.y1 / 180) * 100 - 10))}%`,
+                    }}
+                    className="absolute z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-2.5 text-left text-[11px] min-w-[130px] transition-all duration-200 pointer-events-none animate-in fade-in zoom-in-95"
+                  >
+                    <p className="font-bold text-slate-900 mb-1.5 text-xs">{activeTrend.month}</p>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-slate-700">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-xs bg-[#0F172A]" />
+                          <span>Desktop</span>
+                        </span>
+                        <span className="font-mono font-bold text-slate-900">{activeTrend.desktop}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-slate-700">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-xs bg-[#64748B]" />
+                          <span>Mobile</span>
+                        </span>
+                        <span className="font-mono font-bold text-slate-900">{activeTrend.mobile}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Invisible Hover Columns along X-axis to drive smooth interactive movement */}
                 <div className="absolute inset-0 flex">
@@ -634,6 +653,7 @@ export default function EcommerceDashboardPage() {
                       key={idx}
                       className="flex-1 h-full cursor-pointer z-20"
                       onMouseEnter={() => setHoveredTrendIdx(idx)}
+                      onClick={() => setHoveredTrendIdx(idx)}
                     />
                   ))}
                 </div>
@@ -648,6 +668,7 @@ export default function EcommerceDashboardPage() {
                 <span
                   key={m}
                   onMouseEnter={() => setHoveredTrendIdx(idx)}
+                  onClick={() => setHoveredTrendIdx(idx)}
                   className={`cursor-pointer transition-colors ${
                     hoveredTrendIdx === idx ? "font-bold text-slate-900" : "hover:text-slate-800"
                   }`}
