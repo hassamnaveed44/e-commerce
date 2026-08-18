@@ -699,10 +699,10 @@ export default function AdminOrdersPage() {
 
                       {/* Numeric ID */}
                       {visibleColumns.numericId && (
-                        <td className="py-3.5 px-4 font-bold text-slate-700 dark:text-slate-300 font-mono">
+                        <td className="py-3.5 px-4 font-bold text-slate-600 font-mono">
                           <Link
                             href={`/admin/orders/${ord.id}`}
-                            className="hover:underline hover:text-black dark:hover:text-white"
+                            className="hover:underline hover:text-black"
                           >
                             {ord.numericId}
                           </Link>
@@ -716,7 +716,7 @@ export default function AdminOrdersPage() {
                             href={`/admin/orders/${ord.id}`}
                             className="flex items-center gap-3 group/prod"
                           >
-                            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden border border-slate-200 shrink-0 flex items-center justify-center">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={ord.productImage || "/images/product-1.png"}
@@ -724,7 +724,7 @@ export default function AdminOrdersPage() {
                                 className="w-full h-full object-cover"
                               />
                             </div>
-                            <span className="font-bold text-slate-950 dark:text-white group-hover/prod:underline truncate max-w-[200px]">
+                            <span className="font-semibold text-slate-900 group-hover/prod:underline truncate max-w-[200px]">
                               {ord.productName}
                             </span>
                           </Link>
@@ -733,7 +733,7 @@ export default function AdminOrdersPage() {
 
                       {/* Price */}
                       {visibleColumns.price && (
-                        <td className="py-3.5 px-4 font-extrabold text-slate-950 dark:text-white font-mono text-xs">
+                        <td className="py-3.5 px-4 font-semibold text-slate-800 font-mono">
                           ${ord.totalAmount.toFixed(0)}
                         </td>
                       )}
@@ -741,10 +741,10 @@ export default function AdminOrdersPage() {
                       {/* Customer (Name on top, email below) */}
                       {visibleColumns.customer && (
                         <td className="py-3.5 px-4">
-                          <span className="font-bold text-slate-950 dark:text-white block">
+                          <span className="font-bold text-slate-900 block">
                             {ord.customer.name}
                           </span>
-                          <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium block mt-0.5">
+                          <span className="text-[11px] text-slate-400 font-normal block mt-0.5">
                             {ord.customer.email}
                           </span>
                         </td>
@@ -752,14 +752,14 @@ export default function AdminOrdersPage() {
 
                       {/* Date */}
                       {visibleColumns.date && (
-                        <td className="py-3.5 px-4 font-semibold text-slate-800 dark:text-slate-200">
+                        <td className="py-3.5 px-4 font-medium text-slate-600">
                           {formattedDate}
                         </td>
                       )}
 
                       {/* Type (Sale / Return) */}
                       {visibleColumns.type && (
-                        <td className="py-3.5 px-4 font-semibold text-slate-800 dark:text-slate-200">
+                        <td className="py-3.5 px-4 font-medium text-slate-600">
                           {ord.type}
                         </td>
                       )}
@@ -775,7 +775,7 @@ export default function AdminOrdersPage() {
                       <td className="py-3.5 px-4 text-right">
                         <Link
                           href={`/admin/orders/${ord.id}`}
-                          className="w-7 h-7 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer inline-flex"
+                          className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition cursor-pointer inline-flex"
                           title="View Order Details"
                         >
                           <MoreHorizontal size={15} />

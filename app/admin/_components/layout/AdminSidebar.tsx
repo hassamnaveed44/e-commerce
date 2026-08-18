@@ -10,9 +10,6 @@ import {
   ChevronRight,
   ChevronsUpDown,
   Clock,
-  MessageSquare,
-  Package,
-  Sparkles,
   MoreVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -54,7 +51,7 @@ export default function AdminSidebar({
     loadFirstEntities();
   }, []);
 
-  // Exact Requested Sequence:
+  // Requested Sequence:
   // E-commerce: Dashboard -> Product List -> Product Detail -> Add Product -> Order List -> Order Detail -> Reviews -> Inventory
   const ecommerceSubItems = [
     { title: "Dashboard", href: "/admin", exact: true },
@@ -81,27 +78,27 @@ export default function AdminSidebar({
   ];
 
   const sidebarContent = (
-    <div className="flex h-full flex-col justify-between p-3 select-none bg-[#FAFAFA] dark:bg-[#121214] text-slate-900 dark:text-slate-100 transition-colors duration-200 font-satoshi overflow-y-auto">
+    <div className="flex h-full flex-col justify-between p-3 select-none bg-white text-slate-900 font-satoshi overflow-y-auto">
       {/* Top Header & Menus */}
       <div className="space-y-4">
-        {/* Brand Header */}
-        <div className="flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800 transition cursor-pointer">
+        {/* Brand Header (Screenshot Match: S. icon + Shadcn UI Kit / SHOP.CO Admin) */}
+        <div className="flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer">
           <Link href="/admin" className="flex items-center gap-2.5 flex-1 min-w-0">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black dark:bg-white text-white dark:text-black font-integral text-sm font-black shadow-xs shrink-0">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black text-white font-integral text-sm font-black shadow-xs shrink-0">
               S.
             </div>
             <div className="flex flex-col truncate">
-              <span className="font-integral text-sm font-extrabold tracking-tight text-slate-900 dark:text-white truncate">
+              <span className="font-integral text-sm font-extrabold tracking-tight text-slate-900 truncate">
                 SHOP.CO Admin
               </span>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 -mt-0.5">Fashion Store</span>
+              <span className="text-[10px] text-slate-400 -mt-0.5">Fashion Store</span>
             </div>
           </Link>
           <ChevronsUpDown className="h-4 w-4 text-slate-400 shrink-0" />
         </div>
 
         {/* Dashboards Section Title */}
-        <p className="px-2 text-[11px] font-semibold text-slate-400 dark:text-slate-500">Dashboards</p>
+        <p className="px-2 text-[11px] font-semibold text-slate-400">Dashboards</p>
 
         {/* Menu Navigation */}
         <div className="space-y-1">
@@ -112,11 +109,11 @@ export default function AdminSidebar({
             className={cn(
               "flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors",
               pathname === "/admin"
-                ? "bg-slate-200/70 dark:bg-slate-800 text-slate-950 dark:text-white font-bold shadow-2xs"
-                : "text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                ? "bg-slate-100 text-slate-900 font-bold"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
             )}
           >
-            <Clock className="h-4 w-4 text-slate-500 dark:text-slate-400 shrink-0" />
+            <Clock className="h-4 w-4 text-slate-400 shrink-0" />
             <span>Classic Dashboard</span>
           </Link>
 
@@ -125,10 +122,10 @@ export default function AdminSidebar({
             <button
               type="button"
               onClick={() => setEcommerceOpen(!ecommerceOpen)}
-              className="flex w-full items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition cursor-pointer"
+              className="flex w-full items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
             >
               <div className="flex items-center gap-2.5">
-                <ShoppingBag className="h-4 w-4 text-slate-500 dark:text-slate-400 shrink-0" />
+                <ShoppingBag className="h-4 w-4 text-slate-400 shrink-0" />
                 <span>E-commerce</span>
               </div>
               {ecommerceOpen ? (
@@ -139,7 +136,7 @@ export default function AdminSidebar({
             </button>
 
             {ecommerceOpen && (
-              <div className="mt-1 ml-4 pl-3 border-l border-slate-200 dark:border-slate-800 space-y-0.5">
+              <div className="mt-1 ml-4 pl-3 border-l border-slate-200 space-y-0.5">
                 {ecommerceSubItems.map((item) => {
                   let isActive = false;
                   if (item.exact) {
@@ -161,10 +158,10 @@ export default function AdminSidebar({
                       href={item.href}
                       onClick={onMobileClose}
                       className={cn(
-                        "block px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                        "block px-3 py-1.5 rounded-lg text-xs transition-colors",
                         isActive
-                          ? "bg-slate-200/80 dark:bg-slate-800 text-slate-950 dark:text-white font-bold shadow-2xs"
-                          : "text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50"
+                          ? "bg-slate-100 text-slate-950 font-bold"
+                          : "text-slate-600 font-medium hover:text-slate-950 hover:bg-slate-50"
                       )}
                     >
                       {item.title}
@@ -180,10 +177,10 @@ export default function AdminSidebar({
             <button
               type="button"
               onClick={() => setPaymentOpen(!paymentOpen)}
-              className="flex w-full items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition cursor-pointer"
+              className="flex w-full items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
             >
               <div className="flex items-center gap-2.5">
-                <CreditCard className="h-4 w-4 text-slate-500 dark:text-slate-400 shrink-0" />
+                <CreditCard className="h-4 w-4 text-slate-400 shrink-0" />
                 <span>Payment Dashboard</span>
               </div>
               {paymentOpen ? (
@@ -194,7 +191,7 @@ export default function AdminSidebar({
             </button>
 
             {paymentOpen && (
-              <div className="mt-1 ml-4 pl-3 border-l border-slate-200 dark:border-slate-800 space-y-0.5">
+              <div className="mt-1 ml-4 pl-3 border-l border-slate-200 space-y-0.5">
                 {paymentSubItems.map((item) => {
                   const isActive = pathname === item.href;
                   return (
@@ -203,10 +200,10 @@ export default function AdminSidebar({
                       href={item.href}
                       onClick={onMobileClose}
                       className={cn(
-                        "block px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                        "block px-3 py-1.5 rounded-lg text-xs transition-colors",
                         isActive
-                          ? "bg-slate-200/80 dark:bg-slate-800 text-slate-950 dark:text-white font-bold shadow-2xs"
-                          : "text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50"
+                          ? "bg-slate-100 text-slate-950 font-bold"
+                          : "text-slate-600 font-medium hover:text-slate-950 hover:bg-slate-50"
                       )}
                     >
                       {item.title}
@@ -219,44 +216,39 @@ export default function AdminSidebar({
         </div>
       </div>
 
-      {/* Bottom Promo Badge & User Profile (Screenshot 4 Match) */}
+      {/* Bottom Promo Badge & User Profile (Screenshot 3 & 4 Match) */}
       <div className="pt-4 space-y-3">
-        {/* "Unlock Everything" Card (Screenshot 4 Match) */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#18181B] p-4 shadow-2xs space-y-2.5">
-          <h4 className="font-bold text-xs text-slate-950 dark:text-white">
+        {/* "Unlock Everything" Card (Screenshot Match) */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-2.5">
+          <h4 className="font-bold text-xs text-slate-900">
             Unlock Everything
           </h4>
-          <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
+          <p className="text-[11px] text-slate-500 leading-relaxed font-normal">
             Get instant access to all premium dashboards, templates, and UI components. Pay once, use forever in unlimited projects.
           </p>
           <button
             type="button"
-            className="w-full bg-black hover:bg-black/85 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-black font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
+            className="w-full bg-black hover:bg-black/85 text-white font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block shrink-0 animate-pulse" />
             <span>Get Full Access</span>
           </button>
         </div>
 
-        {/* User Profile Footer Row (Screenshot 4 Match) */}
-        <div className="flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer">
+        {/* User Profile Footer Row (Screenshot Match) */}
+        <div className="flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer">
           <div className="flex items-center gap-2.5 min-w-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/images/user-avatar.png"
-              onError={(e) => {
-                // Fallback avatar
-                (e.target as HTMLImageElement).src =
-                  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80";
-              }}
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
               alt="User Avatar"
-              className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+              className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
             />
             <div className="flex flex-col truncate">
-              <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+              <span className="text-xs font-bold text-slate-900 truncate">
                 Toby Belhome
               </span>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+              <span className="text-[10px] text-slate-400 truncate">
                 hello@tobybelhome.com
               </span>
             </div>
@@ -264,7 +256,7 @@ export default function AdminSidebar({
 
           <button
             type="button"
-            className="w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white"
+            className="w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-slate-700"
           >
             <MoreVertical size={14} />
           </button>
@@ -276,18 +268,18 @@ export default function AdminSidebar({
   return (
     <>
       {/* Desktop Fixed Sticky Sidebar */}
-      <aside className="fixed left-0 top-0 hidden h-screen w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#121214] z-30 md:block">
+      <aside className="fixed left-0 top-0 hidden h-screen w-64 border-r border-slate-200 bg-white z-30 md:block shadow-2xs">
         {sidebarContent}
       </aside>
 
       {/* Mobile Drawer Overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs md:hidden animate-in fade-in"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs md:hidden animate-in fade-in"
           onClick={onMobileClose}
         >
           <div
-            className="fixed inset-y-0 left-0 w-64 bg-white dark:bg-[#121214] shadow-2xl z-50 animate-in slide-in-from-left duration-200"
+            className="fixed inset-y-0 left-0 w-64 bg-white shadow-2xl z-50 animate-in slide-in-from-left duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {sidebarContent}
