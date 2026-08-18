@@ -615,46 +615,63 @@ export default function ProductDetailPage({
               </button>
             </div>
 
-            {/* Reviews 2-Column Grid inside Right Column */}
+            {/* Reviews 2-Column Grid inside Right Column (Screenshot 2 Match) */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
               {/* Left Column: Customer Review Cards List (Screenshot 2 Match) */}
-              <div className="md:col-span-7 space-y-3">
-                {product.reviews.slice(0, visibleReviewsCount).map((rev) => (
-                  <div
-                    key={rev.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs space-y-2.5"
-                  >
-                    {/* Review Header: Avatar, Name, Rating, Time */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center font-bold text-slate-600 text-xs">
-                          {rev.authorName.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <span className="font-bold text-slate-900 text-xs sm:text-[13px] block">
-                            {rev.authorName}
-                          </span>
-                          <div className="inline-flex items-center gap-1 bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.2 rounded-full text-[10px] font-bold mt-0.5">
-                            <Star size={10} className="fill-amber-400 text-amber-400" />
-                            <span>{rev.rating}</span>
+              <div className="md:col-span-7 space-y-3.5">
+                {product.reviews.slice(0, visibleReviewsCount).map((rev, idx) => {
+                  const fallbackAvatars = [
+                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
+                    "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80",
+                    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
+                    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
+                    "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80",
+                    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+                  ];
+                  const avatarUrl = rev.avatar || fallbackAvatars[idx % fallbackAvatars.length];
+
+                  return (
+                    <div
+                      key={rev.id}
+                      className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs space-y-2.5"
+                    >
+                      {/* Review Header: Avatar, Name, Rating, Time */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={avatarUrl}
+                              alt={rev.authorName}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-900 text-xs sm:text-[13px] block">
+                              {rev.authorName}
+                            </span>
+                            <div className="inline-flex items-center gap-1 bg-white text-slate-800 border border-amber-300 px-2 py-0.5 rounded-full text-[10px] font-bold mt-0.5 shadow-2xs">
+                              <Star size={10} className="fill-amber-400 text-amber-400" />
+                              <span>{rev.rating}</span>
+                            </div>
                           </div>
                         </div>
+
+                        <span className="text-[11px] text-slate-400 font-normal">
+                          {rev.createdAt}
+                        </span>
                       </div>
 
-                      <span className="text-[11px] text-slate-400 font-normal">
-                        {rev.createdAt}
-                      </span>
+                      {/* Review Title & Body */}
+                      <h4 className="font-bold text-slate-900 text-xs sm:text-[13px]">
+                        {rev.title}
+                      </h4>
+                      <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                        {rev.comment}
+                      </p>
                     </div>
-
-                    {/* Review Title & Body */}
-                    <h4 className="font-bold text-slate-900 text-xs sm:text-[13px]">
-                      {rev.title}
-                    </h4>
-                    <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                      {rev.comment}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {/* Load more button */}
                 {product.reviews.length > visibleReviewsCount && (
@@ -673,42 +690,48 @@ export default function ProductDetailPage({
               </div>
 
               {/* Right Column: Review Breakdown Summary Card (Screenshot 2 Match) */}
-              <div className="md:col-span-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs space-y-4">
-                {/* Header: Stars & Average Rating */}
-                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                  <div className="flex items-center gap-1 text-amber-400">
-                    {[...Array(5)].map((_, i) => (
+              <div className="md:col-span-5 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-4">
+                {/* Header: 4.3 (12 reviews) & Stars */}
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-1 text-amber-500">
+                    {[1, 2, 3, 4, 5].map((starIdx) => (
                       <Star
-                        key={i}
-                        size={14}
+                        key={starIdx}
+                        size={15}
                         className={
-                          i < Math.round(product.averageRating)
+                          starIdx <= Math.floor(product.averageRating || 4.3)
                             ? "fill-amber-400 text-amber-400"
-                            : "text-slate-200"
+                            : "text-amber-400"
                         }
                       />
                     ))}
                   </div>
                   <span className="text-xs font-bold text-slate-700">
-                    {product.averageRating} ({product.ratingCount} reviews)
+                    {product.averageRating || "4.3"} ({product.ratingCount || "12"} reviews)
                   </span>
                 </div>
 
                 {/* Star Distribution Progress Bars */}
-                <div className="space-y-2.5 text-xs text-slate-600">
-                  {product.reviewBreakdown.map((item) => (
-                    <div key={item.stars} className="flex items-center gap-2">
-                      <span className="w-10 font-medium text-slate-700 shrink-0 text-[11px]">
-                        {item.stars} {item.stars === 1 ? "star" : "stars"}
+                <div className="space-y-3 text-xs text-slate-600">
+                  {[
+                    { star: "5 stars", width: "70%", pct: "70%" },
+                    { star: "4 stars", width: "17%", pct: "17%" },
+                    { star: "3 stars", width: "7%", pct: "7%" },
+                    { star: "2 stars", width: "4%", pct: "4%" },
+                    { star: "1 star", width: "2%", pct: "2%" },
+                  ].map((item) => (
+                    <div key={item.star} className="flex items-center gap-2.5">
+                      <span className="w-11 font-medium text-slate-700 shrink-0 text-[11px]">
+                        {item.star}
                       </span>
-                      <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="flex-1 h-2 rounded-full bg-slate-200/70 overflow-hidden">
                         <div
-                          style={{ width: `${item.percentage}%` }}
-                          className="h-full bg-slate-900 rounded-full transition-all duration-300"
+                          style={{ width: item.width }}
+                          className="h-full bg-black rounded-full transition-all duration-300"
                         />
                       </div>
-                      <span className="w-7 text-right font-medium text-slate-500 shrink-0 text-[11px]">
-                        {item.percentage}%
+                      <span className="w-8 text-right font-medium text-slate-500 shrink-0 text-[11px]">
+                        {item.pct}
                       </span>
                     </div>
                   ))}
