@@ -1,28 +1,30 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useUser } from "@clerk/nextjs";
 import {
   Calendar,
   Download,
-  ExternalLink,
+  Share2,
   ChevronRight,
   ChevronLeft,
   Search,
   Star,
   MoreHorizontal,
-  ArrowUpDown,
-  CheckCircle2,
-  Share2,
   RefreshCw,
-  Eye,
-  ShoppingBag,
-  Sparkles,
+  Copy,
+  Check,
+  User,
+  CreditCard,
+  FileText,
+  X,
+  ArrowUpRight,
+  Package,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import PrintableInvoiceSlip from "@/app/components/order/PrintableInvoiceSlip";
 import type { AdminAnalyticsData } from "@/services/analytics.service";
 
 export default function EcommerceDashboardPage() {
@@ -43,6 +45,34 @@ export default function EcommerceDashboardPage() {
 
   // Hover state for Bar Chart
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
+
+  // Row Dropdown & Detail Modal States
+  const [activeOrderMenu, setActiveOrderMenu] = useState<string | null>(null);
+  const [activeProductMenu, setActiveProductMenu] = useState<string | null>(null);
+  const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<any | null>(null);
+  const [selectedCustomerModal, setSelectedCustomerModal] = useState<{
+    name: string;
+    email: string;
+    orderNumber: string;
+    totalAmount: number;
+    paymentMethod: string;
+    status: string;
+  } | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menus on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setActiveOrderMenu(null);
+        setActiveProductMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   const fetchAnalytics = useCallback(async (isRefresh = false) => {
     if (isRefresh) setIsRefreshing(true);
@@ -66,9 +96,9 @@ export default function EcommerceDashboardPage() {
     fetchAnalytics();
   }, [fetchAnalytics]);
 
-  // Dynamic admin name for the celebration card
+  // Admin name
   const adminFirstName =
-    user?.firstName || user?.fullName?.split(" ")[0] || "Toby";
+    user?.firstName || user?.fullName?.split(" ")[0] || "hassam";
 
   // Filtered Orders
   const filteredOrders = useMemo(() => {
@@ -106,6 +136,12 @@ export default function EcommerceDashboardPage() {
     return filteredProducts.slice(start, start + productsPerPage);
   }, [filteredProducts, productPage]);
 
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   // Export handler
   const handleExportCSV = (type: string) => {
     const content =
@@ -137,53 +173,53 @@ export default function EcommerceDashboardPage() {
     const s = status.toUpperCase();
     if (s === "PROCESSING" || s === "PENDING_PAYMENT") {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-600 border border-sky-200">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-sky-50 text-sky-600 border border-sky-200">
           Processing
         </span>
       );
     }
     if (s === "DELIVERED" || s === "SUCCESS") {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-600 border border-emerald-200">
           Success
         </span>
       );
     }
     if (s === "SHIPPED" || s === "PAID") {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-600 border border-amber-200">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-600 border border-amber-200">
           Paid
         </span>
       );
     }
     if (s === "CANCELLED" || s === "FAILED" || s === "RETURNED_REFUSED") {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-600 border border-rose-200">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-50 text-rose-600 border border-rose-200">
           Failed
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-50 text-slate-600 border border-slate-200">
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-50 text-slate-600 border border-slate-200">
         {status}
       </span>
     );
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8 pb-12 font-satoshi text-slate-900">
+    <div className="space-y-5 sm:space-y-6 pb-12 font-satoshi text-slate-900">
       {/* 1️⃣ Top Dashboard Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
             E-Commerce Dashboard
           </h1>
         </div>
 
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Date Range Picker Pill */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs">
-            <Calendar size={14} className="text-slate-400" />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 shadow-2xs">
+            <Calendar size={13} className="text-slate-400" />
             <span>22 Jul 2026 - 18 Aug 2026</span>
           </div>
 
@@ -191,7 +227,7 @@ export default function EcommerceDashboardPage() {
           <Button
             size="sm"
             onClick={() => handleExportCSV("orders")}
-            className="bg-black text-white hover:bg-black/80 rounded-xl text-xs font-bold gap-1.5 h-8.5 px-3.5 cursor-pointer shadow-xs"
+            className="bg-black text-white hover:bg-black/80 rounded-lg text-xs font-semibold gap-1.5 h-8 px-3 cursor-pointer shadow-xs"
           >
             <Download size={13} />
             <span>Download</span>
@@ -202,7 +238,7 @@ export default function EcommerceDashboardPage() {
             variant="outline"
             size="sm"
             onClick={() => fetchAnalytics(true)}
-            className="rounded-xl h-8.5 w-8.5 p-0 border-slate-200 cursor-pointer"
+            className="rounded-lg h-8 w-8 p-0 border-slate-200 cursor-pointer hover:bg-slate-50"
             title="Refresh analytics"
           >
             <RefreshCw
@@ -213,300 +249,289 @@ export default function EcommerceDashboardPage() {
         </div>
       </div>
 
-      {/* 2️⃣ Top Metric Cards Row (4 Cards) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
+      {/* 2️⃣ Top Metric Cards Row (Compact Height & Clean Typography) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 sm:gap-4">
         {/* Card 1: Congratulations Banner Card */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-pink-50/30 p-5 sm:p-6 shadow-xs flex flex-col justify-between">
-          {/* Confetti Background Decoration */}
-          <div className="absolute top-2 right-2 text-xl select-none opacity-80 animate-pulse">
+        <div className="relative overflow-hidden rounded-xl border border-slate-200/90 bg-gradient-to-br from-indigo-50/60 via-purple-50/30 to-pink-50/20 p-4 sm:p-4.5 shadow-xs flex flex-col justify-between min-h-[145px]">
+          <div className="absolute top-2.5 right-3 text-lg select-none opacity-80">
             🎉
           </div>
-          <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-indigo-200/20 rounded-full blur-xl pointer-events-none" />
 
           <div>
-            <h3 className="text-lg font-black text-slate-950 tracking-tight flex items-center gap-1.5">
-              <span>Congratulations {adminFirstName}!</span>
+            <h3 className="text-sm sm:text-base font-bold text-slate-900">
+              Congratulations {adminFirstName}!
             </h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
+            <p className="text-[11px] text-slate-500 font-normal mt-0.5">
               Best seller of the month
             </p>
 
-            <div className="mt-4">
-              <span className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-                ${data?.overview.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "15,231.89"}
+            <div className="mt-2.5">
+              <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                ${data?.overview.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "6,239.00"}
               </span>
-              <p className="text-[11px] font-bold text-emerald-600 mt-1 flex items-center gap-1">
-                <span>+65% from last month</span>
+              <p className="text-[10px] font-semibold text-emerald-600 mt-0.5">
+                +65% from last month
               </p>
             </div>
           </div>
 
-          <div className="mt-5">
+          <div className="mt-3">
             <Link
               href="/admin/orders"
-              className="inline-flex items-center justify-center px-4 py-1.5 rounded-xl text-xs font-bold text-slate-800 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition cursor-pointer"
+              className="inline-flex items-center justify-center px-3 py-1 rounded-lg text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition"
             >
               View Sales
             </Link>
           </div>
         </div>
 
-        {/* Card 2: Monthly Recurring Revenue */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+        {/* Card 2: Monthly Recurring Revenue (Static metric as requested) */}
+        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-4.5 shadow-xs flex flex-col justify-between min-h-[145px]">
           <div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-slate-500 font-medium truncate">
+              <span className="text-xs text-slate-500 font-normal truncate">
                 Monthly recurring r...
               </span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
-                +{data?.overview.monthlyGrowthPercent || 6.1}%
+              <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                +6.1%
               </span>
             </div>
-            <div className="mt-3">
-              <span className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+            <div className="mt-2.5">
+              <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
                 $34.1K
               </span>
             </div>
           </div>
-          <div className="mt-6 pt-3 border-t border-slate-100">
+          <div className="mt-3 pt-2.5 border-t border-slate-100">
             <Link
               href="/admin/orders"
-              className="text-xs text-slate-600 hover:text-slate-900 font-semibold flex items-center justify-between group"
+              className="text-xs text-slate-500 hover:text-slate-900 font-medium flex items-center justify-between group"
             >
               <span>View more</span>
-              <ChevronRight size={14} className="group-hover:translate-x-0.5 transition" />
+              <ChevronRight size={13} className="group-hover:translate-x-0.5 transition" />
             </Link>
           </div>
         </div>
 
-        {/* Card 3: Users */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+        {/* Card 3: Users (Dynamic Signed-in Users from DB) */}
+        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-4.5 shadow-xs flex flex-col justify-between min-h-[145px]">
           <div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-slate-500 font-medium">Users</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
-                +{data?.overview.usersGrowthPercent || 19.2}%
+              <span className="text-xs text-slate-500 font-normal">Users</span>
+              <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                +19.2%
               </span>
             </div>
-            <div className="mt-3">
-              <span className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-                500.1K
+            <div className="mt-2.5">
+              <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                {data?.overview.totalCustomers && data.overview.totalCustomers > 999
+                  ? `${(data.overview.totalCustomers / 1000).toFixed(1)}K`
+                  : `${data?.overview.totalCustomers || 1}`}
               </span>
             </div>
           </div>
-          <div className="mt-6 pt-3 border-t border-slate-100">
+          <div className="mt-3 pt-2.5 border-t border-slate-100">
             <Link
               href="/admin/customers"
-              className="text-xs text-slate-600 hover:text-slate-900 font-semibold flex items-center justify-between group"
+              className="text-xs text-slate-500 hover:text-slate-900 font-medium flex items-center justify-between group"
             >
               <span>View more</span>
-              <ChevronRight size={14} className="group-hover:translate-x-0.5 transition" />
+              <ChevronRight size={13} className="group-hover:translate-x-0.5 transition" />
             </Link>
           </div>
         </div>
 
-        {/* Card 4: User Growth */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+        {/* Card 4: User Growth / Conversion (Calculated based on orders/revenue) */}
+        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-4.5 shadow-xs flex flex-col justify-between min-h-[145px]">
           <div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-slate-500 font-medium">User growth</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200">
+              <span className="text-xs text-slate-500 font-normal">User growth</span>
+              <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-rose-50 text-rose-600 border border-rose-200">
                 -1.2%
               </span>
             </div>
-            <div className="mt-3">
-              <span className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+            <div className="mt-2.5">
+              <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
                 {data?.overview.conversionRate || 11.3}%
               </span>
             </div>
           </div>
-          <div className="mt-6 pt-3 border-t border-slate-100">
+          <div className="mt-3 pt-2.5 border-t border-slate-100">
             <Link
-              href="/admin/reviews"
-              className="text-xs text-slate-600 hover:text-slate-900 font-semibold flex items-center justify-between group"
+              href="/admin/analytics"
+              className="text-xs text-slate-500 hover:text-slate-900 font-medium flex items-center justify-between group"
             >
               <span>View more</span>
-              <ChevronRight size={14} className="group-hover:translate-x-0.5 transition" />
+              <ChevronRight size={13} className="group-hover:translate-x-0.5 transition" />
             </Link>
           </div>
         </div>
       </div>
 
-      {/* 3️⃣ Middle Row (2 Charts) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
-        {/* Left Chart: Total Revenue Bar Chart (7 Cols) */}
-        <div className="lg:col-span-6 xl:col-span-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between">
-          <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
+      {/* 3️⃣ Middle Row (2 Charts - Exact Match to Screenshot 3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
+        {/* Left Chart: Total Revenue Bar Chart (6 Cols) */}
+        <div className="lg:col-span-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div>
-              <h3 className="text-base font-extrabold text-slate-950">Total Revenue</h3>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Total Revenue</h3>
+              <p className="text-[11px] text-slate-400 font-normal mt-0.5">
                 Income in the last 28 days
               </p>
             </div>
 
             {/* Desktop & Mobile Split Box */}
-            <div className="flex items-center gap-3 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50/80 text-[11px]">
+            <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50/70 text-[11px]">
               <div>
-                <span className="text-slate-400 font-bold block text-[10px] uppercase">
+                <span className="text-slate-400 font-medium block text-[9px] uppercase tracking-wider">
                   DESKTOP
                 </span>
-                <span className="font-extrabold text-slate-900">
-                  {data?.desktopMobileSplit.desktopCount.toLocaleString() || "24,828"}
-                </span>
+                <span className="font-bold text-slate-900">24,828</span>
               </div>
-              <div className="w-[1px] h-6 bg-slate-200" />
+              <div className="w-[1px] h-5 bg-slate-200" />
               <div>
-                <span className="text-slate-400 font-bold block text-[10px] uppercase">
+                <span className="text-slate-400 font-medium block text-[9px] uppercase tracking-wider">
                   MOBILE
                 </span>
-                <span className="font-extrabold text-slate-900">
-                  {data?.desktopMobileSplit.mobileCount.toLocaleString() || "25,010"}
-                </span>
+                <span className="font-bold text-slate-900">25,010</span>
               </div>
             </div>
           </div>
 
-          {/* SVG Bar Chart with Rounded Bars */}
-          <div className="h-56 w-full flex items-end justify-between gap-2 pt-6 px-2">
+          {/* SVG Bar Chart with Wider Rounded Bars Matching Screenshot 3 */}
+          <div className="h-52 w-full flex items-end justify-between gap-2 pt-6 px-1 sm:px-3">
             {[
-              { label: "W1", h1: 65, h2: 55 },
-              { label: "W2", h1: 85, h2: 45 },
-              { label: "W3", h1: 95, h2: 35 },
-              { label: "W4", h1: 50, h2: 70 },
-              { label: "W5", h1: 90, h2: 40 },
-              { label: "W6", h1: 75, h2: 60 },
+              { month: "January", h1: 60, h2: 55, amount: "$21,400" },
+              { month: "February", h1: 85, h2: 70, amount: "$28,600" },
+              { month: "March", h1: 90, h2: 45, amount: "$24,300" },
+              { month: "April", h1: 45, h2: 65, amount: "$19,800" },
+              { month: "May", h1: 40, h2: 50, amount: "$16,500" },
+              { month: "June", h1: 92, h2: 58, amount: "$31,200" },
             ].map((bar, idx) => (
               <div
                 key={idx}
-                className="flex-1 flex items-end justify-center gap-1.5 h-full group relative cursor-pointer"
+                className="flex-1 flex items-end justify-center gap-1 sm:gap-1.5 h-full group relative cursor-pointer"
                 onMouseEnter={() => setHoveredBar(idx)}
                 onMouseLeave={() => setHoveredBar(null)}
               >
-                {/* Desktop Bar (Dark Black) */}
+                {/* Desktop Bar (Dark Solid Rounded Bar) */}
                 <div
                   style={{ height: `${bar.h1}%` }}
-                  className="w-3 sm:w-4 bg-slate-950 rounded-t-md transition-all duration-300 group-hover:bg-indigo-600"
+                  className={`w-4 sm:w-6 rounded-t-md transition-all duration-200 ${
+                    hoveredBar === idx ? "bg-slate-800" : "bg-[#0F172A]"
+                  }`}
                 />
-                {/* Mobile Bar (Slate Grey) */}
+                {/* Mobile Bar (Slate Grey Rounded Bar) */}
                 <div
                   style={{ height: `${bar.h2}%` }}
-                  className="w-3 sm:w-4 bg-slate-400/80 rounded-t-md transition-all duration-300 group-hover:bg-slate-600"
+                  className={`w-4 sm:w-6 rounded-t-md transition-all duration-200 ${
+                    hoveredBar === idx ? "bg-slate-600" : "bg-[#64748B]"
+                  }`}
                 />
 
-                {/* Tooltip */}
+                {/* Clean Black Tooltip on Hover */}
                 {hoveredBar === idx && (
-                  <div className="absolute -top-9 bg-black text-white text-[10px] font-bold py-1 px-2 rounded-lg shadow-lg pointer-events-none whitespace-nowrap z-10 animate-in fade-in">
-                    ${((bar.h1 + bar.h2) * 180).toLocaleString()}
+                  <div className="absolute -top-8 bg-black text-white text-[10px] font-semibold py-1 px-2 rounded-md shadow-md pointer-events-none whitespace-nowrap z-10 animate-in fade-in">
+                    {bar.amount}
                   </div>
                 )}
               </div>
             ))}
           </div>
 
-          {/* Chart X-Axis Labels */}
-          <div className="flex justify-between px-2 pt-3 border-t border-slate-100 text-[10px] font-semibold text-slate-400 uppercase">
-            <span>Week 1</span>
-            <span>Week 2</span>
-            <span>Week 3</span>
-            <span>Week 4</span>
-            <span>Week 5</span>
-            <span>Week 6</span>
+          {/* Months on X-Axis Matching Screenshot 3 */}
+          <div className="flex justify-between px-1 sm:px-3 pt-3 border-t border-slate-100 text-[11px] font-normal text-slate-500">
+            <span>January</span>
+            <span>February</span>
+            <span>March</span>
+            <span>April</span>
+            <span>May</span>
+            <span>June</span>
           </div>
         </div>
 
-        {/* Right Chart: Returning Rate Multi-Line Chart (6 Cols) */}
-        <div className="lg:col-span-6 xl:col-span-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between">
-          <div className="flex items-start justify-between gap-3 mb-4">
+        {/* Right Chart: Returning Rate Matching Screenshot 3 */}
+        <div className="lg:col-span-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-start justify-between gap-3 mb-3">
             <div>
-              <h3 className="text-base font-extrabold text-slate-950">Returning Rate</h3>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Returning Rate</h3>
               <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-2xl font-black text-slate-950 tracking-tight">
-                  ${data?.overview.returningRateValue.toLocaleString() || "$42,379"}
+                <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                  $42,379
                 </span>
-                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
-                  +{data?.overview.returningRateGrowth || 2.5}%
+                <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                  +2.5%
                 </span>
               </div>
             </div>
 
+            {/* Export Button matching Screenshot 5 */}
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleExportCSV("orders")}
-              className="rounded-xl text-xs font-semibold gap-1.5 h-7.5 px-2.5 border-slate-200 cursor-pointer"
+              className="rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-medium gap-1.5 h-8 px-2.5 shadow-2xs"
             >
               <Share2 size={12} />
               <span>Export</span>
             </Button>
           </div>
 
-          {/* SVG Smooth Multi-Wave Curves Chart */}
-          <div className="h-56 w-full relative flex items-center justify-center pt-2">
+          {/* SVG Multi-Line Chart with Clean Dark & Slate Curves (Screenshot 3) */}
+          <div className="h-52 w-full relative flex items-center justify-center pt-2">
             <svg
               className="w-full h-full overflow-visible"
-              viewBox="0 0 500 200"
+              viewBox="0 0 560 180"
               preserveAspectRatio="none"
             >
-              {/* Subtle Grid Lines */}
-              <line x1="0" y1="50" x2="500" y2="50" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4 4" />
-              <line x1="0" y1="100" x2="500" y2="100" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4 4" />
-              <line x1="0" y1="150" x2="500" y2="150" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4 4" />
+              {/* Subtle Horizontal Reference Line */}
+              <line x1="0" y1="130" x2="560" y2="130" stroke="#f8fafc" strokeWidth="1" />
 
-              {/* Gradient Shading */}
-              <defs>
-                <linearGradient id="rateGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#0f172a" stopOpacity="0.15" />
-                  <stop offset="100%" stopColor="#0f172a" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-
-              {/* Area 1 */}
+              {/* Line 1 (Solid Dark Black Line - Screenshot 3) */}
               <path
-                d="M 0 160 Q 60 180 120 120 T 240 100 T 360 60 T 500 40 L 500 200 L 0 200 Z"
-                fill="url(#rateGrad)"
-              />
-
-              {/* Line 1 (Dark Crisp Wave) */}
-              <path
-                d="M 0 160 Q 60 180 120 120 T 240 100 T 360 60 T 500 40"
+                d="M 0 140 L 70 120 L 140 135 L 210 90 L 280 105 L 350 70 L 420 140 L 490 100 L 560 40"
                 fill="none"
-                stroke="#0f172a"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-
-              {/* Line 2 (Secondary Slate Wave) */}
-              <path
-                d="M 0 190 Q 60 195 120 160 T 240 140 T 360 110 T 500 90"
-                fill="none"
-                stroke="#94a3b8"
+                stroke="#0F172A"
                 strokeWidth="2"
                 strokeLinecap="round"
-                strokeDasharray="4 4"
+                strokeLinejoin="round"
+              />
+
+              {/* Line 2 (Secondary Slate Grey Line - Screenshot 3) */}
+              <path
+                d="M 0 160 L 70 140 L 140 155 L 210 130 L 280 145 L 350 140 L 420 155 L 490 135 L 560 110"
+                fill="none"
+                stroke="#94A3B8"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
             </svg>
           </div>
 
-          <div className="flex justify-between px-2 pt-3 border-t border-slate-100 text-[10px] font-semibold text-slate-400 uppercase">
-            <span>Jan</span>
-            <span>Feb</span>
-            <span>Mar</span>
-            <span>Apr</span>
+          {/* X-Axis Months Matching Screenshot 3 */}
+          <div className="flex justify-between px-1 sm:px-3 pt-3 border-t border-slate-100 text-[10px] sm:text-[11px] font-normal text-slate-500">
+            <span>March</span>
+            <span>April</span>
             <span>May</span>
-            <span>Jun</span>
+            <span>June</span>
+            <span>July</span>
+            <span>August</span>
+            <span>October</span>
+            <span>December</span>
           </div>
         </div>
       </div>
 
       {/* 4️⃣ Third Row (3 Analytics Cards) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
         {/* Card 1: Sales by Location (4 Cols) */}
-        <div className="lg:col-span-4 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-4 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-start justify-between gap-2 mb-3">
+            <div className="flex items-start justify-between gap-2 mb-2">
               <div>
-                <h3 className="text-base font-extrabold text-slate-950">Sales by Location</h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                <h3 className="text-sm sm:text-base font-bold text-slate-900">Sales by Location</h3>
+                <p className="text-[11px] text-slate-400 font-normal mt-0.5">
                   Income in the last 28 days
                 </p>
               </div>
@@ -515,7 +540,7 @@ export default function EcommerceDashboardPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => handleExportCSV("orders")}
-                className="rounded-xl text-xs font-semibold gap-1.5 h-7.5 px-2 border-slate-200 cursor-pointer"
+                className="rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-medium gap-1 h-7.5 px-2"
               >
                 <Share2 size={11} />
                 <span>Export</span>
@@ -523,7 +548,7 @@ export default function EcommerceDashboardPage() {
             </div>
 
             {/* Location Progress List */}
-            <div className="space-y-3.5 mt-5">
+            <div className="space-y-3 mt-4">
               {(data?.salesByLocation || [
                 { country: "Canada", change: "+5.2%", percentage: 85, isPositive: true },
                 { country: "Greenland", change: "+7.8%", percentage: 80, isPositive: true },
@@ -532,12 +557,12 @@ export default function EcommerceDashboardPage() {
                 { country: "Australia", change: "+1.2%", percentage: 45, isPositive: true },
                 { country: "Greece", change: "+1%", percentage: 40, isPositive: true },
               ]).map((loc, idx) => (
-                <div key={idx} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-semibold">
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-800">{loc.country}</span>
+                <div key={idx} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-700 font-medium">{loc.country}</span>
                       <span
-                        className={`text-[10px] font-bold px-1 py-0.2 rounded ${
+                        className={`text-[9px] font-semibold px-1 py-0.2 rounded ${
                           loc.isPositive
                             ? "bg-emerald-50 text-emerald-600"
                             : "bg-rose-50 text-rose-600"
@@ -546,9 +571,8 @@ export default function EcommerceDashboardPage() {
                         {loc.change}
                       </span>
                     </div>
-                    <span className="font-bold text-slate-900">{loc.percentage}%</span>
+                    <span className="font-semibold text-slate-900">{loc.percentage}%</span>
                   </div>
-                  {/* Dark Rounded Progress Bar */}
                   <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                     <div
                       style={{ width: `${loc.percentage}%` }}
@@ -562,59 +586,56 @@ export default function EcommerceDashboardPage() {
         </div>
 
         {/* Card 2: Store Visits by Source (4 Cols) */}
-        <div className="lg:col-span-4 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-4 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div>
-            <h3 className="text-base font-extrabold text-slate-950">Store Visits by Source</h3>
+            <h3 className="text-sm sm:text-base font-bold text-slate-900">Store Visits by Source</h3>
 
             {/* Center Donut Gauge */}
-            <div className="relative w-44 h-44 mx-auto my-6 flex items-center justify-center">
+            <div className="relative w-40 h-40 mx-auto my-5 flex items-center justify-center">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="38" fill="none" stroke="#f1f5f9" strokeWidth="12" />
-                {/* Arc 1: Direct */}
+                <circle cx="50" cy="50" r="38" fill="none" stroke="#f1f5f9" strokeWidth="11" />
                 <circle
                   cx="50"
                   cy="50"
                   r="38"
                   fill="none"
                   stroke="#0f172a"
-                  strokeWidth="12"
+                  strokeWidth="11"
                   strokeDasharray="100 138"
                   strokeDashoffset="0"
                 />
-                {/* Arc 2: Referrals */}
                 <circle
                   cx="50"
                   cy="50"
                   r="38"
                   fill="none"
                   stroke="#94a3b8"
-                  strokeWidth="12"
+                  strokeWidth="11"
                   strokeDasharray="65 173"
                   strokeDashoffset="-100"
                 />
-                {/* Arc 3: Email */}
                 <circle
                   cx="50"
                   cy="50"
                   r="38"
                   fill="none"
                   stroke="#1e293b"
-                  strokeWidth="12"
+                  strokeWidth="11"
                   strokeDasharray="35 203"
                   strokeDashoffset="-165"
                 />
               </svg>
 
               <div className="absolute flex flex-col items-center text-center">
-                <span className="text-2xl font-black text-slate-950 tracking-tight">
+                <span className="text-xl font-bold text-slate-900 tracking-tight">
                   10.2K
                 </span>
-                <span className="text-[11px] font-semibold text-slate-400">Visitors</span>
+                <span className="text-[10px] font-normal text-slate-400">Visitors</span>
               </div>
             </div>
 
             {/* Legend */}
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] font-semibold text-slate-600 pt-3 border-t border-slate-100">
+            <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1.5 text-[10px] font-medium text-slate-600 pt-2.5 border-t border-slate-100">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-slate-950" />
                 <span>Direct</span>
@@ -640,39 +661,37 @@ export default function EcommerceDashboardPage() {
         </div>
 
         {/* Card 3: Customer Reviews (4 Cols) */}
-        <div className="lg:col-span-4 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-4 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-start justify-between gap-2 mb-1">
-              <h3 className="text-base font-extrabold text-slate-950">Customer Reviews</h3>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Customer Reviews</h3>
               <Link
                 href="/admin/reviews"
-                className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-0.5"
+                className="text-xs font-medium text-slate-500 hover:text-slate-900 flex items-center gap-0.5"
               >
                 <span>View All</span>
-                <ChevronRight size={13} />
+                <ChevronRight size={12} />
               </Link>
             </div>
-            <p className="text-xs text-slate-500 font-medium mb-4">
+            <p className="text-[11px] text-slate-400 font-normal mb-3">
               Based on {data?.reviewBreakdown.totalReviews.toLocaleString() || "5,500"} verified purchases
             </p>
 
             {/* Rating Hero & Star Breakdown */}
-            <div className="grid grid-cols-12 gap-3 items-center mb-5">
-              {/* Left Score */}
+            <div className="grid grid-cols-12 gap-3 items-center mb-4">
               <div className="col-span-5 text-center sm:text-left">
                 <div className="flex items-center justify-center sm:justify-start gap-0.5 text-amber-400 mb-1">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={14} className="fill-amber-400 text-amber-400" />
+                    <Star key={i} size={13} className="fill-amber-400 text-amber-400" />
                   ))}
                 </div>
-                <div className="text-3xl font-black text-slate-950">
+                <div className="text-2xl font-bold text-slate-900">
                   {data?.reviewBreakdown.averageRating || "4.5"}
                 </div>
-                <span className="text-[11px] text-slate-400 font-semibold">out of 5</span>
+                <span className="text-[10px] text-slate-400 font-normal">out of 5</span>
               </div>
 
-              {/* Right Star Bars */}
-              <div className="col-span-7 space-y-1 text-[11px] font-semibold">
+              <div className="col-span-7 space-y-1 text-[10px] font-normal">
                 {[
                   { star: 5, color: "bg-emerald-500", count: 4000, width: "80%" },
                   { star: 4, color: "bg-lime-500", count: 2100, width: "55%" },
@@ -680,15 +699,15 @@ export default function EcommerceDashboardPage() {
                   { star: 2, color: "bg-orange-500", count: 631, width: "15%" },
                   { star: 1, color: "bg-rose-500", count: 344, width: "8%" },
                 ].map((item) => (
-                  <div key={item.star} className="flex items-center gap-2">
-                    <span className="text-slate-600 w-3">{item.star}★</span>
+                  <div key={item.star} className="flex items-center gap-1.5">
+                    <span className="text-slate-500 w-3">{item.star}★</span>
                     <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
                       <div
                         style={{ width: item.width }}
                         className={`${item.color} h-full rounded-full`}
                       />
                     </div>
-                    <span className="text-slate-400 text-[10px] w-8 text-right font-mono">
+                    <span className="text-slate-400 text-[9px] w-7 text-right font-mono">
                       {item.count}
                     </span>
                   </div>
@@ -697,31 +716,31 @@ export default function EcommerceDashboardPage() {
             </div>
 
             {/* Featured Review Box */}
-            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs space-y-1.5">
+            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs space-y-1">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-0.5 text-amber-400">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={11} className="fill-amber-400 text-amber-400" />
+                    <Star key={i} size={10} className="fill-amber-400 text-amber-400" />
                   ))}
                 </div>
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[9px] text-slate-400">
                   {data?.featuredReview?.date || "March 12, 2025"}
                 </span>
               </div>
 
-              <p className="font-bold text-slate-900 text-xs">
+              <p className="font-semibold text-slate-900 text-xs">
                 {data?.featuredReview?.title || "Exceeded my expectations!"}
               </p>
-              <p className="text-slate-600 text-[11px] leading-relaxed">
+              <p className="text-slate-500 text-[10px] leading-relaxed">
                 {data?.featuredReview?.comment ||
                   "I was skeptical at first, but this product has completely changed my daily routine. The quality is outstanding and it's so easy to use."}
               </p>
 
               <div className="pt-1 flex items-center justify-between">
-                <span className="font-bold text-slate-900 text-[11px]">
+                <span className="font-medium text-slate-800 text-[10px]">
                   {data?.featuredReview?.userName || "Sarah J."}
                 </span>
-                <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">
+                <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[8px] font-semibold bg-emerald-100 text-emerald-700">
                   Verified Purchase
                 </span>
               </div>
@@ -730,27 +749,27 @@ export default function EcommerceDashboardPage() {
         </div>
       </div>
 
-      {/* 5️⃣ Fourth Row (2 Data Tables - Recent Orders & Best Selling Products) */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 sm:gap-6">
-        {/* Table 1: Recent Orders (6 Cols) */}
-        <div className="xl:col-span-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+      {/* 5️⃣ Fourth Row (2 Spacious Data Tables with Interactive Dropdowns) */}
+      <div ref={menuRef} className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-5">
+        {/* Table 1: Recent Orders (6 Cols - Spacious Padding) */}
+        <div className="xl:col-span-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <h3 className="text-base font-extrabold text-slate-950">Recent Orders</h3>
+            <div className="flex items-center justify-between gap-2 mb-3.5">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Recent Orders</h3>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleExportCSV("orders")}
-                className="rounded-xl text-xs font-semibold gap-1.5 h-7.5 px-2.5 border-slate-200 cursor-pointer"
+                className="rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-medium gap-1.5 h-8 px-2.5 shadow-2xs"
               >
-                <Share2 size={11} />
+                <Share2 size={12} />
                 <span>Export</span>
               </Button>
             </div>
 
             {/* Filter orders input */}
-            <div className="relative mb-4">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <div className="relative mb-3.5">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Filter orders..."
@@ -759,56 +778,142 @@ export default function EcommerceDashboardPage() {
                   setOrderFilter(e.target.value);
                   setOrderPage(1);
                 }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 transition"
+                className="w-full bg-slate-50/70 border border-slate-200 rounded-lg pl-8.5 pr-3 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-slate-300 transition"
               />
             </div>
 
-            {/* Table */}
+            {/* Table with proper cell widths and generous padding */}
             <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
+              <table className="w-full text-xs text-left min-w-[520px]">
                 <thead>
-                  <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400">
-                    <th className="pb-2.5 font-bold">ID</th>
-                    <th className="pb-2.5 font-bold">Customer</th>
-                    <th className="pb-2.5 font-bold">Product</th>
-                    <th className="pb-2.5 font-bold">Amount ⇅</th>
-                    <th className="pb-2.5 font-bold">Status</th>
-                    <th className="pb-2.5 text-right font-bold"></th>
+                  <tr className="border-b border-slate-100 text-[11px] font-medium text-slate-400">
+                    <th className="py-2.5 px-2 font-medium">ID</th>
+                    <th className="py-2.5 px-2 font-medium">Customer</th>
+                    <th className="py-2.5 px-2 font-medium">Product</th>
+                    <th className="py-2.5 px-2 font-medium">Amount ⇅</th>
+                    <th className="py-2.5 px-2 font-medium">Status</th>
+                    <th className="py-2.5 px-2 text-right font-medium"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {paginatedOrders.length > 0 ? (
                     paginatedOrders.map((o, idx) => {
                       const idShort = `#${o.orderNumber.split("-")[1] || 1023 + idx * 1022}`;
+                      const isMenuOpen = activeOrderMenu === o.id;
+
                       return (
-                        <tr key={o.id} className="hover:bg-slate-50/80 transition">
-                          <td className="py-2.5 font-mono text-slate-600 font-medium">
+                        <tr key={o.id} className="hover:bg-slate-50/60 transition">
+                          {/* Order ID */}
+                          <td className="py-3 px-2 font-mono text-slate-500 font-normal">
                             {idShort}
                           </td>
-                          <td className="py-2.5">
+
+                          {/* Customer */}
+                          <td className="py-3 px-2">
                             <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center text-[10px] font-bold text-slate-700">
-                                {o.customerName.charAt(0)}
+                              <div className="w-6 h-6 rounded-full bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                                {o.customerName.charAt(0).toUpperCase()}
                               </div>
-                              <span className="font-bold text-slate-900 truncate max-w-[100px]">
+                              <span className="font-semibold text-slate-900 truncate max-w-[110px]">
                                 {o.customerName}
                               </span>
                             </div>
                           </td>
-                          <td className="py-2.5 text-slate-600 truncate max-w-[110px]">
+
+                          {/* Product Summary */}
+                          <td className="py-3 px-2 text-slate-600 truncate max-w-[140px]">
                             {o.productSummary}
                           </td>
-                          <td className="py-2.5 font-mono font-bold text-slate-900">
+
+                          {/* Amount */}
+                          <td className="py-3 px-2 font-mono font-semibold text-slate-900">
                             ${o.totalAmount.toFixed(2)}
                           </td>
-                          <td className="py-2.5">{getOrderStatusBadge(o.status)}</td>
-                          <td className="py-2.5 text-right">
-                            <Link
-                              href="/admin/orders"
-                              className="text-slate-400 hover:text-slate-700"
+
+                          {/* Status */}
+                          <td className="py-3 px-2">{getOrderStatusBadge(o.status)}</td>
+
+                          {/* Actions Dropdown */}
+                          <td className="py-3 px-2 text-right relative">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveOrderMenu(isMenuOpen ? null : o.id)
+                              }
+                              className="w-7 h-7 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 inline-flex items-center justify-center transition cursor-pointer"
+                              title="Order Options"
                             >
                               <MoreHorizontal size={14} />
-                            </Link>
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {isMenuOpen && (
+                              <div className="absolute right-2 top-8 z-50 w-48 rounded-xl bg-white border border-slate-200 shadow-xl py-1 text-left animate-in fade-in zoom-in-95">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleCopy(o.orderNumber, o.id);
+                                    setActiveOrderMenu(null);
+                                  }}
+                                  className="w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                >
+                                  {copiedId === o.id ? (
+                                    <Check size={13} className="text-emerald-600" />
+                                  ) : (
+                                    <Copy size={13} className="text-slate-400" />
+                                  )}
+                                  <span>Copy #{o.orderNumber}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedCustomerModal({
+                                      name: o.customerName,
+                                      email: o.customerEmail,
+                                      orderNumber: o.orderNumber,
+                                      totalAmount: o.totalAmount,
+                                      paymentMethod: o.paymentMethod,
+                                      status: o.status,
+                                    });
+                                    setActiveOrderMenu(null);
+                                  }}
+                                  className="w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                >
+                                  <User size={13} className="text-slate-400" />
+                                  <span>View Customer</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedCustomerModal({
+                                      name: o.customerName,
+                                      email: o.customerEmail,
+                                      orderNumber: o.orderNumber,
+                                      totalAmount: o.totalAmount,
+                                      paymentMethod: o.paymentMethod,
+                                      status: o.status,
+                                    });
+                                    setActiveOrderMenu(null);
+                                  }}
+                                  className="w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                >
+                                  <CreditCard size={13} className="text-slate-400" />
+                                  <span>Payment Details</span>
+                                </button>
+
+                                <div className="border-t border-slate-100 my-1" />
+
+                                <Link
+                                  href="/admin/orders"
+                                  className="w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                >
+                                  <FileText size={13} className="text-slate-400" />
+                                  <span>Manage All Orders</span>
+                                </Link>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
@@ -826,19 +931,19 @@ export default function EcommerceDashboardPage() {
           </div>
 
           {/* Pagination Footer */}
-          <div className="flex items-center justify-between pt-4 mt-2 border-t border-slate-100 text-xs text-slate-500">
+          <div className="flex items-center justify-between pt-3.5 mt-2 border-t border-slate-100 text-xs text-slate-400">
             <span>
               Showing {filteredOrders.length > 0 ? (orderPage - 1) * ordersPerPage + 1 : 0} to{" "}
               {Math.min(orderPage * ordersPerPage, filteredOrders.length)} of{" "}
               {filteredOrders.length} entries
             </span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="sm"
                 disabled={orderPage === 1}
                 onClick={() => setOrderPage((p) => Math.max(1, p - 1))}
-                className="h-7 w-7 p-0 rounded-lg border-slate-200"
+                className="h-7 w-7 p-0 rounded-md border-slate-200 text-slate-600"
               >
                 <ChevronLeft size={13} />
               </Button>
@@ -847,7 +952,7 @@ export default function EcommerceDashboardPage() {
                 size="sm"
                 disabled={orderPage * ordersPerPage >= filteredOrders.length}
                 onClick={() => setOrderPage((p) => p + 1)}
-                className="h-7 w-7 p-0 rounded-lg border-slate-200"
+                className="h-7 w-7 p-0 rounded-md border-slate-200 text-slate-600"
               >
                 <ChevronRight size={13} />
               </Button>
@@ -855,25 +960,25 @@ export default function EcommerceDashboardPage() {
           </div>
         </div>
 
-        {/* Table 2: Best Selling Products (6 Cols) */}
-        <div className="xl:col-span-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+        {/* Table 2: Best Selling Products (6 Cols - Spacious Padding) */}
+        <div className="xl:col-span-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <h3 className="text-base font-extrabold text-slate-950">Best Selling Products</h3>
+            <div className="flex items-center justify-between gap-2 mb-3.5">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Best Selling Products</h3>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleExportCSV("products")}
-                className="rounded-xl text-xs font-semibold gap-1.5 h-7.5 px-2.5 border-slate-200 cursor-pointer"
+                className="rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-medium gap-1.5 h-8 px-2.5 shadow-2xs"
               >
-                <Share2 size={11} />
+                <Share2 size={12} />
                 <span>Export</span>
               </Button>
             </div>
 
             {/* Filter products input */}
-            <div className="relative mb-4">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <div className="relative mb-3.5">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Filter products..."
@@ -882,57 +987,92 @@ export default function EcommerceDashboardPage() {
                   setProductFilter(e.target.value);
                   setProductPage(1);
                 }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 transition"
+                className="w-full bg-slate-50/70 border border-slate-200 rounded-lg pl-8.5 pr-3 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-slate-300 transition"
               />
             </div>
 
             {/* Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
+              <table className="w-full text-xs text-left min-w-[480px]">
                 <thead>
-                  <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400">
-                    <th className="pb-2.5 font-bold">Product</th>
-                    <th className="pb-2.5 font-bold">Sold ⇅</th>
-                    <th className="pb-2.5 font-bold">Sales ⇅</th>
-                    <th className="pb-2.5 text-right font-bold"></th>
+                  <tr className="border-b border-slate-100 text-[11px] font-medium text-slate-400">
+                    <th className="py-2.5 px-2 font-medium">Product</th>
+                    <th className="py-2.5 px-2 font-medium">Sold ⇅</th>
+                    <th className="py-2.5 px-2 font-medium">Sales ⇅</th>
+                    <th className="py-2.5 px-2 text-right font-medium"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {paginatedProducts.length > 0 ? (
-                    paginatedProducts.map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-50/80 transition">
-                        <td className="py-2.5">
-                          <div className="flex items-center gap-2.5">
-                            <div className="relative w-8 h-8 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-200 flex items-center justify-center">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={p.image}
-                                alt={p.name}
-                                className="w-full h-full object-cover"
-                              />
+                    paginatedProducts.map((p) => {
+                      const isProductOpen = activeProductMenu === p.id;
+                      return (
+                        <tr key={p.id} className="hover:bg-slate-50/60 transition">
+                          {/* Product Image & Title */}
+                          <td className="py-3 px-2">
+                            <div className="flex items-center gap-2.5">
+                              <div className="relative w-8 h-8 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-200 flex items-center justify-center">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={p.image}
+                                  alt={p.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <span className="font-semibold text-slate-900 truncate max-w-[180px]">
+                                {p.name}
+                              </span>
                             </div>
-                            <span className="font-bold text-slate-900 truncate max-w-[160px]">
-                              {p.name}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-2.5 font-mono font-bold text-slate-900">
-                          {p.unitsSold || 10}
-                        </td>
-                        <td className="py-2.5 font-mono font-bold text-slate-900">
-                          ${(p.revenue || p.price * (p.unitsSold || 10)).toFixed(2)}
-                        </td>
-                        <td className="py-2.5 text-right">
-                          <Link
-                            href={`/product/${p.slug}`}
-                            target="_blank"
-                            className="text-slate-400 hover:text-slate-700"
-                          >
-                            <MoreHorizontal size={14} />
-                          </Link>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+
+                          {/* Units Sold */}
+                          <td className="py-3 px-2 font-mono font-medium text-slate-800">
+                            {p.unitsSold || 6}
+                          </td>
+
+                          {/* Revenue */}
+                          <td className="py-3 px-2 font-mono font-semibold text-slate-900">
+                            ${(p.revenue || p.price * (p.unitsSold || 6)).toFixed(2)}
+                          </td>
+
+                          {/* Actions Dropdown */}
+                          <td className="py-3 px-2 text-right relative">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveProductMenu(isProductOpen ? null : p.id)
+                              }
+                              className="w-7 h-7 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 inline-flex items-center justify-center transition cursor-pointer"
+                              title="Product Options"
+                            >
+                              <MoreHorizontal size={14} />
+                            </button>
+
+                            {/* Dropdown */}
+                            {isProductOpen && (
+                              <div className="absolute right-2 top-8 z-50 w-44 rounded-xl bg-white border border-slate-200 shadow-xl py-1 text-left animate-in fade-in zoom-in-95">
+                                <Link
+                                  href={`/product/${p.slug}`}
+                                  target="_blank"
+                                  className="w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                >
+                                  <ArrowUpRight size={13} className="text-slate-400" />
+                                  <span>View in Store</span>
+                                </Link>
+
+                                <Link
+                                  href="/admin/products"
+                                  className="w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                >
+                                  <Package size={13} className="text-slate-400" />
+                                  <span>Edit Product</span>
+                                </Link>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td colSpan={4} className="py-6 text-center text-slate-400">
@@ -946,15 +1086,15 @@ export default function EcommerceDashboardPage() {
           </div>
 
           {/* Table Footer */}
-          <div className="flex items-center justify-between pt-4 mt-2 border-t border-slate-100 text-xs text-slate-500">
+          <div className="flex items-center justify-between pt-3.5 mt-2 border-t border-slate-100 text-xs text-slate-400">
             <span>0 of {paginatedProducts.length} row(s) selected.</span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="sm"
                 disabled={productPage === 1}
                 onClick={() => setProductPage((p) => Math.max(1, p - 1))}
-                className="h-7 w-7 p-0 rounded-lg border-slate-200"
+                className="h-7 w-7 p-0 rounded-md border-slate-200 text-slate-600"
               >
                 <ChevronLeft size={13} />
               </Button>
@@ -963,7 +1103,7 @@ export default function EcommerceDashboardPage() {
                 size="sm"
                 disabled={productPage * productsPerPage >= filteredProducts.length}
                 onClick={() => setProductPage((p) => p + 1)}
-                className="h-7 w-7 p-0 rounded-lg border-slate-200"
+                className="h-7 w-7 p-0 rounded-md border-slate-200 text-slate-600"
               >
                 <ChevronRight size={13} />
               </Button>
@@ -971,6 +1111,88 @@ export default function EcommerceDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* 6️⃣ Interactive Customer / Payment Details Modal (Triggered by Three Dots) */}
+      {selectedCustomerModal && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedCustomerModal(null);
+          }}
+        >
+          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 text-slate-900 relative">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <User size={15} className="text-slate-500" />
+                <span>Customer & Payment Info</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setSelectedCustomerModal(null)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 space-y-1.5">
+                <span className="text-[10px] font-bold uppercase text-slate-400 block">
+                  Customer Profile
+                </span>
+                <p className="font-bold text-slate-900 text-sm">
+                  {selectedCustomerModal.name}
+                </p>
+                <p className="text-slate-500">{selectedCustomerModal.email}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block">
+                    Order Ref
+                  </span>
+                  <span className="font-mono font-bold text-slate-900">
+                    #{selectedCustomerModal.orderNumber}
+                  </span>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block">
+                    Amount Paid
+                  </span>
+                  <span className="font-mono font-bold text-indigo-600 text-sm">
+                    ${selectedCustomerModal.totalAmount.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block">
+                    Payment Method
+                  </span>
+                  <span className="font-semibold text-slate-800">
+                    {selectedCustomerModal.paymentMethod === "CARD"
+                      ? "Stripe Card (Prepaid)"
+                      : "Cash on Delivery (COD)"}
+                  </span>
+                </div>
+                <div>{getOrderStatusBadge(selectedCustomerModal.status)}</div>
+              </div>
+            </div>
+
+            <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+              <Button
+                size="sm"
+                onClick={() => setSelectedCustomerModal(null)}
+                className="bg-black text-white hover:bg-black/80 rounded-lg text-xs font-semibold px-4 h-8 cursor-pointer"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
