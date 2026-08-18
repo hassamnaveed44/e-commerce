@@ -201,7 +201,7 @@ export async function getAdminOverviewStats(): Promise<AdminAnalyticsData> {
   const recentOrders = orders.map((o, idx) => {
     const customerName =
       o.user?.fullName ||
-      (o.shippingAddress?.fullName ? o.shippingAddress.fullName : o.user?.email ? o.user.email.split("@")[0] : `Customer ${idx + 1}`);
+      (o.user?.email ? o.user.email.split("@")[0] : `Customer ${idx + 1}`);
     const customerEmail = o.user?.email || "customer@shop.co";
 
     const firstItem = o.items[0];
@@ -216,7 +216,7 @@ export async function getAdminOverviewStats(): Promise<AdminAnalyticsData> {
       orderNumber: o.orderNumber,
       customerName,
       customerEmail,
-      customerAvatar: o.user?.avatarUrl || undefined,
+      customerAvatar: undefined,
       productSummary,
       totalAmount: Number(o.totalAmount),
       status: o.orderStatus,
@@ -353,9 +353,9 @@ export async function getAdminOverviewStats(): Promise<AdminAnalyticsData> {
   const featuredReview = topReview
     ? {
         userName: topReview.user?.fullName || "Sarah J.",
-        userAvatar: topReview.user?.avatarUrl || undefined,
+        userAvatar: undefined,
         rating: topReview.rating || 5,
-        title: topReview.title || "Exceeded my expectations!",
+        title: "Exceeded my expectations!",
         comment:
           topReview.comment ||
           "I was skeptical at first, but this product has completely changed my daily routine. The quality is outstanding and it's so easy to use.",
