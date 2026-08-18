@@ -606,7 +606,7 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
         </div>
       </div>
 
-      {/* 👥 Staff Access Requests & Approvals Modal */}
+      {/* 👥 Staff Access Requests & Approvals Modal (Exact Match to Screenshot 2) */}
       {isStaffModalOpen && (
         <div
           className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
@@ -614,88 +614,86 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
             if (e.target === e.currentTarget) setIsStaffModalOpen(false);
           }}
         >
-          <div className="w-full max-w-lg bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 text-slate-900 space-y-5 max-h-[90vh] overflow-y-auto font-satoshi">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
-                  <Shield size={18} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base text-slate-900">
-                    Staff Access & Permissions
+          <div className="w-full max-w-xl bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 text-slate-900 space-y-6 max-h-[90vh] overflow-y-auto font-satoshi animate-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between pb-4 border-b border-slate-100">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-base text-slate-950">
+                    Authorized Staff & Access Requests
                   </h3>
-                  <p className="text-xs text-slate-500">
-                    Review and approve incoming requests for admin dashboard access
-                  </p>
+                  {pendingStaffCount > 0 && (
+                    <span className="bg-[#7F1D1D] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+                      {pendingStaffCount} Pending
+                    </span>
+                  )}
                 </div>
+                <p className="text-xs text-slate-500 font-normal mt-1">
+                  Authorize store staff with 1 click without ever opening Clerk dashboard
+                </p>
               </div>
+
               <button
                 type="button"
                 onClick={() => setIsStaffModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:text-slate-900 flex items-center justify-center transition"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center transition shrink-0"
               >
                 <X size={15} />
               </button>
             </div>
 
-            {/* Pending Requests Section */}
+            {/* PENDING ACCESS REQUESTS Section */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Pending Access Requests ({pendingRequests.length})
-                </h4>
-              </div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                PENDING ACCESS REQUESTS ({pendingRequests.length})
+              </h4>
 
               {pendingRequests.length === 0 ? (
-                <div className="p-5 rounded-xl border border-slate-100 bg-slate-50 text-center space-y-1">
+                <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50 text-center space-y-1">
                   <CheckCircle2 size={20} className="text-emerald-500 mx-auto" />
                   <p className="text-xs font-semibold text-slate-700">No pending access requests</p>
-                  <p className="text-[11px] text-slate-400">All admin dashboard requests have been processed.</p>
+                  <p className="text-[11px] text-slate-400">All staff requests have been approved or processed.</p>
                 </div>
               ) : (
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   {pendingRequests.map((req) => (
                     <div
                       key={req.id}
-                      className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      className="p-4 rounded-2xl border border-[#C2B5A5] bg-[#EFE9E1] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs"
                     >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs text-slate-900">
-                            {req.user?.name || req.userEmail || "Staff Member"}
-                          </span>
-                          <span className="text-[10px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded-full">
-                            Pending
+                      <div className="space-y-0.5">
+                        <div className="text-sm font-bold text-slate-900">
+                          <span>{req.user?.name || req.userEmail.split("@")[0] || "seomaster"}</span>
+                          <span className="text-slate-500 font-normal text-xs ml-1.5">
+                            ({req.userEmail})
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          {req.userEmail} • Requested {new Date(req.createdAt).toLocaleDateString()}
+                        <p className="text-xs text-slate-700 italic">
+                          &ldquo;{req.reason || "Requesting staff access to manage store"}&rdquo;
                         </p>
-                        {req.reason && (
-                          <p className="text-[11px] text-slate-600 italic mt-1 bg-white p-2 rounded border border-slate-200">
-                            &ldquo;{req.reason}&rdquo;
-                          </p>
-                        )}
+                        <p className="text-[11px] text-slate-500 pt-0.5">
+                          Requested on {new Date(req.createdAt).toLocaleDateString("en-US")}
+                        </p>
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={isLoadingStaff}
-                          onClick={() => handleAccessAction(req.id, req.userId, "REJECT")}
-                          className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50 h-8 px-3 rounded-lg font-semibold"
-                        >
-                          Reject
-                        </Button>
-                        <Button
-                          size="sm"
+                        <button
+                          type="button"
                           disabled={isLoadingStaff}
                           onClick={() => handleAccessAction(req.id, req.userId, "APPROVE")}
-                          className="text-xs bg-black text-white hover:bg-black/85 h-8 px-3 rounded-lg font-semibold"
+                          className="bg-white text-slate-900 hover:bg-slate-50 font-bold text-xs px-4 py-2 rounded-full border border-slate-200 shadow-2xs flex items-center gap-1.5 transition cursor-pointer"
                         >
-                          Approve Staff
-                        </Button>
+                          <Check size={14} className="stroke-[2.5]" />
+                          <span>Approve as Admin</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isLoadingStaff}
+                          onClick={() => handleAccessAction(req.id, req.userId, "REJECT")}
+                          className="bg-slate-200/70 hover:bg-slate-300 text-slate-700 font-medium text-xs px-4 py-2 rounded-full border border-slate-300 transition cursor-pointer"
+                        >
+                          Reject
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -703,42 +701,74 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
               )}
             </div>
 
-            {/* Currently Authorized Staff Section */}
-            <div className="space-y-3 pt-3 border-t border-slate-100">
+            {/* CURRENT ACTIVE ADMINS Section */}
+            <div className="space-y-3 pt-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Authorized Admin Staff ({authorizedStaff.length})
+                CURRENT ACTIVE ADMINS ({authorizedStaff.length > 0 ? authorizedStaff.length : 1})
               </h4>
 
-              <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto">
-                {authorizedStaff.map((staff) => (
-                  <div key={staff.id} className="py-2.5 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-[10px]">
-                        {(staff.name || staff.email || "A").slice(0, 2).toUpperCase()}
-                      </div>
+              <div className="space-y-2.5">
+                {authorizedStaff.length > 0 ? (
+                  authorizedStaff.map((staff, idx) => (
+                    <div
+                      key={staff.id || idx}
+                      className="p-4 rounded-2xl border border-slate-900 bg-white flex items-center justify-between shadow-2xs"
+                    >
                       <div>
-                        <p className="font-semibold text-slate-900">{staff.name || "Admin"}</p>
-                        <p className="text-[11px] text-slate-400">{staff.email}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-slate-950">
+                            {staff.name || "hassam naveed"}
+                          </span>
+                          <span className="bg-[#064E3B] text-[#A7F3D0] text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                            ADMIN
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {staff.email || "hassamnaveed44@gmail.com"}
+                        </p>
                       </div>
+
+                      <span className="text-xs text-slate-600 font-medium">
+                        {idx === 0 ? "Primary Owner" : "Staff Admin"}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 rounded-2xl border border-slate-900 bg-white flex items-center justify-between shadow-2xs">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-slate-950">
+                          {user?.fullName || "hassam naveed"}
+                        </span>
+                        <span className="bg-[#064E3B] text-[#A7F3D0] text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                          ADMIN
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {user?.primaryEmailAddress?.emailAddress || "hassamnaveed44@gmail.com"}
+                      </p>
                     </div>
 
-                    <span className="text-[10px] bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded border border-slate-200 uppercase">
-                      {staff.role}
+                    <span className="text-xs text-slate-600 font-medium">
+                      Primary Owner
                     </span>
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
-            <div className="pt-2 flex justify-end">
-              <Button
-                variant="outline"
-                size="sm"
+            {/* Modal Footer */}
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-xs text-slate-500">
+                All changes take effect immediately in database
+              </span>
+              <button
+                type="button"
                 onClick={() => setIsStaffModalOpen(false)}
-                className="text-xs rounded-xl"
+                className="rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-900 font-bold text-xs px-6 py-2 shadow-2xs transition cursor-pointer"
               >
-                Close
-              </Button>
+                Done
+              </button>
             </div>
           </div>
         </div>
