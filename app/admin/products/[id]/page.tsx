@@ -151,6 +151,11 @@ export default function ProductDetailPage({
         setEditPrice(String(data.product.price));
         setEditDescription(data.product.description);
         setActiveImageIdx(0);
+
+        // Set initial color and size from real product variants
+        const firstVariant = data.product.variants?.[0];
+        if (firstVariant?.size) setSelectedSize(firstVariant.size);
+        if (firstVariant?.colorHex) setSelectedColor(firstVariant.colorHex);
       }
     } catch (err) {
       console.error("Failed to load product:", err);
@@ -224,7 +229,7 @@ export default function ProductDetailPage({
     showToast(`Added ${product.name} (${selectedSize}) to cart!`);
   };
 
-  // Handle Submit Review
+  // Handle Submit Review (Dynamic integration: immediately prepends to current reviews)
   const handleSubmitReview = async () => {
     if (!product || !reviewTitle || !reviewComment) return;
     setIsSubmittingReview(true);
@@ -239,15 +244,21 @@ export default function ProductDetailPage({
         avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
       };
 
-      setProduct((prev) =>
-        prev
-          ? {
-              ...prev,
-              reviews: [newRev, ...prev.reviews],
-              ratingCount: prev.ratingCount + 1,
-            }
-          : null
-      );
+      setProduct((prev) => {
+        if (!prev) return null;
+        const updatedReviews = [newRev, ...prev.reviews];
+        const newTotal = updatedReviews.length;
+        const newSum = updatedReviews.reduce((s, r) => s + r.rating, 0);
+        const newAvg = Number((newSum / newTotal).toFixed(1));
+
+        return {
+          ...prev,
+          reviews: updatedReviews,
+          ratingCount: newTotal,
+          averageRating: newAvg,
+        };
+      });
+
       setIsReviewModalOpen(false);
       setReviewTitle("");
       setReviewComment("");
@@ -282,8 +293,6 @@ export default function ProductDetailPage({
   }
 
   // 🖼️ DYNAMIC CAROUSEL IMAGES
-  // If the product has multiple images, show all its images.
-  // Otherwise, thumbnail 1 is this product, and thumbnails 2..4 are other active products!
   const hasMultipleImages = product.images && product.images.length > 1;
 
   const currentMainImage = hasMultipleImages
@@ -303,6 +312,57 @@ export default function ProductDetailPage({
       setActiveImageIdx((prev) => (prev === totalImageCount - 1 ? 0 : prev + 1));
     }
   };
+
+  // 🎯 DYNAMIC SIZES AVAILABLE FOR THIS PRODUCT
+  const availableSizes: string[] = [];
+  const seenSizes = new Set<string>();
+  if (product.variants && product.variants.length > 0) {
+    for (const v of product.variants) {
+      if (v.size && !seenSizes.has(v.size)) {
+        seenSizes.add(v.size);
+        availableSizes.push(v.size);
+      }
+    }
+  }
+  const displaySizes = availableSizes.length > 0 ? availableSizes : ["SM", "MD", "LG", "XL", "XXL"];
+
+  // 🎨 DYNAMIC COLORS AVAILABLE FOR THIS PRODUCT
+  const availableColors: { hex: string; name: string }[] = [];
+  const seenColors = new Set<string>();
+  if (product.variants && product.variants.length > 0) {
+    for (const v of product.variants) {
+      const hex =
+        v.colorHex ||
+        (v.colorName?.toLowerCase() === "emerald"
+          ? "#10B981"
+          : v.colorName?.toLowerCase() === "indigo"
+          ? "#6366F1"
+          : v.colorName?.toLowerCase() === "purple"
+          ? "#A855F7"
+          : v.colorName?.toLowerCase() === "black"
+          ? "#0F172A"
+          : v.colorName?.toLowerCase() === "white"
+          ? "#F8FAFC"
+          : v.colorName?.toLowerCase() === "red"
+          ? "#EF4444"
+          : v.colorName?.toLowerCase() === "blue"
+          ? "#3B82F6"
+          : "#10B981");
+      const name = v.colorName || "Color";
+      if (!seenColors.has(hex.toLowerCase())) {
+        seenColors.add(hex.toLowerCase());
+        availableColors.push({ hex, name });
+      }
+    }
+  }
+  const displayColors =
+    availableColors.length > 0
+      ? availableColors
+      : [
+          { hex: "#10B981", name: "Emerald" },
+          { hex: "#6366F1", name: "Indigo" },
+          { hex: "#A855F7", name: "Purple" },
+        ];
 
   return (
     <div className="space-y-6 pb-20 font-satoshi text-slate-900 max-w-7xl mx-auto">
@@ -521,7 +581,7 @@ export default function ProductDetailPage({
             </div>
           </div>
 
-          {/* 2. White Details Container (Spec Table, Description, Key Features, Colors, Sizes, Add to Card) */}
+          {/* 2. White Details Container (Spec Table, Description, Key Features, Dynamic Colors, Dynamic Sizes, Add to Card) */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-5">
             {/* Top Row: Description & Spec Table */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
@@ -571,19 +631,15 @@ export default function ProductDetailPage({
               </div>
             </div>
 
-            {/* Colors Selector (Screenshot 1 Match) */}
+            {/* Dynamic Available Colors Selector */}
             <div>
               <h3 className="text-xs font-bold text-slate-900 mb-2">Colors:</h3>
               <div className="flex items-center gap-2.5">
-                {[
-                  { hex: "#10B981", name: "Emerald" },
-                  { hex: "#6366F1", name: "Indigo" },
-                  { hex: "#A855F7", name: "Purple" },
-                ].map((c) => {
-                  const isSel = selectedColor === c.hex;
+                {displayColors.map((c) => {
+                  const isSel = selectedColor.toLowerCase() === c.hex.toLowerCase();
                   return (
                     <button
-                      key={c.hex}
+                      key={c.hex + c.name}
                       type="button"
                       onClick={() => setSelectedColor(c.hex)}
                       style={{ backgroundColor: c.hex }}
@@ -597,11 +653,11 @@ export default function ProductDetailPage({
               </div>
             </div>
 
-            {/* Sizes Selector (Screenshot 1 Match) */}
+            {/* Dynamic Available Sizes Selector */}
             <div>
               <h3 className="text-xs font-bold text-slate-900 mb-2">Sizes:</h3>
-              <div className="flex items-center gap-2">
-                {["SM", "MD", "LG", "XL", "XXL"].map((sz) => {
+              <div className="flex items-center gap-2 flex-wrap">
+                {displaySizes.map((sz) => {
                   const isSel = selectedSize === sz;
                   return (
                     <button
