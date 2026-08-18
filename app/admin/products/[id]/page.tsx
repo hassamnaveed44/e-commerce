@@ -22,9 +22,9 @@ import {
   X,
   AlertTriangle,
   RefreshCw,
-  Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/context/CartContext";
 
 interface ProductVariant {
   id: string;
@@ -93,11 +93,12 @@ export default function ProductDetailPage({
   const resolvedParams = use(params);
   const router = useRouter();
   const productId = resolvedParams.id;
+  const { addToCart } = useCart();
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Static fashion carousel items
+  // Static fashion carousel items matching screenshot
   const staticCarouselImages = [
     { id: "img-1", url: "/images/product-1.png", alt: "Hoodie" },
     { id: "img-2", url: "/images/product-2.png", alt: "T-Shirt" },
@@ -108,6 +109,8 @@ export default function ProductDetailPage({
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [selectedColor, setSelectedColor] = useState("#10B981");
   const [selectedSize, setSelectedSize] = useState("MD");
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Reviews Load More State
   const [visibleReviewsCount, setVisibleReviewsCount] = useState(4);
@@ -117,7 +120,6 @@ export default function ProductDetailPage({
   const [editName, setEditName] = useState("");
   const [editPrice, setEditPrice] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [editStock, setEditStock] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   // Delete Modal State
@@ -132,6 +134,11 @@ export default function ProductDetailPage({
   const [reviewComment, setReviewComment] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
   // Fetch single product details
   const fetchProduct = async () => {
     setIsLoading(true);
@@ -143,7 +150,6 @@ export default function ProductDetailPage({
         setEditName(data.product.name);
         setEditPrice(String(data.product.price));
         setEditDescription(data.product.description);
-        setEditStock(String(data.product.stock));
       }
     } catch (err) {
       console.error("Failed to load product:", err);
@@ -183,6 +189,7 @@ export default function ProductDetailPage({
             : null
         );
         setIsEditModalOpen(false);
+        showToast("Product updated successfully!");
       }
     } catch (err) {
       console.error("Failed to save product:", err);
@@ -208,6 +215,31 @@ export default function ProductDetailPage({
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  // Handle Add to Cart
+  const handleAddToCart = () => {
+    if (!product) return;
+    const matchingVariant =
+      product.variants.find((v) => v.size === selectedSize) ||
+      product.variants[0];
+
+    addToCart({
+      variantId: matchingVariant?.id || product.id,
+      quantity: 1,
+      productId: product.id,
+      name: product.name,
+      slug: product.slug,
+      image: product.images[0]?.url || "/images/product-1.png",
+      size: selectedSize,
+      colorName: matchingVariant?.colorName || product.color,
+      colorHex: matchingVariant?.colorHex || selectedColor,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      discountPercent: product.discountPercent || 0,
+      stockQuantity: product.stock,
+    });
+    showToast(`Added ${product.name} (${selectedSize}) to cart!`);
   };
 
   // Handle Submit Review
@@ -237,6 +269,7 @@ export default function ProductDetailPage({
       setIsReviewModalOpen(false);
       setReviewTitle("");
       setReviewComment("");
+      showToast("Review submitted successfully!");
     } finally {
       setIsSubmittingReview(false);
     }
@@ -282,7 +315,15 @@ export default function ProductDetailPage({
   const activeImage = staticCarouselImages[activeImageIdx] || staticCarouselImages[0];
 
   return (
-    <div className="space-y-6 pb-16 font-satoshi text-slate-900 max-w-7xl mx-auto">
+    <div className="space-y-6 pb-20 font-satoshi text-slate-900 max-w-7xl mx-auto">
+      {/* Toast notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-[999999] bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4">
+          <Check size={14} className="text-emerald-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* 1️⃣ Top Header: Title, Metadata, Edit & Delete Buttons (Screenshot 1 Match) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -327,24 +368,24 @@ export default function ProductDetailPage({
         </div>
       </div>
 
-      {/* 2️⃣ Main 2-Column Section: Left Carousel + Right Details & Metrics (Screenshots 1 & 2) */}
+      {/* 2️⃣ Main 2-Column Section: Sticky Left Carousel + All Content in Single Scrolling Right Column */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Static Fashion Image Carousel (Screenshot 1 Match) */}
-        <div className="lg:col-span-5 space-y-3.5">
+        {/* Left Column: Static Sticky Fashion Image Carousel (Does not move away on scroll) */}
+        <div className="lg:col-span-5 space-y-3.5 lg:sticky lg:top-6 lg:self-start">
           {/* Big Featured Image Container */}
           <div className="relative w-full aspect-square rounded-2xl bg-[#EFEFEF] overflow-hidden border border-slate-200 shadow-xs flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={activeImage.url}
               alt={activeImage.alt}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition duration-300"
             />
 
             {/* Left Chevron Button */}
             <button
               type="button"
               onClick={prevImage}
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/70 hover:bg-white text-slate-800 flex items-center justify-center shadow-md transition cursor-pointer"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-slate-800 flex items-center justify-center shadow-md transition cursor-pointer"
             >
               <ChevronLeft size={18} />
             </button>
@@ -353,7 +394,7 @@ export default function ProductDetailPage({
             <button
               type="button"
               onClick={nextImage}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/70 hover:bg-white text-slate-800 flex items-center justify-center shadow-md transition cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-slate-800 flex items-center justify-center shadow-md transition cursor-pointer"
             >
               <ChevronRight size={18} />
             </button>
@@ -384,72 +425,72 @@ export default function ProductDetailPage({
           </div>
         </div>
 
-        {/* Right Column: 4 KPI Cards + Spec Table & Description (Screenshots 1 & 2) */}
-        <div className="lg:col-span-7 space-y-4">
-          {/* Top 4 Mini Metric Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Right Column: 4 KPI Cards + Spec & Details Card + Reviews Section (All in one unified flow!) */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* 1. Top 4 Mini Metric Cards with Soft Grey Background (Screenshot 1 Match) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
             {/* Card 1: Price */}
-            <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+            <div className="rounded-xl border border-slate-200/90 bg-[#F8FAFC] p-3.5 shadow-2xs flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center text-slate-500 shrink-0">
                 <CircleDollarSign size={18} />
               </div>
               <div>
                 <span className="text-[11px] text-slate-400 font-normal block">
                   Price
                 </span>
-                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight font-mono">
                   ${product.price.toFixed(2)}
                 </span>
               </div>
             </div>
 
             {/* Card 2: No. of Orders */}
-            <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+            <div className="rounded-xl border border-slate-200/90 bg-[#F8FAFC] p-3.5 shadow-2xs flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center text-slate-500 shrink-0">
                 <Truck size={17} />
               </div>
               <div>
                 <span className="text-[11px] text-slate-400 font-normal block">
                   No. of Orders
                 </span>
-                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight font-mono">
                   {product.ordersCount.toLocaleString()}
                 </span>
               </div>
             </div>
 
             {/* Card 3: Available Stocks */}
-            <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+            <div className="rounded-xl border border-slate-200/90 bg-[#F8FAFC] p-3.5 shadow-2xs flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center text-slate-500 shrink-0">
                 <Layers size={17} />
               </div>
               <div>
                 <span className="text-[11px] text-slate-400 font-normal block">
                   Available Stocks
                 </span>
-                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight font-mono">
                   {product.stock.toLocaleString()}
                 </span>
               </div>
             </div>
 
             {/* Card 4: Total Revenue */}
-            <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+            <div className="rounded-xl border border-slate-200/90 bg-[#F8FAFC] p-3.5 shadow-2xs flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center text-slate-500 shrink-0">
                 <HandCoins size={17} />
               </div>
               <div>
                 <span className="text-[11px] text-slate-400 font-normal block">
                   Total Revenue
                 </span>
-                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                <span className="text-base sm:text-lg font-bold text-slate-900 tracking-tight font-mono">
                   ${product.totalRevenue.toLocaleString()}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* White Details Container (Spec Table, Description, Key Features, Colors, Sizes, Add to Card) */}
+          {/* 2. White Details Container (Spec Table, Description, Key Features, Colors, Sizes, Add to Card) */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-5">
             {/* Top Row: Description & Spec Table */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
@@ -470,10 +511,10 @@ export default function ProductDetailPage({
                     Key Features:
                   </h3>
                   <ul className="space-y-1 text-xs sm:text-[13px] text-slate-600 list-disc list-inside">
-                    <li>100% Premium Organic Combed Cotton</li>
-                    <li>Pre-shrunk fabric for consistent long-lasting fit</li>
-                    <li>Reinforced double-stitched collar & hems</li>
-                    <li>Breathable, hypoallergenic and gentle on skin</li>
+                    <li>Industry-leading noise cancellation</li>
+                    <li>30-hour battery life</li>
+                    <li>Touch sensor controls</li>
+                    <li>Speak-to-chat technology</li>
                   </ul>
                 </div>
               </div>
@@ -499,7 +540,7 @@ export default function ProductDetailPage({
               </div>
             </div>
 
-            {/* Colors Selector (Screenshot 2 Match) */}
+            {/* Colors Selector (Screenshot 1 Match) */}
             <div>
               <h3 className="text-xs font-bold text-slate-900 mb-2">Colors:</h3>
               <div className="flex items-center gap-2.5">
@@ -525,7 +566,7 @@ export default function ProductDetailPage({
               </div>
             </div>
 
-            {/* Sizes Selector (Screenshot 2 Match) */}
+            {/* Sizes Selector (Screenshot 1 Match) */}
             <div>
               <h3 className="text-xs font-bold text-slate-900 mb-2">Sizes:</h3>
               <div className="flex items-center gap-2">
@@ -549,11 +590,12 @@ export default function ProductDetailPage({
               </div>
             </div>
 
-            {/* Bottom Actions: Add to Card & Wishlist (Screenshot 2 Match) */}
+            {/* Bottom Actions: Add to Card & Wishlist (Screenshot 1 Match) */}
             <div className="flex items-center gap-3 pt-2">
               <button
                 type="button"
-                className="bg-black text-white hover:bg-black/80 rounded-lg px-5 py-2.5 text-xs font-semibold flex items-center gap-2 shadow-xs transition cursor-pointer"
+                onClick={handleAddToCart}
+                className="bg-black text-white hover:bg-black/80 rounded-lg px-5 py-2.5 text-xs font-semibold flex items-center gap-2 shadow-xs transition cursor-pointer active:scale-95"
               >
                 <ShoppingCart size={14} />
                 <span>Add to Card</span>
@@ -561,130 +603,138 @@ export default function ProductDetailPage({
 
               <button
                 type="button"
-                className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-lg px-4 py-2.5 text-xs font-semibold flex items-center gap-2 shadow-2xs transition cursor-pointer"
+                onClick={() => {
+                  setIsWishlisted(!isWishlisted);
+                  showToast(!isWishlisted ? "Added to wishlist!" : "Removed from wishlist!");
+                }}
+                className={`border rounded-lg px-4 py-2.5 text-xs font-semibold flex items-center gap-2 shadow-2xs transition cursor-pointer active:scale-95 ${
+                  isWishlisted
+                    ? "bg-rose-50 border-rose-200 text-rose-600"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
               >
-                <Heart size={14} />
+                <Heart size={14} className={isWishlisted ? "fill-rose-600" : ""} />
                 <span>Wishlist</span>
               </button>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* 3️⃣ Reviews Section (Screenshots 3, 4, 5 Match) */}
-      <div className="space-y-4 pt-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">
-            Reviews
-          </h2>
+          {/* 3. Reviews Section (Nested Directly Inside Right Column - Screenshot 2 Match!) */}
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
+                Reviews
+              </h2>
 
-          <button
-            type="button"
-            onClick={() => setIsReviewModalOpen(true)}
-            className="border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 rounded-lg px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-          >
-            <PlusCircle size={13} />
-            <span>Submit Review</span>
-          </button>
-        </div>
-
-        {/* Reviews 2-Column Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Customer Review Cards List (Screenshots 3, 4, 5) */}
-          <div className="lg:col-span-8 space-y-3.5">
-            {product.reviews.slice(0, visibleReviewsCount).map((rev) => (
-              <div
-                key={rev.id}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-2.5"
+              <button
+                type="button"
+                onClick={() => setIsReviewModalOpen(true)}
+                className="border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 rounded-lg px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
               >
-                {/* Review Header: Avatar, Name, Rating, Time */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center font-bold text-slate-600 text-xs">
-                      {rev.authorName.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <span className="font-bold text-slate-900 text-xs sm:text-sm block">
-                        {rev.authorName}
-                      </span>
-                      <div className="inline-flex items-center gap-1 bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.2 rounded-full text-[10px] font-bold mt-0.5">
-                        <Star size={10} className="fill-amber-400 text-amber-400" />
-                        <span>{rev.rating}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <span className="text-[11px] text-slate-400 font-normal">
-                    {rev.createdAt}
-                  </span>
-                </div>
-
-                {/* Review Title & Body */}
-                <h4 className="font-bold text-slate-900 text-xs sm:text-sm">
-                  {rev.title}
-                </h4>
-                <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                  {rev.comment}
-                </p>
-              </div>
-            ))}
-
-            {/* Load more button (Screenshot 5 Match) */}
-            {product.reviews.length > visibleReviewsCount && (
-              <div className="text-center pt-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setVisibleReviewsCount((prev) => prev + 3)
-                  }
-                  className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-lg px-4 py-2 text-xs font-semibold shadow-2xs transition cursor-pointer"
-                >
-                  Load more..
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Right Column: Review Breakdown Summary Card (Screenshot 3 Match) */}
-          <div className="lg:col-span-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            {/* Header: Stars & Average Rating */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div className="flex items-center gap-1 text-amber-400">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    size={15}
-                    className={
-                      i < Math.round(product.averageRating)
-                        ? "fill-amber-400 text-amber-400"
-                        : "text-slate-200"
-                    }
-                  />
-                ))}
-              </div>
-              <span className="text-xs font-bold text-slate-700">
-                {product.averageRating} ({product.ratingCount} reviews)
-              </span>
+                <PlusCircle size={13} />
+                <span>Submit Review</span>
+              </button>
             </div>
 
-            {/* Star Distribution Progress Bars */}
-            <div className="space-y-2.5 text-xs text-slate-600">
-              {product.reviewBreakdown.map((item) => (
-                <div key={item.stars} className="flex items-center gap-3">
-                  <span className="w-12 font-medium text-slate-700 shrink-0">
-                    {item.stars} {item.stars === 1 ? "star" : "stars"}
-                  </span>
-                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div
-                      style={{ width: `${item.percentage}%` }}
-                      className="h-full bg-slate-900 rounded-full transition-all duration-300"
-                    />
+            {/* Reviews 2-Column Grid inside Right Column */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+              {/* Left Column: Customer Review Cards List (Screenshot 2 Match) */}
+              <div className="md:col-span-7 space-y-3">
+                {product.reviews.slice(0, visibleReviewsCount).map((rev) => (
+                  <div
+                    key={rev.id}
+                    className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs space-y-2.5"
+                  >
+                    {/* Review Header: Avatar, Name, Rating, Time */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center font-bold text-slate-600 text-xs">
+                          {rev.authorName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <span className="font-bold text-slate-900 text-xs sm:text-[13px] block">
+                            {rev.authorName}
+                          </span>
+                          <div className="inline-flex items-center gap-1 bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.2 rounded-full text-[10px] font-bold mt-0.5">
+                            <Star size={10} className="fill-amber-400 text-amber-400" />
+                            <span>{rev.rating}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <span className="text-[11px] text-slate-400 font-normal">
+                        {rev.createdAt}
+                      </span>
+                    </div>
+
+                    {/* Review Title & Body */}
+                    <h4 className="font-bold text-slate-900 text-xs sm:text-[13px]">
+                      {rev.title}
+                    </h4>
+                    <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                      {rev.comment}
+                    </p>
                   </div>
-                  <span className="w-8 text-right font-medium text-slate-500 shrink-0">
-                    {item.percentage}%
+                ))}
+
+                {/* Load more button */}
+                {product.reviews.length > visibleReviewsCount && (
+                  <div className="text-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setVisibleReviewsCount((prev) => prev + 3)
+                      }
+                      className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-lg px-4 py-2 text-xs font-semibold shadow-2xs transition cursor-pointer"
+                    >
+                      Load more..
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: Review Breakdown Summary Card (Screenshot 2 Match) */}
+              <div className="md:col-span-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs space-y-4">
+                {/* Header: Stars & Average Rating */}
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-1 text-amber-400">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        size={14}
+                        className={
+                          i < Math.round(product.averageRating)
+                            ? "fill-amber-400 text-amber-400"
+                            : "text-slate-200"
+                        }
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs font-bold text-slate-700">
+                    {product.averageRating} ({product.ratingCount} reviews)
                   </span>
                 </div>
-              ))}
+
+                {/* Star Distribution Progress Bars */}
+                <div className="space-y-2.5 text-xs text-slate-600">
+                  {product.reviewBreakdown.map((item) => (
+                    <div key={item.stars} className="flex items-center gap-2">
+                      <span className="w-10 font-medium text-slate-700 shrink-0 text-[11px]">
+                        {item.stars} {item.stars === 1 ? "star" : "stars"}
+                      </span>
+                      <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          style={{ width: `${item.percentage}%` }}
+                          className="h-full bg-slate-900 rounded-full transition-all duration-300"
+                        />
+                      </div>
+                      <span className="w-7 text-right font-medium text-slate-500 shrink-0 text-[11px]">
+                        {item.percentage}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -802,7 +852,7 @@ export default function ProductDetailPage({
               <strong className="text-slate-900">{product.name}</strong>? This action cannot be undone.
             </p>
 
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+            <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
               <Button
                 variant="outline"
                 size="sm"
