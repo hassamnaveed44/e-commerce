@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import {
   PanelLeft,
   Search,
@@ -23,7 +24,10 @@ import {
   Sparkles,
   Info,
   UserCheck,
+  Shield,
+  UserX,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -96,6 +100,7 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 
 export default function AdminHeader({ onMenuClick }: HeaderProps) {
   const router = useRouter();
+  const { user } = useUser();
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -115,6 +120,28 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
   const [pendingStaffCount, setPendingStaffCount] = useState(0);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [authorizedStaff, setAuthorizedStaff] = useState<any[]>([]);
+  const [isLoadingStaff, setIsLoadingStaff] = useState(false);
+
+  // Compute dynamic initials from logged-in admin user
+  const getInitials = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+    }
+    if (user?.fullName) {
+      const parts = user.fullName.trim().split(" ");
+      if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+      }
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+    if (user?.firstName) {
+      return user.firstName.slice(0, 2).toUpperCase();
+    }
+    if (user?.primaryEmailAddress?.emailAddress) {
+      return user.primaryEmailAddress.emailAddress.slice(0, 2).toUpperCase();
+    }
+    return "AD";
+  };
 
   // Enforce light theme
   useEffect(() => {
@@ -138,11 +165,12 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
 
   useEffect(() => {
     fetchStaffData();
-    const interval = setInterval(fetchStaffData, 15000);
+    const interval = setInterval(fetchStaffData, 12000);
     return () => clearInterval(interval);
   }, []);
 
   const handleAccessAction = async (requestId: string | null, targetUserId: string | null, action: string) => {
+    setIsLoadingStaff(true);
     try {
       const res = await fetch("/api/admin/access-requests", {
         method: "PATCH",
@@ -151,7 +179,6 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
       });
       const data = await res.json();
       if (data.success) {
-        alert(data.message);
         fetchStaffData();
       } else {
         alert(data.error || "Action failed");
@@ -159,6 +186,8 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
     } catch (e) {
       console.error("Action error:", e);
       alert("Error performing action");
+    } finally {
+      setIsLoadingStaff(false);
     }
   };
 
@@ -438,9 +467,9 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
         </div>
       </div>
 
-      {/* Right: Get Pro + Bell (Notifications) + Moon (Static) + Cookies/Palette (Static) + User Avatar (Screenshot Match) */}
-      <div className="flex items-center gap-3.5 sm:gap-4">
-        {/* Get Pro Link (Screenshot Match) */}
+      {/* Right Header Navigation: Get Pro + Bell + UserCheck (with badge) + Moon + Cookies + | + Dynamic Avatar Initials */}
+      <div className="flex items-center gap-3 sm:gap-3.5">
+        {/* 1. Get Pro Link */}
         <button
           type="button"
           className="text-xs font-semibold text-purple-600 hover:opacity-80 transition cursor-pointer"
@@ -448,7 +477,7 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
           Get Pro
         </button>
 
-        {/* 🔔 Functional Notification Bell with Dropdown */}
+        {/* 2. 🔔 Notification Bell with Red Dot */}
         <div ref={notifContainerRef} className="relative">
           <button
             type="button"
@@ -532,7 +561,24 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
           )}
         </div>
 
-        {/* 🌙 Moon Icon (Static Display matching Screenshot) */}
+        {/* 3. 👥 Dynamic Clickable User Access Requests Icon with Counter Badge (Screenshot Match) */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsStaffModalOpen(true)}
+            className="text-slate-600 hover:text-slate-950 transition cursor-pointer p-1 rounded-md relative flex items-center justify-center"
+            title="Admin Dashboard Access Requests & Staff Approvals"
+          >
+            <UserCheck className="h-4 w-4" />
+            {pendingStaffCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-xs animate-pulse">
+                {pendingStaffCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* 4. 🌙 Moon Static Icon (Screenshot Match) */}
         <div
           className="text-slate-600 hover:text-slate-900 transition p-1 rounded-md cursor-pointer"
           title="Appearance Mode"
@@ -540,7 +586,7 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
           <Moon className="h-4 w-4" />
         </div>
 
-        {/* 🎨 Palette / Cookies Icon (Static Display matching Screenshot) */}
+        {/* 5. 🎨 Palette / Cookies Static Icon (Screenshot Match) */}
         <div
           className="text-slate-600 hover:text-slate-900 transition p-1 rounded-md cursor-pointer hidden sm:block"
           title="Color Theme"
@@ -548,16 +594,155 @@ export default function AdminHeader({ onMenuClick }: HeaderProps) {
           <Palette className="h-4 w-4" />
         </div>
 
-        {/* User Avatar (Screenshot Match) */}
-        <div className="flex items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-            alt="Admin Profile"
-            className="w-7 h-7 rounded-full object-cover border border-slate-300 shadow-2xs"
-          />
+        {/* 6. Vertical Separator Line */}
+        <div className="h-4 w-px bg-slate-200 shrink-0" />
+
+        {/* 7. Dynamic User Avatar showing First Letters / Initials (Screenshot Match) */}
+        <div
+          className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[11px] font-bold text-slate-800 tracking-tight shadow-2xs select-none hover:bg-slate-200 transition cursor-pointer"
+          title={user?.fullName || user?.primaryEmailAddress?.emailAddress || "Admin Profile"}
+        >
+          {getInitials()}
         </div>
       </div>
+
+      {/* 👥 Staff Access Requests & Approvals Modal */}
+      {isStaffModalOpen && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsStaffModalOpen(false);
+          }}
+        >
+          <div className="w-full max-w-lg bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 text-slate-900 space-y-5 max-h-[90vh] overflow-y-auto font-satoshi">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+                  <Shield size={18} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900">
+                    Staff Access & Permissions
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Review and approve incoming requests for admin dashboard access
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsStaffModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:text-slate-900 flex items-center justify-center transition"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Pending Requests Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Pending Access Requests ({pendingRequests.length})
+                </h4>
+              </div>
+
+              {pendingRequests.length === 0 ? (
+                <div className="p-5 rounded-xl border border-slate-100 bg-slate-50 text-center space-y-1">
+                  <CheckCircle2 size={20} className="text-emerald-500 mx-auto" />
+                  <p className="text-xs font-semibold text-slate-700">No pending access requests</p>
+                  <p className="text-[11px] text-slate-400">All admin dashboard requests have been processed.</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {pendingRequests.map((req) => (
+                    <div
+                      key={req.id}
+                      className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xs text-slate-900">
+                            {req.user?.name || req.userEmail || "Staff Member"}
+                          </span>
+                          <span className="text-[10px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded-full">
+                            Pending
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          {req.userEmail} • Requested {new Date(req.createdAt).toLocaleDateString()}
+                        </p>
+                        {req.reason && (
+                          <p className="text-[11px] text-slate-600 italic mt-1 bg-white p-2 rounded border border-slate-200">
+                            &ldquo;{req.reason}&rdquo;
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={isLoadingStaff}
+                          onClick={() => handleAccessAction(req.id, req.userId, "REJECT")}
+                          className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50 h-8 px-3 rounded-lg font-semibold"
+                        >
+                          Reject
+                        </Button>
+                        <Button
+                          size="sm"
+                          disabled={isLoadingStaff}
+                          onClick={() => handleAccessAction(req.id, req.userId, "APPROVE")}
+                          className="text-xs bg-black text-white hover:bg-black/85 h-8 px-3 rounded-lg font-semibold"
+                        >
+                          Approve Staff
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Currently Authorized Staff Section */}
+            <div className="space-y-3 pt-3 border-t border-slate-100">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Authorized Admin Staff ({authorizedStaff.length})
+              </h4>
+
+              <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto">
+                {authorizedStaff.map((staff) => (
+                  <div key={staff.id} className="py-2.5 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-[10px]">
+                        {(staff.name || staff.email || "A").slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-900">{staff.name || "Admin"}</p>
+                        <p className="text-[11px] text-slate-400">{staff.email}</p>
+                      </div>
+                    </div>
+
+                    <span className="text-[10px] bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded border border-slate-200 uppercase">
+                      {staff.role}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsStaffModalOpen(false)}
+                className="text-xs rounded-xl"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
