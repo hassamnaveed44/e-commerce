@@ -9,15 +9,9 @@ import {
   X,
   ArrowRightLeft,
   ChevronDown,
-  TrendingUp,
-  TrendingDown,
-  Check,
-  DollarSign,
-  CreditCard,
-  Building,
   BarChart2,
   Bell,
-  Sparkles,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -48,34 +42,36 @@ interface ChartPoint {
 }
 
 export default function PaymentsPage() {
-  const [totalFunds, setTotalFunds] = useState("1.740,30 USD");
+  const [totalFunds, setTotalFunds] = useState("3,080.00 USD");
   const [balances, setBalances] = useState<BalanceItem[]>([
-    { code: "US", currency: "USD", label: "US", amount: "1,240.30", raw: 1240.3 },
-    { code: "EU", currency: "EUR", label: "EU", amount: "500.00", raw: 500.0 },
+    { code: "US", currency: "USD", label: "US", amount: "3,080.00", raw: 3080.0 },
+    { code: "PK", currency: "PKR", label: "PK", amount: "857,780.00", raw: 857780.0 },
     { code: "GB", currency: "GBP", label: "GB", amount: "0.00", raw: 0.0 },
   ]);
-  const [transactions, setTransactions] = useState<TransactionItem[]>([]);
+
+  const [latestTransactions, setLatestTransactions] = useState<TransactionItem[]>([]);
+  const [upcomingTransactions, setUpcomingTransactions] = useState<TransactionItem[]>([]);
   const [activeTab, setActiveTab] = useState<"Latest" | "Upcoming">("Latest");
 
   // Yellow Banner Dismiss
   const [isBannerVisible, setIsBannerVisible] = useState(true);
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
 
-  // Exchange Rates & Timeframes
-  const [sourceCurrency, setSourceCurrency] = useState("EU EUR");
-  const [targetCurrency, setTargetCurrency] = useState("US USD");
+  // Exchange Rates & Timeframes (US USD & PK PKR)
+  const [sourceCurrency, setSourceCurrency] = useState("US USD");
+  const [targetCurrency, setTargetCurrency] = useState("PK PKR");
   const [timeframe, setTimeframe] = useState<"1D" | "7D" | "30D" | "90D" | "1Y">("7D");
   const [lastUpdated, setLastUpdated] = useState("11:08 AM");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Chart Hover Tooltip State
-  const [hoveredPointIdx, setHoveredPointIdx] = useState<number | null>(1);
+  // Dynamic Chart Tooltip State (Hidden by default, shows only on hover/click)
+  const [hoveredPointIdx, setHoveredPointIdx] = useState<number | null>(null);
 
   // Modals
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [convertAmount, setConvertAmount] = useState("100");
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
-  const [alertTargetRate, setAlertTargetRate] = useState("1.0950");
+  const [alertTargetRate, setAlertTargetRate] = useState("280.00");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -90,9 +86,10 @@ export default function PaymentsPage() {
       const res = await fetch("/api/admin/payments");
       const json = await res.json();
       if (json.success && json.data) {
-        setTotalFunds(json.data.totalFundsFormatted || "1.740,30 USD");
+        setTotalFunds(json.data.totalFundsFormatted || "3,080.00 USD");
         setBalances(json.data.balances || []);
-        setTransactions(json.data.transactions || []);
+        setLatestTransactions(json.data.latestTransactions || []);
+        setUpcomingTransactions(json.data.upcomingTransactions || []);
         setLastUpdated(json.data.lastUpdated || "11:08 AM");
       }
     } catch (err) {
@@ -106,42 +103,42 @@ export default function PaymentsPage() {
     fetchPayments();
   }, []);
 
-  // Timeframe points for exchange rates curve
+  // Timeframe points for exchange rates curve (US USD <-> PK PKR)
   const timeframeData: Record<string, ChartPoint[]> = {
     "1D": [
-      { label: "00:00", date: "Today 00:00", value: 412, x: 10, y: 135 },
-      { label: "06:00", date: "Today 06:00", value: 428, x: 75, y: 130 },
-      { label: "12:00", date: "Today 12:00", value: 584, x: 140, y: 25 },
-      { label: "18:00", date: "Today 18:00", value: 395, x: 200, y: 145 },
-      { label: "24:00", date: "Today 24:00", value: 615, x: 270, y: 20 },
+      { label: "00:00", date: "Today 00:00", value: 278.2, x: 10, y: 135 },
+      { label: "06:00", date: "Today 06:00", value: 278.45, x: 75, y: 130 },
+      { label: "12:00", date: "Today 12:00", value: 279.1, x: 140, y: 25 },
+      { label: "18:00", date: "Today 18:00", value: 278.35, x: 200, y: 145 },
+      { label: "24:00", date: "Today 24:00", value: 278.9, x: 270, y: 20 },
     ],
     "7D": [
-      { label: "Jun 24", date: "Jun 24, 2024", value: 410, x: 10, y: 135 },
-      { label: "Jun 26", date: "Jun 26, 2024", value: 434, x: 75, y: 130 },
-      { label: "Jun 27", date: "Jun 27, 2024", value: 580, x: 140, y: 25 },
-      { label: "Jun 28", date: "Jun 28, 2024", value: 390, x: 200, y: 145 },
-      { label: "Jun 30", date: "Jun 30, 2024", value: 610, x: 270, y: 20 },
+      { label: "Jun 24", date: "Jun 24, 2024", value: 278.1, x: 10, y: 135 },
+      { label: "Jun 26", date: "Jun 26, 2024", value: 278.5, x: 75, y: 130 },
+      { label: "Jun 27", date: "Jun 27, 2024", value: 279.2, x: 140, y: 25 },
+      { label: "Jun 28", date: "Jun 28, 2024", value: 278.3, x: 200, y: 145 },
+      { label: "Jun 30", date: "Jun 30, 2024", value: 279.4, x: 270, y: 20 },
     ],
     "30D": [
-      { label: "1 Jun", date: "1 Jun, 2024", value: 395, x: 10, y: 140 },
-      { label: "8 Jun", date: "8 Jun, 2024", value: 430, x: 75, y: 125 },
-      { label: "15 Jun", date: "15 Jun, 2024", value: 620, x: 140, y: 20 },
-      { label: "22 Jun", date: "22 Jun, 2024", value: 380, x: 200, y: 150 },
-      { label: "30 Jun", date: "30 Jun, 2024", value: 595, x: 270, y: 25 },
+      { label: "1 Jun", date: "1 Jun, 2024", value: 277.8, x: 10, y: 140 },
+      { label: "8 Jun", date: "8 Jun, 2024", value: 278.4, x: 75, y: 125 },
+      { label: "15 Jun", date: "15 Jun, 2024", value: 279.5, x: 140, y: 20 },
+      { label: "22 Jun", date: "22 Jun, 2024", value: 278.1, x: 200, y: 150 },
+      { label: "30 Jun", date: "30 Jun, 2024", value: 278.95, x: 270, y: 25 },
     ],
     "90D": [
-      { label: "Apr", date: "Apr 2024", value: 380, x: 10, y: 145 },
-      { label: "May", date: "May 2024", value: 440, x: 75, y: 120 },
-      { label: "May 20", date: "May 20, 2024", value: 650, x: 140, y: 15 },
-      { label: "Jun", date: "Jun 2024", value: 400, x: 200, y: 140 },
-      { label: "Jul", date: "Jul 2024", value: 590, x: 270, y: 30 },
+      { label: "Apr", date: "Apr 2024", value: 277.5, x: 10, y: 145 },
+      { label: "May", date: "May 2024", value: 278.6, x: 75, y: 120 },
+      { label: "May 20", date: "May 20, 2024", value: 280.1, x: 140, y: 15 },
+      { label: "Jun", date: "Jun 2024", value: 278.2, x: 200, y: 140 },
+      { label: "Jul", date: "Jul 2024", value: 279.0, x: 270, y: 30 },
     ],
     "1Y": [
-      { label: "Q1", date: "Q1 2024", value: 350, x: 10, y: 155 },
-      { label: "Q2", date: "Q2 2024", value: 430, x: 75, y: 125 },
-      { label: "Q2 Late", date: "Mid 2024", value: 640, x: 140, y: 20 },
-      { label: "Q3", date: "Q3 2024", value: 420, x: 200, y: 120 },
-      { label: "Q4", date: "Q4 2024", value: 680, x: 270, y: 10 },
+      { label: "Q1", date: "Q1 2024", value: 275.5, x: 10, y: 155 },
+      { label: "Q2", date: "Q2 2024", value: 278.4, x: 75, y: 125 },
+      { label: "Q2 Late", date: "Mid 2024", value: 281.0, x: 140, y: 20 },
+      { label: "Q3", date: "Q3 2024", value: 278.8, x: 200, y: 120 },
+      { label: "Q4", date: "Q4 2024", value: 282.5, x: 270, y: 10 },
     ],
   };
 
@@ -149,7 +146,7 @@ export default function PaymentsPage() {
   const activePoint =
     hoveredPointIdx !== null && currentPoints[hoveredPointIdx]
       ? currentPoints[hoveredPointIdx]
-      : currentPoints[1];
+      : null;
 
   // Swap currencies
   const handleSwapCurrencies = () => {
@@ -159,8 +156,15 @@ export default function PaymentsPage() {
   };
 
   // Convert calculation
-  const exchangeRate = sourceCurrency.includes("EUR") ? 1.0845 : 0.922;
-  const convertedValue = (parseFloat(convertAmount || "0") * exchangeRate).toFixed(2);
+  const isUSDToPKR = sourceCurrency.includes("USD");
+  const exchangeRate = isUSDToPKR ? 278.5 : 0.00359;
+  const convertedValue = (parseFloat(convertAmount || "0") * exchangeRate).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  const displayedTransactions =
+    activeTab === "Latest" ? latestTransactions : upcomingTransactions;
 
   return (
     <div className="space-y-6 pb-20 font-satoshi text-slate-900 max-w-7xl mx-auto">
@@ -186,11 +190,11 @@ export default function PaymentsPage() {
             </p>
           </div>
 
-          {/* Yellow Verification Alert Banner (Screenshot 2 Match) */}
+          {/* Soft Lighter Yellow Verification Alert Banner */}
           {isBannerVisible && (
-            <div className="rounded-2xl bg-[#FEF9C3] border border-[#FDE047]/60 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div className="rounded-2xl bg-[#FEFCE8] border border-[#FEF08A]/70 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-center gap-2.5 text-xs text-slate-800 font-medium">
-                <AlertCircle size={17} className="text-amber-600 shrink-0" />
+                <AlertCircle size={17} className="text-amber-500 shrink-0" />
                 <span>You have information to submit in verification center</span>
               </div>
 
@@ -205,7 +209,7 @@ export default function PaymentsPage() {
                 <button
                   type="button"
                   onClick={() => setIsBannerVisible(false)}
-                  className="w-7 h-7 rounded-lg hover:bg-amber-200/50 text-slate-700 flex items-center justify-center transition cursor-pointer"
+                  className="w-7 h-7 rounded-lg hover:bg-amber-200/40 text-slate-600 flex items-center justify-center transition cursor-pointer"
                   title="Dismiss"
                 >
                   <X size={14} />
@@ -214,7 +218,7 @@ export default function PaymentsPage() {
             </div>
           )}
 
-          {/* 3 Currency Balance Cards (Screenshot 2 Match) */}
+          {/* 3 Currency Balance Cards (US, PK PKR, GB GBP) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
             {balances.map((b) => (
               <div
@@ -284,44 +288,50 @@ export default function PaymentsPage() {
 
             {/* Transactions Rows List */}
             <div className="divide-y divide-slate-100">
-              {transactions.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50/50 rounded-xl px-2 -mx-2 transition"
-                >
-                  {/* Left: Date */}
-                  <div className="w-24 sm:w-28 shrink-0 text-xs font-bold text-slate-900">
-                    {tx.date}
-                  </div>
+              {displayedTransactions.length > 0 ? (
+                displayedTransactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50/50 rounded-xl px-2 -mx-2 transition"
+                  >
+                    {/* Left: Date */}
+                    <div className="w-24 sm:w-28 shrink-0 text-xs font-bold text-slate-900">
+                      {tx.date}
+                    </div>
 
-                  {/* Center: Title & Status */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-900 truncate">
-                      {tx.title}
-                    </p>
-                    <span className="text-[11px] text-slate-400 font-normal block mt-0.5">
-                      {tx.status}
-                    </span>
-                  </div>
+                    {/* Center: Title & Status */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-900 truncate">
+                        {tx.title}
+                      </p>
+                      <span className="text-[11px] text-slate-400 font-normal block mt-0.5">
+                        {tx.status}
+                      </span>
+                    </div>
 
-                  {/* Right: Amount & Chevron */}
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span
-                      className={`text-xs font-bold font-mono ${
-                        tx.isPositive ? "text-emerald-600" : "text-rose-500"
-                      }`}
-                    >
-                      {tx.amount}
-                    </span>
-                    <button
-                      type="button"
-                      className="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-700 transition cursor-pointer shadow-2xs"
-                    >
-                      <ChevronRight size={13} />
-                    </button>
+                    {/* Right: Amount & Chevron */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span
+                        className={`text-xs font-bold font-mono ${
+                          tx.isPositive ? "text-emerald-600" : "text-rose-500"
+                        }`}
+                      >
+                        {tx.amount}
+                      </span>
+                      <button
+                        type="button"
+                        className="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-700 transition cursor-pointer shadow-2xs"
+                      >
+                        <ChevronRight size={13} />
+                      </button>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="py-8 text-center text-slate-400 text-xs">
+                  No {activeTab.toLowerCase()} transactions found.
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -352,7 +362,7 @@ export default function PaymentsPage() {
               </div>
             </div>
 
-            {/* Currency Selector Row (EU EUR ⇄ US USD) */}
+            {/* Currency Selector Row (US USD ⇄ PK PKR) */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <select
@@ -360,10 +370,10 @@ export default function PaymentsPage() {
                   onChange={(e) => setSourceCurrency(e.target.value)}
                   className="w-full appearance-none border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 bg-white focus:border-slate-400 outline-none pr-7 cursor-pointer font-medium"
                 >
-                  <option value="EU EUR">EU EUR</option>
                   <option value="US USD">US USD</option>
-                  <option value="GB GBP">GB GBP</option>
                   <option value="PK PKR">PK PKR</option>
+                  <option value="EU EUR">EU EUR</option>
+                  <option value="GB GBP">GB GBP</option>
                 </select>
                 <ChevronDown
                   size={12}
@@ -387,10 +397,10 @@ export default function PaymentsPage() {
                   onChange={(e) => setTargetCurrency(e.target.value)}
                   className="w-full appearance-none border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 bg-white focus:border-slate-400 outline-none pr-7 cursor-pointer font-medium"
                 >
+                  <option value="PK PKR">PK PKR</option>
                   <option value="US USD">US USD</option>
                   <option value="EU EUR">EU EUR</option>
                   <option value="GB GBP">GB GBP</option>
-                  <option value="PK PKR">PK PKR</option>
                 </select>
                 <ChevronDown
                   size={12}
@@ -417,9 +427,12 @@ export default function PaymentsPage() {
               ))}
             </div>
 
-            {/* Interactive Smooth SVG Trend Chart (Screenshots 1 & 2 Match) */}
-            <div className="relative w-full pt-4 pb-1 select-none">
-              {/* Dynamic Tracking Tooltip */}
+            {/* Interactive Smooth SVG Trend Chart */}
+            <div
+              className="relative w-full pt-4 pb-1 select-none cursor-default"
+              onMouseLeave={() => setHoveredPointIdx(null)}
+            >
+              {/* Dynamic Tracking Tooltip (Appears ONLY on hover / click) */}
               {activePoint && (
                 <div
                   style={{
@@ -435,7 +448,7 @@ export default function PaymentsPage() {
                     <div className="flex items-center gap-1">
                       <span className="w-2 h-2 rounded-xs bg-black inline-block" />
                       <span className="text-[11px] font-semibold text-slate-700">
-                        Page Views
+                        {isUSDToPKR ? "PKR Rate" : "USD Rate"}
                       </span>
                     </div>
                     <span className="text-[11px] font-bold text-slate-900 font-mono">
@@ -448,7 +461,7 @@ export default function PaymentsPage() {
               {/* Chart SVG */}
               <svg
                 viewBox="0 0 280 160"
-                className="w-full h-40 overflow-visible cursor-crosshair"
+                className="w-full h-40 overflow-visible"
               >
                 {/* Horizontal reference grid lines */}
                 <line
@@ -476,14 +489,14 @@ export default function PaymentsPage() {
                   strokeWidth="1"
                 />
 
-                {/* Vertical tooltip tracker line */}
+                {/* Vertical tooltip tracker line (Only when point is hovered) */}
                 {activePoint && (
                   <line
                     x1={activePoint.x}
                     y1="0"
                     x2={activePoint.x}
                     y2="150"
-                    stroke="#E2E8F0"
+                    stroke="#CBD5E1"
                     strokeWidth="1"
                     strokeDasharray="2,2"
                   />
@@ -511,6 +524,7 @@ export default function PaymentsPage() {
                     strokeWidth="2"
                     className="cursor-pointer transition-all duration-150"
                     onMouseEnter={() => setHoveredPointIdx(idx)}
+                    onClick={() => setHoveredPointIdx(idx)}
                   />
                 ))}
               </svg>
