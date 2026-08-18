@@ -285,7 +285,7 @@ export default function EcommerceDashboardPage() {
           </div>
         </div>
 
-        {/* Card 2: Monthly Recurring Revenue (Static metric as requested) */}
+        {/* Card 2: Monthly Recurring Revenue (Dynamic from Monthly Trend) */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-4.5 shadow-xs flex flex-col justify-between min-h-[145px]">
           <div>
             <div className="flex items-center justify-between gap-2">
@@ -293,12 +293,20 @@ export default function EcommerceDashboardPage() {
                 Monthly recurring r...
               </span>
               <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
-                +6.1%
+                +{data?.overview.monthlyGrowthPercent || 6.1}%
               </span>
             </div>
             <div className="mt-2.5">
               <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                $34.1K
+                {(() => {
+                  const currentMonthRev =
+                    data?.monthlyRevenueChart?.slice(-1)[0]?.revenue ||
+                    data?.overview.totalRevenue ||
+                    0;
+                  return currentMonthRev >= 1000
+                    ? `$${(currentMonthRev / 1000).toFixed(1)}K`
+                    : `$${currentMonthRev.toFixed(0)}`;
+                })()}
               </span>
             </div>
           </div>
@@ -782,17 +790,17 @@ export default function EcommerceDashboardPage() {
               />
             </div>
 
-            {/* Table with proper cell widths and generous padding */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left min-w-[520px]">
+            {/* Table with responsive column layout (No horizontal scroll) */}
+            <div className="w-full">
+              <table className="w-full text-xs text-left table-auto">
                 <thead>
                   <tr className="border-b border-slate-100 text-[11px] font-medium text-slate-400">
-                    <th className="py-2.5 px-2 font-medium">ID</th>
-                    <th className="py-2.5 px-2 font-medium">Customer</th>
-                    <th className="py-2.5 px-2 font-medium">Product</th>
-                    <th className="py-2.5 px-2 font-medium">Amount ⇅</th>
-                    <th className="py-2.5 px-2 font-medium">Status</th>
-                    <th className="py-2.5 px-2 text-right font-medium"></th>
+                    <th className="py-2.5 pr-1 font-medium w-16">ID</th>
+                    <th className="py-2.5 px-1 font-medium">Customer</th>
+                    <th className="py-2.5 px-1 font-medium hidden md:table-cell">Product</th>
+                    <th className="py-2.5 px-1 font-medium text-right">Amount ⇅</th>
+                    <th className="py-2.5 px-1 font-medium text-center">Status</th>
+                    <th className="py-2.5 pl-1 text-right font-medium w-6"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -804,51 +812,51 @@ export default function EcommerceDashboardPage() {
                       return (
                         <tr key={o.id} className="hover:bg-slate-50/60 transition">
                           {/* Order ID */}
-                          <td className="py-3 px-2 font-mono text-slate-500 font-normal">
+                          <td className="py-3 pr-1 font-mono text-slate-500 font-normal">
                             {idShort}
                           </td>
 
                           {/* Customer */}
-                          <td className="py-3 px-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                          <td className="py-3 px-1">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <div className="w-5.5 h-5.5 rounded-full bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center text-[10px] font-bold text-slate-600">
                                 {o.customerName.charAt(0).toUpperCase()}
                               </div>
-                              <span className="font-semibold text-slate-900 truncate max-w-[110px]">
+                              <span className="font-semibold text-slate-900 truncate max-w-[90px] sm:max-w-[110px]">
                                 {o.customerName}
                               </span>
                             </div>
                           </td>
 
                           {/* Product Summary */}
-                          <td className="py-3 px-2 text-slate-600 truncate max-w-[140px]">
+                          <td className="py-3 px-1 text-slate-600 truncate max-w-[100px] lg:max-w-[130px] hidden md:table-cell">
                             {o.productSummary}
                           </td>
 
                           {/* Amount */}
-                          <td className="py-3 px-2 font-mono font-semibold text-slate-900">
+                          <td className="py-3 px-1 font-mono font-semibold text-slate-900 text-right">
                             ${o.totalAmount.toFixed(2)}
                           </td>
 
                           {/* Status */}
-                          <td className="py-3 px-2">{getOrderStatusBadge(o.status)}</td>
+                          <td className="py-3 px-1 text-center">{getOrderStatusBadge(o.status)}</td>
 
                           {/* Actions Dropdown */}
-                          <td className="py-3 px-2 text-right relative">
+                          <td className="py-3 pl-1 text-right relative">
                             <button
                               type="button"
                               onClick={() =>
                                 setActiveOrderMenu(isMenuOpen ? null : o.id)
                               }
-                              className="w-7 h-7 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 inline-flex items-center justify-center transition cursor-pointer"
+                              className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 inline-flex items-center justify-center transition cursor-pointer"
                               title="Order Options"
                             >
-                              <MoreHorizontal size={14} />
+                              <MoreHorizontal size={13} />
                             </button>
 
                             {/* Dropdown Menu */}
                             {isMenuOpen && (
-                              <div className="absolute right-2 top-8 z-50 w-48 rounded-xl bg-white border border-slate-200 shadow-xl py-1 text-left animate-in fade-in zoom-in-95">
+                              <div className="absolute right-0 top-8 z-50 w-44 rounded-xl bg-white border border-slate-200 shadow-xl py-1 text-left animate-in fade-in zoom-in-95">
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -960,7 +968,7 @@ export default function EcommerceDashboardPage() {
           </div>
         </div>
 
-        {/* Table 2: Best Selling Products (6 Cols - Spacious Padding) */}
+        {/* Table 2: Best Selling Products (6 Cols - No horizontal scroll) */}
         <div className="xl:col-span-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between gap-2 mb-3.5">
@@ -992,14 +1000,14 @@ export default function EcommerceDashboardPage() {
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left min-w-[480px]">
+            <div className="w-full">
+              <table className="w-full text-xs text-left table-auto">
                 <thead>
                   <tr className="border-b border-slate-100 text-[11px] font-medium text-slate-400">
-                    <th className="py-2.5 px-2 font-medium">Product</th>
-                    <th className="py-2.5 px-2 font-medium">Sold ⇅</th>
-                    <th className="py-2.5 px-2 font-medium">Sales ⇅</th>
-                    <th className="py-2.5 px-2 text-right font-medium"></th>
+                    <th className="py-2.5 pr-1 font-medium">Product</th>
+                    <th className="py-2.5 px-1 font-medium text-center w-14">Sold ⇅</th>
+                    <th className="py-2.5 px-1 font-medium text-right w-20">Sales ⇅</th>
+                    <th className="py-2.5 pl-1 text-right font-medium w-6"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1009,9 +1017,9 @@ export default function EcommerceDashboardPage() {
                       return (
                         <tr key={p.id} className="hover:bg-slate-50/60 transition">
                           {/* Product Image & Title */}
-                          <td className="py-3 px-2">
-                            <div className="flex items-center gap-2.5">
-                              <div className="relative w-8 h-8 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-200 flex items-center justify-center">
+                          <td className="py-3 pr-1">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="relative w-7 h-7 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-200 flex items-center justify-center">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src={p.image}
@@ -1019,38 +1027,38 @@ export default function EcommerceDashboardPage() {
                                   className="w-full h-full object-cover"
                                 />
                               </div>
-                              <span className="font-semibold text-slate-900 truncate max-w-[180px]">
+                              <span className="font-semibold text-slate-900 truncate max-w-[130px] sm:max-w-[170px]">
                                 {p.name}
                               </span>
                             </div>
                           </td>
 
                           {/* Units Sold */}
-                          <td className="py-3 px-2 font-mono font-medium text-slate-800">
+                          <td className="py-3 px-1 font-mono font-medium text-slate-800 text-center">
                             {p.unitsSold || 6}
                           </td>
 
                           {/* Revenue */}
-                          <td className="py-3 px-2 font-mono font-semibold text-slate-900">
+                          <td className="py-3 px-1 font-mono font-semibold text-slate-900 text-right">
                             ${(p.revenue || p.price * (p.unitsSold || 6)).toFixed(2)}
                           </td>
 
                           {/* Actions Dropdown */}
-                          <td className="py-3 px-2 text-right relative">
+                          <td className="py-3 pl-1 text-right relative">
                             <button
                               type="button"
                               onClick={() =>
                                 setActiveProductMenu(isProductOpen ? null : p.id)
                               }
-                              className="w-7 h-7 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 inline-flex items-center justify-center transition cursor-pointer"
+                              className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 inline-flex items-center justify-center transition cursor-pointer"
                               title="Product Options"
                             >
-                              <MoreHorizontal size={14} />
+                              <MoreHorizontal size={13} />
                             </button>
 
                             {/* Dropdown */}
                             {isProductOpen && (
-                              <div className="absolute right-2 top-8 z-50 w-44 rounded-xl bg-white border border-slate-200 shadow-xl py-1 text-left animate-in fade-in zoom-in-95">
+                              <div className="absolute right-0 top-8 z-50 w-40 rounded-xl bg-white border border-slate-200 shadow-xl py-1 text-left animate-in fade-in zoom-in-95">
                                 <Link
                                   href={`/product/${p.slug}`}
                                   target="_blank"
