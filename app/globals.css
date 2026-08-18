@@ -41,25 +41,25 @@ html {
 /* Dark Theme (Activated when you toggle dark mode) */
 .dark {
   --background: #09090b;
-  --foreground: #f4f4f5;
+  --foreground: #f8fafc;
 
   --card: #121214;
-  --card-foreground: #f4f4f5;
+  --card-foreground: #f8fafc;
 
   --popover: #121214;
-  --popover-foreground: #f4f4f5;
+  --popover-foreground: #f8fafc;
 
-  --primary: #f4f4f5;
+  --primary: #f8fafc;
   --primary-foreground: #09090b;
 
   --secondary: #1c1c1f;
-  --secondary-foreground: #f4f4f5;
+  --secondary-foreground: #f8fafc;
 
   --muted: #18181b;
-  --muted-foreground: #a1a1aa;
+  --muted-foreground: #cbd5e1;
 
   --accent: #1c1c1f;
-  --accent-foreground: #f4f4f5;
+  --accent-foreground: #f8fafc;
 
   --destructive: #7f1d1d;
   --destructive-foreground: #fef2f2;
@@ -101,30 +101,48 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Universal Dark Mode High Contrast Overrides */
-.dark body {
+/* Universal Dark Mode Light Typography & High Contrast Rules */
+.dark body,
+.dark main {
   background-color: #09090b !important;
-  color: #f4f4f5 !important;
+  color: #f8fafc !important;
+}
+
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
+  color: #ffffff !important;
+}
+
+.dark p,
+.dark span,
+.dark td,
+.dark th,
+.dark label {
+  color: #e2e8f0;
 }
 
 .dark .bg-white {
   background-color: #121214 !important;
-  color: #f4f4f5 !important;
+  color: #f8fafc !important;
 }
 
 .dark .text-slate-900,
 .dark .text-slate-800 {
-  color: #f4f4f5 !important;
+  color: #f8fafc !important;
 }
 
 .dark .text-slate-700,
 .dark .text-slate-600 {
-  color: #d4d4d8 !important;
+  color: #e2e8f0 !important;
 }
 
 .dark .text-slate-500,
 .dark .text-slate-400 {
-  color: #a1a1aa !important;
+  color: #cbd5e1 !important;
 }
 
 .dark .border-slate-200,
@@ -149,6 +167,19 @@ body {
 .dark .hover\:bg-slate-50\/70:hover,
 .dark .hover\:bg-slate-100:hover {
   background-color: #27272a !important;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #121214 !important;
+  color: #f8fafc !important;
+  border-color: #27272a !important;
+}
+
+.dark select option {
+  background-color: #121214 !important;
+  color: #f8fafc !important;
 }
 
 .dark .bg-\[\#FEFCE8\] {
