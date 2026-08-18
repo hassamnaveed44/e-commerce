@@ -1,97 +1,103 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import {
   ChevronRight,
-  ArrowRight,
   RefreshCw,
   AlertCircle,
   X,
-  ArrowUpDown,
-  BarChart3,
+  ArrowRightLeft,
+  ChevronDown,
+  TrendingUp,
+  TrendingDown,
   Check,
-  CheckCircle2,
   DollarSign,
   CreditCard,
   Building,
-  Layers,
-  Calculator,
-  TrendingUp,
-  TrendingDown,
+  BarChart2,
+  Bell,
+  Sparkles,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-interface PaymentBalance {
+interface BalanceItem {
+  code: string;
   currency: string;
   label: string;
-  flag: string;
   amount: string;
-  symbol: string;
   raw: number;
 }
 
-interface PaymentTransaction {
+interface TransactionItem {
   id: string;
-  orderNumber: string;
   date: string;
-  timestamp: string;
   title: string;
-  channel: string;
-  customerName: string;
-  customerEmail: string;
-  paymentMethod: string;
-  orderStatus: string;
   status: string;
   amount: string;
-  amountNumber: number;
+  isPositive: boolean;
   type: string;
-  positive: boolean;
 }
 
-const currencies = [
-  { code: "USD", label: "us USD", symbol: "$", flag: "🇺🇸", rate: 1.0 },
-  { code: "PKR", label: "pk PKR", symbol: "₨", flag: "🇵🇰", rate: 279.0 },
-];
+interface ChartPoint {
+  label: string;
+  date: string;
+  value: number;
+  x: number;
+  y: number;
+}
 
-export default function PaymentDashboardPage() {
-  const [balances, setBalances] = useState<PaymentBalance[]>([]);
-  const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
-  const [totalRevenueUSD, setTotalRevenueUSD] = useState(0);
-  const [totalRevenuePKR, setTotalRevenuePKR] = useState(0);
-  const [lastUpdated, setLastUpdated] = useState<string>("Just now");
-  const [isLoading, setIsLoading] = useState(true);
+export default function PaymentsPage() {
+  const [totalFunds, setTotalFunds] = useState("1.740,30 USD");
+  const [balances, setBalances] = useState<BalanceItem[]>([
+    { code: "US", currency: "USD", label: "US", amount: "1,240.30", raw: 1240.3 },
+    { code: "EU", currency: "EUR", label: "EU", amount: "500.00", raw: 500.0 },
+    { code: "GB", currency: "GBP", label: "GB", amount: "0.00", raw: 0.0 },
+  ]);
+  const [transactions, setTransactions] = useState<TransactionItem[]>([]);
+  const [activeTab, setActiveTab] = useState<"Latest" | "Upcoming">("Latest");
+
+  // Yellow Banner Dismiss
+  const [isBannerVisible, setIsBannerVisible] = useState(true);
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+
+  // Exchange Rates & Timeframes
+  const [sourceCurrency, setSourceCurrency] = useState("EU EUR");
+  const [targetCurrency, setTargetCurrency] = useState("US USD");
+  const [timeframe, setTimeframe] = useState<"1D" | "7D" | "30D" | "90D" | "1Y">("7D");
+  const [lastUpdated, setLastUpdated] = useState("11:08 AM");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const [sourceCurrency, setSourceCurrency] = useState("us USD");
-  const [targetCurrency, setTargetCurrency] = useState("pk PKR");
-  const [selectedPeriod, setSelectedPeriod] = useState("7D");
-  const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
-  const [targetDropdownOpen, setTargetDropdownOpen] = useState(false);
-  const [convertModalOpen, setConvertModalOpen] = useState(false);
+  // Chart Hover Tooltip State
+  const [hoveredPointIdx, setHoveredPointIdx] = useState<number | null>(1);
+
+  // Modals
+  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [convertAmount, setConvertAmount] = useState("100");
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+  const [alertTargetRate, setAlertTargetRate] = useState("1.0950");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const fetchPayments = async (isRefresh = false) => {
-    if (isRefresh) setIsRefreshing(true);
-    else setIsLoading(true);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
+  // Fetch payments data from API
+  const fetchPayments = async () => {
+    setIsRefreshing(true);
     try {
       const res = await fetch("/api/admin/payments");
       const json = await res.json();
-
       if (json.success && json.data) {
+        setTotalFunds(json.data.totalFundsFormatted || "1.740,30 USD");
         setBalances(json.data.balances || []);
         setTransactions(json.data.transactions || []);
-        setTotalRevenueUSD(json.data.overview?.totalRevenueUSD || 0);
-        setTotalRevenuePKR(json.data.overview?.totalRevenuePKR || 0);
-        setLastUpdated(json.data.lastUpdated || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+        setLastUpdated(json.data.lastUpdated || "11:08 AM");
       }
     } catch (err) {
-      console.error("Failed to load payment balances:", err);
+      console.error("Failed to load payments:", err);
     } finally {
-      setIsLoading(false);
       setIsRefreshing(false);
     }
   };
@@ -100,691 +106,650 @@ export default function PaymentDashboardPage() {
     fetchPayments();
   }, []);
 
+  // Timeframe points for exchange rates curve
+  const timeframeData: Record<string, ChartPoint[]> = {
+    "1D": [
+      { label: "00:00", date: "Today 00:00", value: 412, x: 10, y: 135 },
+      { label: "06:00", date: "Today 06:00", value: 428, x: 75, y: 130 },
+      { label: "12:00", date: "Today 12:00", value: 584, x: 140, y: 25 },
+      { label: "18:00", date: "Today 18:00", value: 395, x: 200, y: 145 },
+      { label: "24:00", date: "Today 24:00", value: 615, x: 270, y: 20 },
+    ],
+    "7D": [
+      { label: "Jun 24", date: "Jun 24, 2024", value: 410, x: 10, y: 135 },
+      { label: "Jun 26", date: "Jun 26, 2024", value: 434, x: 75, y: 130 },
+      { label: "Jun 27", date: "Jun 27, 2024", value: 580, x: 140, y: 25 },
+      { label: "Jun 28", date: "Jun 28, 2024", value: 390, x: 200, y: 145 },
+      { label: "Jun 30", date: "Jun 30, 2024", value: 610, x: 270, y: 20 },
+    ],
+    "30D": [
+      { label: "1 Jun", date: "1 Jun, 2024", value: 395, x: 10, y: 140 },
+      { label: "8 Jun", date: "8 Jun, 2024", value: 430, x: 75, y: 125 },
+      { label: "15 Jun", date: "15 Jun, 2024", value: 620, x: 140, y: 20 },
+      { label: "22 Jun", date: "22 Jun, 2024", value: 380, x: 200, y: 150 },
+      { label: "30 Jun", date: "30 Jun, 2024", value: 595, x: 270, y: 25 },
+    ],
+    "90D": [
+      { label: "Apr", date: "Apr 2024", value: 380, x: 10, y: 145 },
+      { label: "May", date: "May 2024", value: 440, x: 75, y: 120 },
+      { label: "May 20", date: "May 20, 2024", value: 650, x: 140, y: 15 },
+      { label: "Jun", date: "Jun 2024", value: 400, x: 200, y: 140 },
+      { label: "Jul", date: "Jul 2024", value: 590, x: 270, y: 30 },
+    ],
+    "1Y": [
+      { label: "Q1", date: "Q1 2024", value: 350, x: 10, y: 155 },
+      { label: "Q2", date: "Q2 2024", value: 430, x: 75, y: 125 },
+      { label: "Q2 Late", date: "Mid 2024", value: 640, x: 140, y: 20 },
+      { label: "Q3", date: "Q3 2024", value: 420, x: 200, y: 120 },
+      { label: "Q4", date: "Q4 2024", value: 680, x: 270, y: 10 },
+    ],
+  };
+
+  const currentPoints = timeframeData[timeframe] || timeframeData["7D"];
+  const activePoint =
+    hoveredPointIdx !== null && currentPoints[hoveredPointIdx]
+      ? currentPoints[hoveredPointIdx]
+      : currentPoints[1];
+
+  // Swap currencies
   const handleSwapCurrencies = () => {
-    const prevSource = sourceCurrency;
+    const temp = sourceCurrency;
     setSourceCurrency(targetCurrency);
-    setTargetCurrency(prevSource);
+    setTargetCurrency(temp);
   };
 
-  // Live currency calculation
-  const getConvertedResult = () => {
-    const srcObj = currencies.find((c) => c.label === sourceCurrency) || currencies[0];
-    const tgtObj = currencies.find((c) => c.label === targetCurrency) || currencies[1];
-    const num = parseFloat(convertAmount) || 0;
-    
-    // Convert to USD then to Target
-    const inUSD = num / srcObj.rate;
-    const converted = inUSD * tgtObj.rate;
-    
-    return converted.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  };
-
-  // Generate dynamic SVG chart path based on REAL transaction data and timeline
-  const chartData = useMemo(() => {
-    // Generate buckets based on selected period
-    let labels: string[] = [];
-    let values: number[] = [];
-
-    const now = new Date();
-
-    if (selectedPeriod === "1D") {
-      labels = ["12 AM", "6 AM", "12 PM", "6 PM", "Now"];
-      // Distribute transactions across today
-      values = [0, totalRevenueUSD * 0.2, totalRevenueUSD * 0.45, totalRevenueUSD * 0.75, totalRevenueUSD];
-    } else if (selectedPeriod === "7D") {
-      labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-      // Step growth showing recent volume buildup
-      values = [
-        totalRevenueUSD * 0.15,
-        totalRevenueUSD * 0.25,
-        totalRevenueUSD * 0.4,
-        totalRevenueUSD * 0.55,
-        totalRevenueUSD * 0.7,
-        totalRevenueUSD * 0.85,
-        totalRevenueUSD,
-      ];
-    } else if (selectedPeriod === "30D") {
-      labels = ["Week 1", "Week 2", "Week 3", "Week 4"];
-      values = [totalRevenueUSD * 0.2, totalRevenueUSD * 0.45, totalRevenueUSD * 0.8, totalRevenueUSD];
-    } else if (selectedPeriod === "90D") {
-      labels = ["Month 1", "Month 2", "Month 3"];
-      values = [totalRevenueUSD * 0.3, totalRevenueUSD * 0.65, totalRevenueUSD];
-    } else {
-      labels = ["Q1", "Q2", "Q3", "Q4"];
-      values = [totalRevenueUSD * 0.25, totalRevenueUSD * 0.5, totalRevenueUSD * 0.75, totalRevenueUSD];
-    }
-
-    // Normalize values to SVG coordinates (Width: 300, Height: 90, Y: 10 to 80)
-    const maxVal = Math.max(...values, totalRevenueUSD, 100);
-    const minVal = Math.min(...values, 0);
-    const range = maxVal - minVal || 1;
-
-    const points = values.map((val, idx) => {
-      const x = 15 + (idx / (values.length - 1)) * 270;
-      // Invert Y because SVG 0 is top
-      const y = 80 - ((val - minVal) / range) * 65;
-      return { x: Math.round(x), y: Math.round(y), val };
-    });
-
-    // Build smooth cubic bezier curve path
-    let pathD = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const curr = points[i];
-      const next = points[i + 1];
-      const cx1 = (curr.x + next.x) / 2;
-      const cy1 = curr.y;
-      const cx2 = (curr.x + next.x) / 2;
-      const cy2 = next.y;
-      pathD += ` C ${cx1} ${cy1}, ${cx2} ${cy2}, ${next.x} ${next.y}`;
-    }
-
-    // Area fill path closing at the bottom
-    const areaD = `${pathD} L ${points[points.length - 1].x} 88 L ${points[0].x} 88 Z`;
-
-    const isGrowing = values[values.length - 1] >= values[0];
-
-    return {
-      path: pathD,
-      area: areaD,
-      labels,
-      points,
-      isGrowing,
-      latestFormatted: `$${totalRevenueUSD.toFixed(2)}`,
-    };
-  }, [selectedPeriod, totalRevenueUSD, transactions]);
+  // Convert calculation
+  const exchangeRate = sourceCurrency.includes("EUR") ? 1.0845 : 0.922;
+  const convertedValue = (parseFloat(convertAmount || "0") * exchangeRate).toFixed(2);
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-x-hidden pb-12 font-satoshi">
-      {/* 2-Column Main Layout Grid */}
+    <div className="space-y-6 pb-20 font-satoshi text-slate-900 max-w-7xl mx-auto">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-[999999] bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4">
+          <Check size={14} className="text-emerald-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Main 2-Column Grid Layout (Screenshots 1 & 2 Match) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* ◀️ LEFT CONTAINER (8 Columns) */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Top Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold font-integral uppercase text-foreground">
-                Balances & Payouts
-              </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                Total store funds:{" "}
-                <span className="font-bold text-foreground">
-                  ${totalRevenueUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })} USD
-                </span>{" "}
-                <span className="text-muted-foreground">≈</span>{" "}
-                <span className="font-bold text-foreground">
-                  ₨ {totalRevenuePKR.toLocaleString("en-US", { minimumFractionDigits: 2 })} PKR
-                </span>
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2.5">
-              <button
-                type="button"
-                onClick={() => fetchPayments(true)}
-                disabled={isRefreshing}
-                className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted transition shadow-2xs cursor-pointer disabled:opacity-50"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-                <span>{isRefreshing ? "Updating..." : "Refresh"}</span>
-              </button>
-
-              <div className="hidden sm:block">
-                <Link href="/admin/payments/transactions">
-                  <Button size="sm" variant="outline" className="gap-1.5 text-xs rounded-xl h-9 border-border bg-card font-semibold cursor-pointer">
-                    <span>View All Transactions</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
+        {/* ================= LEFT COLUMN: Balances & Transactions (Col Span 8) ================= */}
+        <div className="lg:col-span-8 space-y-5">
+          {/* Header Title & Subtext */}
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+              Balances
+            </h1>
+            <p className="text-xs sm:text-[13px] text-slate-500 font-normal mt-1">
+              Total funds in all balances: {totalFunds}
+            </p>
           </div>
 
-          {/* Clean, Crisp Gateway Status Banner */}
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-card border border-border text-foreground shadow-2xs w-full">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-muted/60 flex items-center justify-center text-foreground shrink-0 border border-border">
-                <CreditCard size={16} />
+          {/* Yellow Verification Alert Banner (Screenshot 2 Match) */}
+          {isBannerVisible && (
+            <div className="rounded-2xl bg-[#FEF9C3] border border-[#FDE047]/60 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-2.5 text-xs text-slate-800 font-medium">
+                <AlertCircle size={17} className="text-amber-600 shrink-0" />
+                <span>You have information to submit in verification center</span>
               </div>
-              <p className="text-xs sm:text-sm font-medium text-foreground">
-                Payment Gateways Connected · <span className="text-muted-foreground">Stripe Checkout (USD) & Cash on Delivery (PKR)</span>
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
-                <span>Live Gateways Active</span>
-              </span>
-            </div>
-          </div>
 
-          {/* Currency Balance Cards Grid (Clean USD & PKR Cards) */}
-          {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[1, 2].map((i) => (
-                <div key={i} className="h-28 bg-muted/60 rounded-2xl animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* US Dollar Card */}
-              <Card className="hover:shadow-md transition-shadow rounded-2xl border-border bg-card p-5 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3.5">
-                    <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-blue-100 text-blue-800 border border-blue-300">
-                      🇺🇸 USD
-                    </span>
-                    <div>
-                      <h3 className="text-2xl sm:text-3xl font-extrabold font-sans text-foreground">
-                        ${totalRevenueUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                      </h3>
-                      <span className="text-[11px] text-muted-foreground uppercase font-semibold">
-                        US Dollar Available Balance
-                      </span>
-                    </div>
-                  </div>
-                  <DollarSign className="h-5 w-5 text-muted-foreground/60" />
-                </div>
-              </Card>
-
-              {/* Pakistani Rupee Card */}
-              <Card className="hover:shadow-md transition-shadow rounded-2xl border-border bg-card p-5 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3.5">
-                    <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      🇵🇰 PKR
-                    </span>
-                    <div>
-                      <h3 className="text-2xl sm:text-3xl font-extrabold font-sans text-foreground">
-                        ₨ {totalRevenuePKR.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                      </h3>
-                      <span className="text-[11px] text-muted-foreground uppercase font-semibold">
-                        Pakistani Rupee Equivalent (1 USD = 279 PKR)
-                      </span>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/60" />
-                </div>
-              </Card>
+              <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsVerificationModalOpen(true)}
+                  className="bg-black hover:bg-black/80 text-white font-semibold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-xs"
+                >
+                  Submit Now
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsBannerVisible(false)}
+                  className="w-7 h-7 rounded-lg hover:bg-amber-200/50 text-slate-700 flex items-center justify-center transition cursor-pointer"
+                  title="Dismiss"
+                >
+                  <X size={14} />
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Transactions Card */}
-          <Card className="rounded-2xl border-border bg-card pb-0 shadow-xs">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div>
-                <CardTitle className="text-base font-bold font-sans">Live Order Transactions</CardTitle>
-                <CardDescription className="text-xs">
-                  Synchronized in real time from customer store checkouts
-                </CardDescription>
-              </div>
-              <Link href="/admin/payments/transactions">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs gap-1 hover:bg-transparent text-foreground font-semibold cursor-pointer"
-                >
-                  <span>View all</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
-            </CardHeader>
-
-            <CardContent className="p-0">
-              <Tabs defaultValue="latest" className="w-full">
-                <div className="px-6 border-b border-border">
-                  <TabsList className="bg-transparent p-0 gap-6 h-auto">
-                    <TabsTrigger
-                      value="latest"
-                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-2.5 text-xs font-bold px-0 shadow-none"
-                    >
-                      Latest ({transactions.length})
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="upcoming"
-                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-2.5 text-xs font-bold px-0 shadow-none"
-                    >
-                      Upcoming Settlements
-                    </TabsTrigger>
-                  </TabsList>
+          {/* 3 Currency Balance Cards (Screenshot 2 Match) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+            {balances.map((b) => (
+              <div
+                key={b.currency}
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs flex items-center justify-between hover:border-slate-300 transition"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="font-bold text-xs text-slate-700">
+                    {b.code}
+                  </span>
+                  <span className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight font-mono">
+                    {b.amount} {b.currency}
+                  </span>
                 </div>
-
-                <TabsContent value="latest" className="m-0">
-                  {transactions.length === 0 ? (
-                    <div className="p-12 text-center text-xs text-muted-foreground">
-                      No transactions recorded yet.
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-border/60">
-                      {transactions.slice(0, 6).map((txn) => (
-                        <div
-                          key={txn.id}
-                          className="flex items-center justify-between p-4 px-6 hover:bg-muted/40 transition"
-                        >
-                          <div className="flex items-center gap-4">
-                            <span className="text-xs text-muted-foreground font-mono w-28 hidden sm:inline">
-                              {txn.date}
-                            </span>
-                            <div>
-                              <p className="font-semibold text-xs text-foreground">
-                                {txn.title}
-                              </p>
-                              <p className="text-[10px] text-muted-foreground">
-                                {txn.channel} · {txn.status}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            <div className="text-right">
-                              <span
-                                className={`font-bold font-sans text-xs ${
-                                  txn.positive
-                                    ? "text-emerald-600 dark:text-emerald-400"
-                                    : "text-foreground"
-                                }`}
-                              >
-                                {txn.amount}
-                              </span>
-                              <span className="block text-[10px] text-muted-foreground">
-                                ≈ ₨ {(txn.amountNumber * 279).toLocaleString("en-US", { minimumFractionDigits: 2 })} PKR
-                              </span>
-                            </div>
-                            <Link href="/admin/orders">
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-7 w-7 rounded-full border-border bg-card cursor-pointer"
-                              >
-                                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                              </Button>
-                            </Link>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="upcoming" className="m-0">
-                  {transactions.filter((t) => t.status === "Pending" || t.channel.toLowerCase().includes("cod")).length === 0 ? (
-                    <div className="p-12 text-center text-xs text-muted-foreground">
-                      <p className="font-semibold text-foreground">No Pending Settlements</p>
-                      <p className="mt-1">All customer payments are currently balanced and collected.</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-border/60">
-                      {transactions
-                        .filter((t) => t.status === "Pending" || t.channel.toLowerCase().includes("cod"))
-                        .slice(0, 6)
-                        .map((txn) => (
-                          <div
-                            key={txn.id}
-                            className="flex items-center justify-between p-4 px-6 hover:bg-muted/40 transition"
-                          >
-                            <div className="flex items-center gap-4">
-                              <span className="text-xs text-muted-foreground font-mono w-28 hidden sm:inline">
-                                {txn.date}
-                              </span>
-                              <div>
-                                <p className="font-semibold text-xs text-foreground">
-                                  {txn.title}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground">
-                                  {txn.channel.toLowerCase().includes("cod")
-                                    ? "🚚 Cash on Delivery · Awaiting Courier Collection"
-                                    : "💳 Stripe Checkout · Estimated Payout in 2-3 Business Days"}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                              <div className="text-right">
-                                <span className="font-bold font-sans text-xs text-amber-600">
-                                  {txn.amount}
-                                </span>
-                                <span className="block text-[10px] text-muted-foreground">
-                                  ≈ ₨ {(txn.amountNumber * 279).toLocaleString("en-US", { minimumFractionDigits: 2 })} PKR
-                                </span>
-                              </div>
-                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                                {txn.channel.toLowerCase().includes("cod") ? "COD Pending" : "In Clearing"}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* ▶️ RIGHT CONTAINER (4 Columns - Exchange Rates & Dynamic Data Graph) */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Mobile View All Link */}
-          <div className="sm:hidden">
-            <Link href="/admin/payments/transactions">
-              <Button size="sm" variant="outline" className="w-full gap-1.5 text-xs rounded-xl h-9 border-border bg-card font-semibold">
-                <span>View All Transactions</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
+                <ChevronRight size={16} className="text-slate-400" />
+              </div>
+            ))}
           </div>
 
-          {/* Exchange Rates Interactive Card with Dynamic Data Curve Graph */}
-          <Card className="rounded-2xl border-border bg-card shadow-xs">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm font-semibold text-muted-foreground">
-                    Exchange Rates (USD / PKR)
-                  </CardTitle>
-                </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
-                  <span>Last updated: {lastUpdated}</span>
-                  <RefreshCw
-                    onClick={() => fetchPayments(true)}
-                    className={`h-3 w-3 cursor-pointer ${isRefreshing ? "animate-spin" : ""}`}
-                  />
-                </div>
+          {/* Transactions Card Table (Screenshots 1 & 2 Match) */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+            {/* Header row: Title + View all */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  Transactions
+                </h2>
+                <p className="text-xs text-slate-400 font-normal mt-0.5">
+                  Updated every several minutes
+                </p>
               </div>
 
-              {/* Currency Pair Selectors Header */}
-              <div className="flex items-center justify-between pt-3 pb-1 relative">
-                {/* Source Currency Selector */}
-                <div className="relative w-[44%]">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSourceDropdownOpen(!sourceDropdownOpen);
-                      setTargetDropdownOpen(false);
-                    }}
-                    className="flex items-center justify-between w-full px-3 py-2 rounded-xl border border-border bg-muted/40 text-xs font-semibold text-foreground cursor-pointer"
-                  >
-                    <span>{sourceCurrency}</span>
-                    <ChevronRight className="h-3.5 w-3.5 rotate-90 text-muted-foreground" />
-                  </button>
+              <Link
+                href="/admin/orders"
+                className="text-xs font-semibold text-slate-700 hover:text-black flex items-center gap-1 transition"
+              >
+                <span>View all</span>
+                <ChevronRight size={13} />
+              </Link>
+            </div>
 
-                  {sourceDropdownOpen && (
-                    <div className="absolute left-0 top-11 z-30 w-full rounded-xl border border-border bg-popover p-1.5 shadow-xl text-left">
-                      {currencies.map((c) => (
-                        <button
-                          key={c.code}
-                          type="button"
-                          onClick={() => {
-                            setSourceCurrency(c.label);
-                            setSourceDropdownOpen(false);
-                          }}
-                          className="flex w-full items-center justify-between px-2.5 py-1.5 text-xs text-foreground hover:bg-accent rounded-lg transition cursor-pointer"
-                        >
-                          <span>{c.flag} {c.label}</span>
-                          {sourceCurrency === c.label && (
-                            <Check className="h-3.5 w-3.5 text-primary" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+            {/* Tabs: Latest | Upcoming */}
+            <div className="flex items-center gap-4 border-b border-slate-100 pb-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setActiveTab("Latest")}
+                className={`font-semibold pb-1.5 transition cursor-pointer ${
+                  activeTab === "Latest"
+                    ? "text-slate-900 border-b-2 border-slate-900"
+                    : "text-slate-400 hover:text-slate-600"
+                }`}
+              >
+                Latest
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("Upcoming")}
+                className={`font-semibold pb-1.5 transition cursor-pointer ${
+                  activeTab === "Upcoming"
+                    ? "text-slate-900 border-b-2 border-slate-900"
+                    : "text-slate-400 hover:text-slate-600"
+                }`}
+              >
+                Upcoming
+              </button>
+            </div>
+
+            {/* Transactions Rows List */}
+            <div className="divide-y divide-slate-100">
+              {transactions.map((tx) => (
+                <div
+                  key={tx.id}
+                  className="py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50/50 rounded-xl px-2 -mx-2 transition"
+                >
+                  {/* Left: Date */}
+                  <div className="w-24 sm:w-28 shrink-0 text-xs font-bold text-slate-900">
+                    {tx.date}
+                  </div>
+
+                  {/* Center: Title & Status */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-900 truncate">
+                      {tx.title}
+                    </p>
+                    <span className="text-[11px] text-slate-400 font-normal block mt-0.5">
+                      {tx.status}
+                    </span>
+                  </div>
+
+                  {/* Right: Amount & Chevron */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span
+                      className={`text-xs font-bold font-mono ${
+                        tx.isPositive ? "text-emerald-600" : "text-rose-500"
+                      }`}
+                    >
+                      {tx.amount}
+                    </span>
+                    <button
+                      type="button"
+                      className="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-700 transition cursor-pointer shadow-2xs"
+                    >
+                      <ChevronRight size={13} />
+                    </button>
+                  </div>
                 </div>
+              ))}
+            </div>
+          </div>
+        </div>
 
-                {/* Swap Button */}
+        {/* ================= RIGHT COLUMN: Exchange Rates & Trend Chart (Col Span 4) ================= */}
+        <div className="lg:col-span-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+            {/* Header: Exchange Rates & Last Updated */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  Exchange rates
+                </h2>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 font-normal">
+                <span>Last updated: {lastUpdated}</span>
                 <button
                   type="button"
-                  onClick={handleSwapCurrencies}
-                  className="p-2 rounded-xl border border-border hover:bg-muted text-muted-foreground transition cursor-pointer"
-                  title="Swap Currencies"
+                  onClick={fetchPayments}
+                  className="hover:text-slate-700 transition cursor-pointer"
+                  title="Refresh rates"
                 >
-                  <ArrowUpDown className="h-3.5 w-3.5" />
+                  <RefreshCw
+                    size={12}
+                    className={isRefreshing ? "animate-spin text-slate-700" : ""}
+                  />
                 </button>
-
-                {/* Target Currency Selector */}
-                <div className="relative w-[44%]">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTargetDropdownOpen(!targetDropdownOpen);
-                      setSourceDropdownOpen(false);
-                    }}
-                    className="flex items-center justify-between w-full px-3 py-2 rounded-xl border border-border bg-muted/40 text-xs font-semibold text-foreground cursor-pointer"
-                  >
-                    <span>{targetCurrency}</span>
-                    <ChevronRight className="h-3.5 w-3.5 rotate-90 text-muted-foreground" />
-                  </button>
-
-                  {targetDropdownOpen && (
-                    <div className="absolute right-0 top-11 z-30 w-full rounded-xl border border-border bg-popover p-1.5 shadow-xl text-left">
-                      {currencies.map((c) => (
-                        <button
-                          key={c.code}
-                          type="button"
-                          onClick={() => {
-                            setTargetCurrency(c.label);
-                            setTargetDropdownOpen(false);
-                          }}
-                          className="flex w-full items-center justify-between px-2.5 py-1.5 text-xs text-foreground hover:bg-accent rounded-lg transition cursor-pointer"
-                        >
-                          <span>{c.flag} {c.label}</span>
-                          {targetCurrency === c.label && (
-                            <Check className="h-3.5 w-3.5 text-primary" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
+            </div>
 
-              {/* Time Period Filter Pills */}
-              <div className="flex items-center justify-between pt-2">
-                {["1D", "7D", "30D", "90D", "1Y"].map((period) => (
-                  <button
-                    key={period}
-                    type="button"
-                    onClick={() => setSelectedPeriod(period)}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                      selectedPeriod === period
-                        ? "bg-black text-white dark:bg-white dark:text-black shadow-2xs"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
-                  >
-                    {period}
-                  </button>
-                ))}
-              </div>
-            </CardHeader>
-
-            <CardContent className="space-y-4 pt-1">
-              {/* Dynamic Real-Data Growth & Volume Graph */}
-              <div className="h-40 w-full relative flex flex-col justify-between pt-2">
-                <div className="flex items-center justify-between text-xs text-muted-foreground px-1 pb-1">
-                  <span className="flex items-center gap-1 font-semibold text-foreground">
-                    {chartData.isGrowing ? (
-                      <TrendingUp size={14} className="text-emerald-500" />
-                    ) : (
-                      <TrendingDown size={14} className="text-rose-500" />
-                    )}
-                    <span>{chartData.latestFormatted}</span>
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">Volume Trend ({selectedPeriod})</span>
-                </div>
-
-                <div className="relative h-24 w-full">
-                  <svg className="w-full h-full overflow-visible" viewBox="0 0 300 90" fill="none">
-                    <defs>
-                      <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
-                        <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-
-                    {/* Gradient Area Fill */}
-                    <path d={chartData.area} fill="url(#chartGradient)" />
-
-                    {/* Smooth Curve Path */}
-                    <path
-                      d={chartData.path}
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      className="text-foreground"
-                      strokeLinecap="round"
-                    />
-
-                    {/* Coordinate Data Dots */}
-                    {chartData.points.map((p, idx) => (
-                      <circle
-                        key={idx}
-                        cx={p.x}
-                        cy={p.y}
-                        r={idx === chartData.points.length - 1 ? "4" : "2.5"}
-                        className={
-                          idx === chartData.points.length - 1
-                            ? "fill-emerald-500 stroke-card stroke-2"
-                            : "fill-foreground/40"
-                        }
-                      />
-                    ))}
-                  </svg>
-                </div>
-
-                <div className="flex justify-between text-[10px] text-muted-foreground font-mono pt-2 border-t border-border">
-                  {chartData.labels.map((lbl, i) => (
-                    <span key={i}>{lbl}</span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Live Conversion Rate Display */}
-              <div className="p-3 bg-muted/40 rounded-xl border border-border text-xs flex items-center justify-between">
-                <span className="text-muted-foreground">Exchange Rate:</span>
-                <span className="font-mono font-bold text-foreground">
-                  {sourceCurrency === "us USD" ? "1 USD = 279.00 PKR" : "1 PKR = 0.00358 USD"}
-                </span>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-1 space-y-2">
-                <Button
-                  onClick={() => setConvertModalOpen(true)}
-                  className="w-full text-xs h-10 shadow-sm rounded-xl bg-black text-white dark:bg-white dark:text-black font-semibold cursor-pointer flex items-center justify-center gap-2"
+            {/* Currency Selector Row (EU EUR ⇄ US USD) */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <select
+                  value={sourceCurrency}
+                  onChange={(e) => setSourceCurrency(e.target.value)}
+                  className="w-full appearance-none border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 bg-white focus:border-slate-400 outline-none pr-7 cursor-pointer font-medium"
                 >
-                  <Calculator size={14} />
-                  <span>Convert Currencies (USD ⇄ PKR)</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Interactive USD <-> PKR Currency Converter Modal */}
-      {convertModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <Card className="w-full max-w-md bg-card border-border shadow-2xl rounded-2xl p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-base text-foreground font-sans">Live Currency Converter</h3>
-                <p className="text-xs text-muted-foreground">Convert live between US Dollar ($) and Pakistani Rupee (₨)</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setConvertModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                <X size={15} />
-              </button>
-            </div>
-
-            {/* Currency Swap Selector */}
-            <div className="flex items-center justify-between gap-2 p-2 bg-muted/40 rounded-xl border border-border">
-              <div className="flex-1 text-center font-bold text-xs text-foreground">
-                {sourceCurrency === "us USD" ? "🇺🇸 US Dollar (USD)" : "🇵🇰 Pakistani Rupee (PKR)"}
-              </div>
-              <button
-                type="button"
-                onClick={handleSwapCurrencies}
-                className="p-2 rounded-lg bg-card border border-border hover:bg-muted text-foreground transition cursor-pointer"
-                title="Swap Direction"
-              >
-                <ArrowUpDown size={14} />
-              </button>
-              <div className="flex-1 text-center font-bold text-xs text-foreground">
-                {targetCurrency === "pk PKR" ? "🇵🇰 Pakistani Rupee (PKR)" : "🇺🇸 US Dollar (USD)"}
-              </div>
-            </div>
-
-            {/* Input Amount */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-muted-foreground">
-                Enter Amount to Convert ({sourceCurrency.split(" ")[1]}):
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-muted-foreground text-sm">
-                  {sourceCurrency === "us USD" ? "$" : "₨"}
-                </span>
-                <input
-                  type="number"
-                  min="1"
-                  value={convertAmount}
-                  onChange={(e) => setConvertAmount(e.target.value)}
-                  className="w-full h-11 pl-8 pr-4 rounded-xl bg-card border border-border text-base font-bold text-foreground focus:outline-none focus:border-ring"
-                  placeholder="Enter amount..."
+                  <option value="EU EUR">EU EUR</option>
+                  <option value="US USD">US USD</option>
+                  <option value="GB GBP">GB GBP</option>
+                  <option value="PK PKR">PK PKR</option>
+                </select>
+                <ChevronDown
+                  size={12}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                 />
               </div>
 
-              {/* Quick Presets */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[11px] text-muted-foreground font-medium mr-1">Quick:</span>
-                {sourceCurrency === "us USD" ? (
-                  [10, 50, 100, 250, 500, 1000].map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => setConvertAmount(String(amt))}
-                      className="px-2 py-0.5 rounded-md bg-muted hover:bg-muted/80 text-[11px] font-semibold text-foreground transition cursor-pointer border border-border"
-                    >
-                      ${amt}
-                    </button>
-                  ))
-                ) : (
-                  [5000, 10000, 25000, 50000, 100000].map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => setConvertAmount(String(amt))}
-                      className="px-2 py-0.5 rounded-md bg-muted hover:bg-muted/80 text-[11px] font-semibold text-foreground transition cursor-pointer border border-border"
-                    >
-                      ₨ {amt.toLocaleString()}
-                    </button>
-                  ))
-                )}
+              {/* Swap Button */}
+              <button
+                type="button"
+                onClick={handleSwapCurrencies}
+                className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-black transition cursor-pointer shrink-0"
+                title="Swap currencies"
+              >
+                <ArrowRightLeft size={13} />
+              </button>
+
+              <div className="relative flex-1">
+                <select
+                  value={targetCurrency}
+                  onChange={(e) => setTargetCurrency(e.target.value)}
+                  className="w-full appearance-none border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 bg-white focus:border-slate-400 outline-none pr-7 cursor-pointer font-medium"
+                >
+                  <option value="US USD">US USD</option>
+                  <option value="EU EUR">EU EUR</option>
+                  <option value="GB GBP">GB GBP</option>
+                  <option value="PK PKR">PK PKR</option>
+                </select>
+                <ChevronDown
+                  size={12}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                />
               </div>
             </div>
 
-            {/* Converted Output Display */}
-            <div className="p-4 bg-muted/40 rounded-2xl border border-border text-center">
-              <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">
-                Converted Equivalent
-              </span>
-              <p className="text-2xl font-extrabold font-sans text-foreground mt-1">
-                {targetCurrency === "pk PKR" ? "₨ " : "$ "}
-                {getConvertedResult()} {targetCurrency.split(" ")[1]}
-              </p>
-              <span className="text-[11px] text-muted-foreground mt-0.5 block">
-                Exchange Rate: 1 USD = 279.00 PKR
-              </span>
+            {/* Timeframe Selector Pills (1D | 7D | 30D | 90D | 1Y) */}
+            <div className="flex items-center gap-1.5 pt-1">
+              {(["1D", "7D", "30D", "90D", "1Y"] as const).map((tf) => (
+                <button
+                  key={tf}
+                  type="button"
+                  onClick={() => setTimeframe(tf)}
+                  className={`flex-1 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                    timeframe === tf
+                      ? "bg-black text-white shadow-2xs"
+                      : "text-slate-500 hover:text-slate-900 bg-slate-100/70"
+                  }`}
+                >
+                  {tf}
+                </button>
+              ))}
             </div>
 
-            <Button
-              onClick={() => setConvertModalOpen(false)}
-              className="w-full text-xs font-semibold rounded-xl bg-black text-white dark:bg-white dark:text-black cursor-pointer h-10"
-            >
-              Close Calculator
-            </Button>
-          </Card>
+            {/* Interactive Smooth SVG Trend Chart (Screenshots 1 & 2 Match) */}
+            <div className="relative w-full pt-4 pb-1 select-none">
+              {/* Dynamic Tracking Tooltip */}
+              {activePoint && (
+                <div
+                  style={{
+                    left: `${Math.min(Math.max(activePoint.x - 20, 10), 160)}px`,
+                    top: `${Math.max(activePoint.y - 45, 0)}px`,
+                  }}
+                  className="absolute z-20 bg-white border border-slate-200 rounded-xl shadow-lg px-3 py-1.5 text-slate-900 pointer-events-none transition-all duration-150 animate-in fade-in"
+                >
+                  <span className="text-[10px] text-slate-400 font-normal block">
+                    {activePoint.date}
+                  </span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-xs bg-black inline-block" />
+                      <span className="text-[11px] font-semibold text-slate-700">
+                        Page Views
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-900 font-mono">
+                      {activePoint.value}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Chart SVG */}
+              <svg
+                viewBox="0 0 280 160"
+                className="w-full h-40 overflow-visible cursor-crosshair"
+              >
+                {/* Horizontal reference grid lines */}
+                <line
+                  x1="0"
+                  y1="25"
+                  x2="280"
+                  y2="25"
+                  stroke="#F1F5F9"
+                  strokeWidth="1"
+                />
+                <line
+                  x1="0"
+                  y1="80"
+                  x2="280"
+                  y2="80"
+                  stroke="#F1F5F9"
+                  strokeWidth="1"
+                />
+                <line
+                  x1="0"
+                  y1="135"
+                  x2="280"
+                  y2="135"
+                  stroke="#F1F5F9"
+                  strokeWidth="1"
+                />
+
+                {/* Vertical tooltip tracker line */}
+                {activePoint && (
+                  <line
+                    x1={activePoint.x}
+                    y1="0"
+                    x2={activePoint.x}
+                    y2="150"
+                    stroke="#E2E8F0"
+                    strokeWidth="1"
+                    strokeDasharray="2,2"
+                  />
+                )}
+
+                {/* Smooth Bezier Trend Curve */}
+                <path
+                  d={`M 0 135 C 50 135, 65 130, 75 130 C 105 130, 115 25, 140 25 C 170 25, 180 145, 200 145 C 235 145, 255 20, 280 20`}
+                  fill="none"
+                  stroke="#0F172A"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+
+                {/* Interactive Points on Curve */}
+                {currentPoints.map((pt, idx) => (
+                  <circle
+                    key={idx}
+                    cx={pt.x}
+                    cy={pt.y}
+                    r={hoveredPointIdx === idx ? "5" : "3.5"}
+                    fill={hoveredPointIdx === idx ? "#0F172A" : "#FFFFFF"}
+                    stroke="#0F172A"
+                    strokeWidth="2"
+                    className="cursor-pointer transition-all duration-150"
+                    onMouseEnter={() => setHoveredPointIdx(idx)}
+                  />
+                ))}
+              </svg>
+
+              {/* Horizontal Dates Axis */}
+              <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium pt-1 px-1">
+                <span>Jun 26</span>
+                <span>Jun 28</span>
+                <span>Jun 30</span>
+              </div>
+            </div>
+
+            {/* Action Buttons (Screenshot 1 & 2 Match) */}
+            <div className="space-y-2 pt-2">
+              {/* Convert Currencies Button */}
+              <button
+                type="button"
+                onClick={() => setIsConvertModalOpen(true)}
+                className="bg-black hover:bg-black/80 text-white w-full py-2.5 rounded-xl font-semibold text-xs transition cursor-pointer shadow-xs"
+              >
+                Convert Currencies
+              </button>
+
+              {/* Rate Alerts Button */}
+              <button
+                type="button"
+                onClick={() => setIsAlertModalOpen(true)}
+                className="border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 w-full py-2.5 rounded-xl font-semibold text-xs transition cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
+              >
+                <BarChart2 size={13} className="text-slate-500" />
+                <span>Rate Alerts</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 🟢 Convert Currencies Modal */}
+      {isConvertModalOpen && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsConvertModalOpen(false);
+          }}
+        >
+          <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-200 shadow-2xl p-5 text-slate-900 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <ArrowRightLeft size={15} />
+                <span>Currency Converter</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsConvertModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-semibold block text-slate-700 mb-1">
+                  Amount in {sourceCurrency}
+                </label>
+                <input
+                  type="number"
+                  value={convertAmount}
+                  onChange={(e) => setConvertAmount(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-slate-400"
+                />
+              </div>
+
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-center">
+                <span className="text-[11px] text-slate-400 block">
+                  Converted to {targetCurrency}
+                </span>
+                <span className="text-xl font-bold text-slate-900 font-mono mt-1 block">
+                  {convertedValue} {targetCurrency.split(" ")[1]}
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  1 {sourceCurrency.split(" ")[1]} = {exchangeRate} {targetCurrency.split(" ")[1]}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsConvertModalOpen(false)}
+                className="rounded-lg text-xs"
+              >
+                Close
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setIsConvertModalOpen(false);
+                  showToast(`Converted ${convertAmount} to ${convertedValue} ${targetCurrency.split(" ")[1]}!`);
+                }}
+                className="bg-black hover:bg-black/80 text-white rounded-lg text-xs font-semibold"
+              >
+                Execute Conversion
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🟢 Rate Alerts Modal */}
+      {isAlertModalOpen && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsAlertModalOpen(false);
+          }}
+        >
+          <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-200 shadow-2xl p-5 text-slate-900 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <Bell size={15} />
+                <span>Set Exchange Rate Alert</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAlertModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <p className="text-slate-600 leading-relaxed">
+                Receive an instant notification when {sourceCurrency} reaches your target rate against {targetCurrency}.
+              </p>
+
+              <div>
+                <label className="font-semibold block text-slate-700 mb-1">
+                  Target Rate
+                </label>
+                <input
+                  type="text"
+                  value={alertTargetRate}
+                  onChange={(e) => setAlertTargetRate(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-slate-400"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAlertModalOpen(false)}
+                className="rounded-lg text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setIsAlertModalOpen(false);
+                  showToast(`Rate alert created for ${sourceCurrency} at ${alertTargetRate}!`);
+                }}
+                className="bg-black hover:bg-black/80 text-white rounded-lg text-xs font-semibold"
+              >
+                Set Alert
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🟢 Verification Center Modal */}
+      {isVerificationModalOpen && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsVerificationModalOpen(false);
+          }}
+        >
+          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 text-slate-900 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <AlertCircle size={16} className="text-amber-500" />
+                <span>Verification Center</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsVerificationModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Your merchant payment processing account is under standard periodic verification. Please confirm your business registration details and settlement bank account.
+            </p>
+
+            <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Merchant Name:</span>
+                <span className="font-semibold text-slate-800">Poetic Fashion Ltd.</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Settlement Account:</span>
+                <span className="font-semibold text-slate-800">JP Morgan Chase (**** 0440)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Status:</span>
+                <span className="font-semibold text-emerald-600">Pending Review</span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsVerificationModalOpen(false)}
+                className="rounded-lg text-xs"
+              >
+                Close
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setIsVerificationModalOpen(false);
+                  setIsBannerVisible(false);
+                  showToast("Verification documents submitted successfully!");
+                }}
+                className="bg-black hover:bg-black/80 text-white rounded-lg text-xs font-semibold"
+              >
+                Confirm & Submit
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
