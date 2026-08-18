@@ -15,6 +15,7 @@ import {
   CreditCard,
   Building,
   DollarSign,
+  Edit3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -51,11 +52,14 @@ interface ChartPoint {
 }
 
 export default function PaymentsPage() {
-  const [totalFunds, setTotalFunds] = useState("3,080.00 USD");
+  const [totalFunds, setTotalFunds] = useState("0.00 USD");
+  const [baseUSD, setBaseUSD] = useState(0);
+  const [currentRate, setCurrentRate] = useState(278.50);
+
   const [balances, setBalances] = useState<BalanceItem[]>([
-    { code: "US", currency: "USD", label: "US", amount: "3,080.00", raw: 3080.0 },
-    { code: "PK", currency: "PKR", label: "PK", amount: "857,780.00", raw: 857780.0 },
-    { code: "GB", currency: "GBP", label: "GB", amount: "0.00", raw: 0.0 },
+    { code: "US", currency: "USD", label: "US", amount: "0.00", raw: 0 },
+    { code: "PK", currency: "PKR", label: "PK", amount: "0.00", raw: 0 },
+    { code: "GB", currency: "GBP", label: "GB", amount: "0.00", raw: 0 },
   ]);
 
   const [latestTransactions, setLatestTransactions] = useState<TransactionItem[]>([]);
@@ -82,11 +86,17 @@ export default function PaymentsPage() {
   // Dynamic Chart Tooltip State (Hidden by default, shows only on hover/click)
   const [hoveredPointIdx, setHoveredPointIdx] = useState<number | null>(null);
 
-  // Modals
+  // Converter Modal State (Admin Controllable)
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [convertAmount, setConvertAmount] = useState("100");
+  const [customRateInput, setCustomRateInput] = useState("278.50");
+  const [isUpdatingRate, setIsUpdatingRate] = useState(false);
+
+  // Alert Modal State (Admin Controllable)
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [alertTargetRate, setAlertTargetRate] = useState("280.00");
+  const [isSettingAlert, setIsSettingAlert] = useState(false);
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -101,7 +111,12 @@ export default function PaymentsPage() {
       const res = await fetch("/api/admin/payments");
       const json = await res.json();
       if (json.success && json.data) {
-        setTotalFunds(json.data.totalFundsFormatted || "3,080.00 USD");
+        setTotalFunds(json.data.totalFundsFormatted || "0.00 USD");
+        setBaseUSD(json.data.baseUSD || 0);
+        const rate = json.data.currentUsdToPkrRate || 278.50;
+        setCurrentRate(rate);
+        setCustomRateInput(rate.toString());
+        setAlertTargetRate((rate + 1.5).toFixed(2));
         setBalances(json.data.balances || []);
         setLatestTransactions(json.data.latestTransactions || []);
         setUpcomingTransactions(json.data.upcomingTransactions || []);
@@ -118,44 +133,121 @@ export default function PaymentsPage() {
     fetchPayments();
   }, []);
 
-  // Timeframe points for exchange rates curve (US USD <-> PK PKR)
-  const timeframeData: Record<string, ChartPoint[]> = {
-    "1D": [
-      { label: "00:00", date: "Today 00:00", value: 278.2, x: 10, y: 135 },
-      { label: "06:00", date: "Today 06:00", value: 278.45, x: 75, y: 130 },
-      { label: "12:00", date: "Today 12:00", value: 279.1, x: 140, y: 25 },
-      { label: "18:00", date: "Today 18:00", value: 278.35, x: 200, y: 145 },
-      { label: "24:00", date: "Today 24:00", value: 278.9, x: 270, y: 20 },
-    ],
-    "7D": [
-      { label: "Jun 24", date: "Jun 24, 2024", value: 278.1, x: 10, y: 135 },
-      { label: "Jun 26", date: "Jun 26, 2024", value: 278.5, x: 75, y: 130 },
-      { label: "Jun 27", date: "Jun 27, 2024", value: 279.2, x: 140, y: 25 },
-      { label: "Jun 28", date: "Jun 28, 2024", value: 278.3, x: 200, y: 145 },
-      { label: "Jun 30", date: "Jun 30, 2024", value: 279.4, x: 270, y: 20 },
-    ],
-    "30D": [
-      { label: "1 Jun", date: "1 Jun, 2024", value: 277.8, x: 10, y: 140 },
-      { label: "8 Jun", date: "8 Jun, 2024", value: 278.4, x: 75, y: 125 },
-      { label: "15 Jun", date: "15 Jun, 2024", value: 279.5, x: 140, y: 20 },
-      { label: "22 Jun", date: "22 Jun, 2024", value: 278.1, x: 200, y: 150 },
-      { label: "30 Jun", date: "30 Jun, 2024", value: 278.95, x: 270, y: 25 },
-    ],
-    "90D": [
-      { label: "Apr", date: "Apr 2024", value: 277.5, x: 10, y: 145 },
-      { label: "May", date: "May 2024", value: 278.6, x: 75, y: 120 },
-      { label: "May 20", date: "May 20, 2024", value: 280.1, x: 140, y: 15 },
-      { label: "Jun", date: "Jun 2024", value: 278.2, x: 200, y: 140 },
-      { label: "Jul", date: "Jul 2024", value: 279.0, x: 270, y: 30 },
-    ],
-    "1Y": [
-      { label: "Q1", date: "Q1 2024", value: 275.5, x: 10, y: 155 },
-      { label: "Q2", date: "Q2 2024", value: 278.4, x: 75, y: 125 },
-      { label: "Q2 Late", date: "Mid 2024", value: 281.0, x: 140, y: 20 },
-      { label: "Q3", date: "Q3 2024", value: 278.8, x: 200, y: 120 },
-      { label: "Q4", date: "Q4 2024", value: 282.5, x: 270, y: 10 },
-    ],
+  // Admin update exchange rate via API
+  const handleUpdateExchangeRate = async (newRateStr: string) => {
+    const parsed = parseFloat(newRateStr);
+    if (isNaN(parsed) || parsed <= 0) {
+      showToast("Please enter a valid exchange rate!");
+      return;
+    }
+    setIsUpdatingRate(true);
+    try {
+      const res = await fetch("/api/admin/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update_rate", rate: parsed }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCurrentRate(parsed);
+        // Recalculate balances with new rate
+        setBalances((prev) =>
+          prev.map((b) =>
+            b.code === "PK"
+              ? {
+                  ...b,
+                  amount: Math.round(baseUSD * parsed).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }),
+                  raw: Math.round(baseUSD * parsed),
+                }
+              : b
+          )
+        );
+        showToast(`Store exchange rate updated to 1 USD = ${parsed} PKR!`);
+        setIsConvertModalOpen(false);
+      }
+    } catch (err) {
+      console.error("Failed to update rate:", err);
+      showToast("Error updating exchange rate");
+    } finally {
+      setIsUpdatingRate(false);
+    }
   };
+
+  // Admin set rate alert via API
+  const handleSetRateAlert = async () => {
+    const parsed = parseFloat(alertTargetRate);
+    if (isNaN(parsed) || parsed <= 0) {
+      showToast("Please enter a valid target rate!");
+      return;
+    }
+    setIsSettingAlert(true);
+    try {
+      const res = await fetch("/api/admin/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "set_alert",
+          targetRate: parsed,
+          source: sourceCurrency,
+          target: targetCurrency,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || `Rate alert saved for ${alertTargetRate}!`);
+        setIsAlertModalOpen(false);
+      }
+    } catch (err) {
+      console.error("Failed to set alert:", err);
+      showToast("Error setting rate alert");
+    } finally {
+      setIsSettingAlert(false);
+    }
+  };
+
+  // Timeframe points for exchange rates curve (Calculated dynamically around active rate)
+  const timeframeData: Record<string, ChartPoint[]> = useMemo(() => {
+    return {
+      "1D": [
+        { label: "00:00", date: "Today 00:00", value: Number((currentRate - 0.3).toFixed(2)), x: 10, y: 135 },
+        { label: "06:00", date: "Today 06:00", value: Number((currentRate - 0.05).toFixed(2)), x: 75, y: 130 },
+        { label: "12:00", date: "Today 12:00", value: Number((currentRate + 0.6).toFixed(2)), x: 140, y: 25 },
+        { label: "18:00", date: "Today 18:00", value: Number((currentRate - 0.15).toFixed(2)), x: 200, y: 145 },
+        { label: "24:00", date: "Today 24:00", value: Number((currentRate + 0.4).toFixed(2)), x: 270, y: 20 },
+      ],
+      "7D": [
+        { label: "Jun 24", date: "Jun 24, 2024", value: Number((currentRate - 0.4).toFixed(2)), x: 10, y: 135 },
+        { label: "Jun 26", date: "Jun 26, 2024", value: Number(currentRate.toFixed(2)), x: 75, y: 130 },
+        { label: "Jun 27", date: "Jun 27, 2024", value: Number((currentRate + 0.7).toFixed(2)), x: 140, y: 25 },
+        { label: "Jun 28", date: "Jun 28, 2024", value: Number((currentRate - 0.2).toFixed(2)), x: 200, y: 145 },
+        { label: "Jun 30", date: "Jun 30, 2024", value: Number((currentRate + 0.9).toFixed(2)), x: 270, y: 20 },
+      ],
+      "30D": [
+        { label: "1 Jun", date: "1 Jun, 2024", value: Number((currentRate - 0.7).toFixed(2)), x: 10, y: 140 },
+        { label: "8 Jun", date: "8 Jun, 2024", value: Number((currentRate - 0.1).toFixed(2)), x: 75, y: 125 },
+        { label: "15 Jun", date: "15 Jun, 2024", value: Number((currentRate + 1.0).toFixed(2)), x: 140, y: 20 },
+        { label: "22 Jun", date: "22 Jun, 2024", value: Number((currentRate - 0.4).toFixed(2)), x: 200, y: 150 },
+        { label: "30 Jun", date: "30 Jun, 2024", value: Number((currentRate + 0.45).toFixed(2)), x: 270, y: 25 },
+      ],
+      "90D": [
+        { label: "Apr", date: "Apr 2024", value: Number((currentRate - 1.0).toFixed(2)), x: 10, y: 145 },
+        { label: "May", date: "May 2024", value: Number((currentRate + 0.1).toFixed(2)), x: 75, y: 120 },
+        { label: "May 20", date: "May 20, 2024", value: Number((currentRate + 1.6).toFixed(2)), x: 140, y: 15 },
+        { label: "Jun", date: "Jun 2024", value: Number((currentRate - 0.3).toFixed(2)), x: 200, y: 140 },
+        { label: "Jul", date: "Jul 2024", value: Number((currentRate + 0.5).toFixed(2)), x: 270, y: 30 },
+      ],
+      "1Y": [
+        { label: "Q1", date: "Q1 2024", value: Number((currentRate - 3.0).toFixed(2)), x: 10, y: 155 },
+        { label: "Q2", date: "Q2 2024", value: Number((currentRate - 0.1).toFixed(2)), x: 75, y: 125 },
+        { label: "Q2 Late", date: "Mid 2024", value: Number((currentRate + 2.5).toFixed(2)), x: 140, y: 20 },
+        { label: "Q3", date: "Q3 2024", value: Number((currentRate + 0.3).toFixed(2)), x: 200, y: 120 },
+        { label: "Q4", date: "Q4 2024", value: Number((currentRate + 4.0).toFixed(2)), x: 270, y: 10 },
+      ],
+    };
+  }, [currentRate]);
 
   const currentPoints = timeframeData[timeframe] || timeframeData["7D"];
   const activePoint =
@@ -170,10 +262,11 @@ export default function PaymentsPage() {
     setTargetCurrency(temp);
   };
 
-  // Convert calculation
+  // Convert calculation using admin controlled rate
   const isUSDToPKR = sourceCurrency.includes("USD");
-  const exchangeRate = isUSDToPKR ? 278.5 : 0.00359;
-  const convertedValue = (parseFloat(convertAmount || "0") * exchangeRate).toLocaleString("en-US", {
+  const activeRateNumber = parseFloat(customRateInput) || currentRate;
+  const effectiveRate = isUSDToPKR ? activeRateNumber : 1 / activeRateNumber;
+  const convertedValue = (parseFloat(convertAmount || "0") * effectiveRate).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -287,7 +380,7 @@ export default function PaymentsPage() {
                     : "text-slate-400 hover:text-slate-600"
                 }`}
               >
-                Latest
+                Latest ({latestTransactions.length})
               </button>
               <button
                 type="button"
@@ -298,7 +391,7 @@ export default function PaymentsPage() {
                     : "text-slate-400 hover:text-slate-600"
                 }`}
               >
-                Upcoming
+                Upcoming ({upcomingTransactions.length})
               </button>
             </div>
 
@@ -711,7 +804,7 @@ export default function PaymentsPage() {
                   {selectedBalance.amount} {selectedBalance.currency}
                 </span>
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  100% backed by store order receipts
+                  100% backed by real customer store order receipts
                 </span>
               </div>
             </div>
@@ -730,7 +823,7 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      {/* 🟢 Convert Currencies Modal */}
+      {/* 🟢 Currency Converter Modal (Admin Controllable Rate - Screenshot 3 Match) */}
       {isConvertModalOpen && (
         <div
           className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
@@ -753,7 +846,8 @@ export default function PaymentsPage() {
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
+            <div className="space-y-3.5 text-xs">
+              {/* Amount input */}
               <div>
                 <label className="font-semibold block text-slate-700 mb-1">
                   Amount in {sourceCurrency}
@@ -762,23 +856,35 @@ export default function PaymentsPage() {
                   type="number"
                   value={convertAmount}
                   onChange={(e) => setConvertAmount(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-slate-400"
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-slate-400 font-medium"
                 />
               </div>
 
-              <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-center">
+              {/* Converted Display Box (Screenshot 3 Match) */}
+              <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 text-center">
                 <span className="text-[11px] text-slate-400 block">
                   Converted to {targetCurrency}
                 </span>
-                <span className="text-xl font-bold text-slate-900 font-mono mt-1 block">
+                <span className="text-2xl font-bold text-slate-900 font-mono mt-1 block">
                   {convertedValue} {targetCurrency.split(" ")[1]}
                 </span>
-                <span className="text-[10px] text-slate-400 mt-0.5 block">
-                  1 {sourceCurrency.split(" ")[1]} = {exchangeRate} {targetCurrency.split(" ")[1]}
-                </span>
+
+                {/* Admin Editable Exchange Rate */}
+                <div className="mt-2.5 pt-2.5 border-t border-slate-200/60 flex items-center justify-center gap-1.5 text-slate-500 text-[11px]">
+                  <span>1 USD =</span>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={customRateInput}
+                    onChange={(e) => setCustomRateInput(e.target.value)}
+                    className="w-16 bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-center font-bold text-slate-900 text-xs focus:border-slate-400 outline-none"
+                  />
+                  <span>PKR</span>
+                </div>
               </div>
             </div>
 
+            {/* Action Buttons */}
             <div className="pt-2 flex items-center justify-end gap-2">
               <Button
                 variant="outline"
@@ -790,20 +896,18 @@ export default function PaymentsPage() {
               </Button>
               <Button
                 size="sm"
-                onClick={() => {
-                  setIsConvertModalOpen(false);
-                  showToast(`Converted ${convertAmount} to ${convertedValue} ${targetCurrency.split(" ")[1]}!`);
-                }}
+                onClick={() => handleUpdateExchangeRate(customRateInput)}
+                disabled={isUpdatingRate}
                 className="bg-black hover:bg-black/80 text-white rounded-lg text-xs font-semibold"
               >
-                Execute Conversion
+                {isUpdatingRate ? "Updating..." : "Execute Conversion"}
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 🟢 Rate Alerts Modal */}
+      {/* 🟢 Set Exchange Rate Alert Modal (Admin Controllable - Screenshot 2 Match) */}
       {isAlertModalOpen && (
         <div
           className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
@@ -832,14 +936,14 @@ export default function PaymentsPage() {
               </p>
 
               <div>
-                <label className="font-semibold block text-slate-700 mb-1">
+                <label className="font-semibold block text-slate-700 mb-1.5">
                   Target Rate
                 </label>
                 <input
                   type="text"
                   value={alertTargetRate}
                   onChange={(e) => setAlertTargetRate(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-slate-400"
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-slate-400 font-mono font-medium"
                 />
               </div>
             </div>
@@ -855,13 +959,11 @@ export default function PaymentsPage() {
               </Button>
               <Button
                 size="sm"
-                onClick={() => {
-                  setIsAlertModalOpen(false);
-                  showToast(`Rate alert created for ${sourceCurrency} at ${alertTargetRate}!`);
-                }}
+                onClick={handleSetRateAlert}
+                disabled={isSettingAlert || !alertTargetRate.trim()}
                 className="bg-black hover:bg-black/80 text-white rounded-lg text-xs font-semibold"
               >
-                Set Alert
+                {isSettingAlert ? "Saving..." : "Set Alert"}
               </Button>
             </div>
           </div>
