@@ -85,6 +85,7 @@ export async function GET(req: NextRequest) {
                 product: {
                   include: {
                     images: { where: { isPrimary: true }, take: 1 },
+                    category: true,
                   },
                 },
               },
