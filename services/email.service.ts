@@ -97,21 +97,55 @@ export async function sendOrderNotificationEmail({
     let statusMessage = "Thank you for your order! We have received your purchase and our fulfillment team is preparing your package.";
     let statusColor = "#10B981"; // Emerald
 
-    if (status === "SHIPPED" || type === "SHIPPED") {
-      subject = `Your Order #${order.orderNumber} Has Shipped! 📦 - SHOP.CO`;
-      statusTitle = "Your Package is on the Way!";
-      statusMessage = "Great news! Your package has been dispatched from our warehouse and is traveling to your delivery address.";
-      statusColor = "#3B82F6"; // Blue
-    } else if (status === "DELIVERED" || type === "DELIVERED") {
-      subject = `Delivered: Your Order #${order.orderNumber} Has Arrived! 🎉 - SHOP.CO`;
-      statusTitle = "Package Delivered Successfully!";
-      statusMessage = "Your order has been delivered! We hope you love your new apparel. Feel free to leave a product review.";
-      statusColor = "#059669"; // Green
-    } else if (status === "CANCELLED" || type === "CANCELLED") {
-      subject = `Order #${order.orderNumber} Cancellation Notice - SHOP.CO`;
-      statusTitle = "Order Cancelled";
-      statusMessage = "Your order has been cancelled and any reserved items have been returned to stock. If you need assistance, please contact our support.";
-      statusColor = "#EF4444"; // Red
+    if (type === "STATUS_UPDATE") {
+      if (status === "SHIPPED") {
+        subject = `Order Status Update: Shipped! 📦 #${order.orderNumber} - SHOP.CO`;
+        statusTitle = "Your Package Has Shipped!";
+        statusMessage = "Great news! Your package has been dispatched from our warehouse and is traveling to your delivery address.";
+        statusColor = "#3B82F6"; // Blue
+      } else if (status === "DELIVERED" || status === "COMPLETED") {
+        subject = `Order Status Update: Delivered! 🎉 #${order.orderNumber} - SHOP.CO`;
+        statusTitle = "Package Delivered Successfully!";
+        statusMessage = "Your order has been delivered! We hope you love your new apparel. Feel free to leave a product review.";
+        statusColor = "#059669"; // Emerald
+      } else if (status === "PROCESSING" || status === "PROCESSED") {
+        subject = `Order Status Update: Processing #${order.orderNumber} - SHOP.CO`;
+        statusTitle = "Status Updated: Processing";
+        statusMessage = "Your order status has been updated to Processing. Our fulfillment team is actively preparing and packing your items.";
+        statusColor = "#2563EB"; // Blue
+      } else if (status === "PENDING_PAYMENT" || status === "PENDING") {
+        subject = `Order Status Update: Pending #${order.orderNumber} - SHOP.CO`;
+        statusTitle = "Status Updated: Pending Payment";
+        statusMessage = "Your order status is currently pending payment or verification.";
+        statusColor = "#D97706"; // Amber
+      } else if (status === "CANCELLED" || status === "CANCELED") {
+        subject = `Order #${order.orderNumber} Cancellation Notice - SHOP.CO`;
+        statusTitle = "Order Cancelled";
+        statusMessage = "Your order has been cancelled and any reserved items have been returned to stock. If you need assistance, please contact our support.";
+        statusColor = "#EF4444"; // Red
+      } else if (status === "RETURNED_REFUSED" || status === "RETURNED") {
+        subject = `Order #${order.orderNumber} Return Status Update - SHOP.CO`;
+        statusTitle = "Order Return Processed";
+        statusMessage = "Your return request has been processed and logged in our system.";
+        statusColor = "#B45309"; // Amber
+      }
+    } else {
+      if (status === "SHIPPED") {
+        subject = `Your Order #${order.orderNumber} Has Shipped! 📦 - SHOP.CO`;
+        statusTitle = "Your Package is on the Way!";
+        statusMessage = "Great news! Your package has been dispatched from our warehouse and is traveling to your delivery address.";
+        statusColor = "#3B82F6"; // Blue
+      } else if (status === "DELIVERED") {
+        subject = `Delivered: Your Order #${order.orderNumber} Has Arrived! 🎉 - SHOP.CO`;
+        statusTitle = "Package Delivered Successfully!";
+        statusMessage = "Your order has been delivered! We hope you love your new apparel.";
+        statusColor = "#059669"; // Green
+      } else if (status === "CANCELLED") {
+        subject = `Order #${order.orderNumber} Cancellation Notice - SHOP.CO`;
+        statusTitle = "Order Cancelled";
+        statusMessage = "Your order has been cancelled.";
+        statusColor = "#EF4444"; // Red
+      }
     }
 
     const itemsHtml = order.items
