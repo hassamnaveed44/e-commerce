@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Star, Check, Plus, Minus, ShoppingBag, AlertCircle, CheckCircle2, Ban } from "lucide-react";
+import { Star, Check, Plus, Minus, ShoppingBag, Ban } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
 interface Variant {
@@ -247,28 +247,14 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
         {availableColors.length > 0 && <hr className="border-t border-black/10 my-3.5" />}
 
-        {/* Choose Size with Color-Specific Stock Validation */}
+        {/* Choose Size */}
         {allPossibleSizes.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-2.5">
               <h3 className="text-sm text-black/60">Choose Size</h3>
-              {matchingVariant && (
-                <span className="text-xs font-semibold">
-                  {matchingVariant.stockQuantity > 0 ? (
-                    matchingVariant.stockQuantity <= 5 ? (
-                      <span className="text-amber-600 flex items-center gap-1">
-                        <AlertCircle size={13} /> Only {matchingVariant.stockQuantity} left!
-                      </span>
-                    ) : (
-                      <span className="text-emerald-600 flex items-center gap-1">
-                        <CheckCircle2 size={13} /> In Stock ({matchingVariant.stockQuantity})
-                      </span>
-                    )
-                  ) : (
-                    <span className="text-rose-500 flex items-center gap-1">
-                      <Ban size={13} /> Out of Stock for this color
-                    </span>
-                  )}
+              {matchingVariant && matchingVariant.stockQuantity === 0 && (
+                <span className="text-xs font-semibold text-rose-500 flex items-center gap-1">
+                  <Ban size={13} /> Out of Stock
                 </span>
               )}
             </div>

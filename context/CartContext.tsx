@@ -161,7 +161,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Check if arriving via Referral / Campaign link (e.g. ?ref=insta10 or ?promo=welcome20)
+      // Check if arriving via Referral / Campaign link (e.g. ?ref=insta10 or ?promo=shop20)
       if (typeof window !== "undefined") {
         const params = new URLSearchParams(window.location.search);
         const refParam = params.get("ref") || params.get("referral");
@@ -171,9 +171,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           applyPromoCode(promoParam, `🏷️ Campaign Discount Applied (${promoParam.toUpperCase()})`);
         } else if (refParam) {
           applyPromoCode("REF10", `🏷️ Referral Discount Applied (via ${refParam})`);
-        } else if (!savedPromo) {
-          // Automatic 20% First-Order Welcome for new visitors
-          applyPromoCode("WELCOME20", "🎉 20% First-Order Welcome Discount Applied!");
         }
       }
     } catch {
@@ -349,8 +346,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = () => {
     setCartItems([]);
+    setPromoCode("");
+    setPromoDiscountPercent(0);
+    setPromoLabel(null);
+    setIsAutoApplied(false);
     localStorage.removeItem(USER_CACHE_KEY);
     localStorage.removeItem(GUEST_CART_KEY);
+    localStorage.removeItem(PROMO_STORAGE_KEY);
   };
 
   const totalItemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
