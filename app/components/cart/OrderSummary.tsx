@@ -27,12 +27,10 @@ export default function OrderSummary() {
     e.preventDefault();
     if (!inputCode.trim()) return;
 
-    const success = applyPromoCode(inputCode);
-    if (success) {
-      setPromoMessage("Promo code applied successfully!");
+    const res = applyPromoCode(inputCode);
+    setPromoMessage(res.message);
+    if (res.success) {
       setInputCode("");
-    } else {
-      setPromoMessage("Invalid promo code. Try SHOP20 or REF10");
     }
   };
 

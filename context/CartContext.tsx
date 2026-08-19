@@ -33,7 +33,7 @@ interface CartContextType {
   promoDiscountPercent: number;
   promoLabel: string | null;
   isAutoApplied: boolean;
-  applyPromoCode: (code: string, customLabel?: string) => boolean;
+  applyPromoCode: (code: string, customLabel?: string) => { success: boolean; message: string };
   removePromoCode: () => void;
   addToCart: (item: {
     variantId: string;
@@ -72,64 +72,152 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [promoDiscountPercent, setPromoDiscountPercent] = useState(0);
   const [promoLabel, setPromoLabel] = useState<string | null>(null);
   const [isAutoApplied, setIsAutoApplied] = useState(false);
+  const [orderCount, setOrderCount] = useState<number | null>(null);
 
-  // Apply promo code with anti-stacking logic
-  const applyPromoCode = useCallback((code: string, customLabel?: string) => {
-    const cleaned = code.trim().toUpperCase();
+  // Apply promo code with anti-stacking & first-order verification logic
+  const applyPromoCode = useCallback(
+    (code: string, customLabel?: string): { success: boolean; message: string } => {
+      const cleaned = code.trim().toUpperCase();
+      if (!cleaned) return { success: false, message: "Please enter a promo code." };
 
-    // 20% First-Order / Welcome / VIP discounts
-    if (
-      cleaned === "WELCOME20" ||
-      cleaned === "FIRST20" ||
-      cleaned === "SHOP20" ||
-      cleaned === "DISCOUNT20"
-    ) {
-      setPromoCode(cleaned);
-      setPromoDiscountPercent(20);
-      setPromoLabel(customLabel || "🎉 20% First-Order Welcome Discount Applied!");
-      setIsAutoApplied(Boolean(customLabel));
-      try {
-        localStorage.setItem(
-          PROMO_STORAGE_KEY,
-          JSON.stringify({
-            code: cleaned,
-            percent: 20,
-            label: customLabel || "20% Discount",
-            isAuto: Boolean(customLabel),
-          })
-        );
-      } catch {}
-      return true;
-    }
+      // 1. First-Order Welcome Codes (WELCOME20, FIRST20) - only for first-time buyers
+      if (cleaned === "WELCOME20" || cleaned === "FIRST20") {
+        if (orderCount !== null && orderCount > 0) {
+          return {
+            success: false,
+            message: "WELCOME20 is valid for first-time orders only.",
+          };
+        }
+        setPromoCode(cleaned);
+        setPromoDiscountPercent(20);
+        setPromoLabel(customLabel || "🎉 20% First-Order Welcome Discount Applied!");
+        setIsAutoApplied(Boolean(customLabel));
+        try {
+          localStorage.setItem(
+            PROMO_STORAGE_KEY,
+            JSON.stringify({
+              code: cleaned,
+              percent: 20,
+              label: customLabel || "🎉 20% First-Order Welcome Discount Applied!",
+              isAuto: Boolean(customLabel),
+            })
+          );
+        } catch {}
+        return { success: true, message: "🎉 20% First-Order Welcome Discount Applied!" };
+      }
 
-    // 10% Referral / Influencer / Ad discounts
-    if (
-      cleaned === "REF10" ||
-      cleaned === "SHOP10" ||
-      cleaned === "AD10" ||
-      cleaned === "TIKTOK10" ||
-      cleaned === "INSTA10"
-    ) {
-      setPromoCode(cleaned);
-      setPromoDiscountPercent(10);
-      setPromoLabel(customLabel || "🏷️ 10% Referral Discount Applied!");
-      setIsAutoApplied(Boolean(customLabel));
-      try {
-        localStorage.setItem(
-          PROMO_STORAGE_KEY,
-          JSON.stringify({
-            code: cleaned,
-            percent: 10,
-            label: customLabel || "10% Referral",
-            isAuto: Boolean(customLabel),
-          })
-        );
-      } catch {}
-      return true;
-    }
+      // 2. 20% General Promo Codes
+      if (
+        cleaned === "SHOP20" ||
+        cleaned === "DISCOUNT20" ||
+        cleaned === "FLASH20" ||
+        cleaned === "VIP20"
+      ) {
+        setPromoCode(cleaned);
+        setPromoDiscountPercent(20);
+        setPromoLabel(customLabel || `🏷️ ${cleaned} Applied (-20%)`);
+        setIsAutoApplied(Boolean(customLabel));
+        try {
+          localStorage.setItem(
+            PROMO_STORAGE_KEY,
+            JSON.stringify({
+              code: cleaned,
+              percent: 20,
+              label: customLabel || `🏷️ ${cleaned} Applied (-20%)`,
+              isAuto: Boolean(customLabel),
+            })
+          );
+        } catch {}
+        return { success: true, message: `Promo code ${cleaned} applied (-20%)!` };
+      }
 
-    return false;
-  }, []);
+      // 3. 15% VIP / Campaign Promo Codes
+      if (
+        cleaned === "VIP15" ||
+        cleaned === "FLASH15" ||
+        cleaned === "EXTRA15" ||
+        cleaned === "SAVE15"
+      ) {
+        setPromoCode(cleaned);
+        setPromoDiscountPercent(15);
+        setPromoLabel(customLabel || `🏷️ ${cleaned} Applied (-15%)`);
+        setIsAutoApplied(Boolean(customLabel));
+        try {
+          localStorage.setItem(
+            PROMO_STORAGE_KEY,
+            JSON.stringify({
+              code: cleaned,
+              percent: 15,
+              label: customLabel || `🏷️ ${cleaned} Applied (-15%)`,
+              isAuto: Boolean(customLabel),
+            })
+          );
+        } catch {}
+        return { success: true, message: `Promo code ${cleaned} applied (-15%)!` };
+      }
+
+      // 4. 10% Referral / Ad / Campaign Codes
+      if (
+        cleaned === "REF10" ||
+        cleaned === "SHOP10" ||
+        cleaned === "AD10" ||
+        cleaned === "TIKTOK10" ||
+        cleaned === "INSTA10" ||
+        cleaned === "SUMMER10" ||
+        cleaned === "SAVE10" ||
+        cleaned === "PROMO10"
+      ) {
+        setPromoCode(cleaned);
+        setPromoDiscountPercent(10);
+        setPromoLabel(customLabel || `🏷️ ${cleaned} Applied (-10%)`);
+        setIsAutoApplied(Boolean(customLabel));
+        try {
+          localStorage.setItem(
+            PROMO_STORAGE_KEY,
+            JSON.stringify({
+              code: cleaned,
+              percent: 10,
+              label: customLabel || `🏷️ ${cleaned} Applied (-10%)`,
+              isAuto: Boolean(customLabel),
+            })
+          );
+        } catch {}
+        return { success: true, message: `Promo code ${cleaned} applied (-10%)!` };
+      }
+
+      // 5. 5% Ad / Special Promo Codes
+      if (
+        cleaned === "SAVE5" ||
+        cleaned === "PROMO5" ||
+        cleaned === "AD5" ||
+        cleaned === "EXTRA5" ||
+        cleaned === "FLASH5"
+      ) {
+        setPromoCode(cleaned);
+        setPromoDiscountPercent(5);
+        setPromoLabel(customLabel || `🏷️ ${cleaned} Applied (-5%)`);
+        setIsAutoApplied(Boolean(customLabel));
+        try {
+          localStorage.setItem(
+            PROMO_STORAGE_KEY,
+            JSON.stringify({
+              code: cleaned,
+              percent: 5,
+              label: customLabel || `🏷️ ${cleaned} Applied (-5%)`,
+              isAuto: Boolean(customLabel),
+            })
+          );
+        } catch {}
+        return { success: true, message: `Promo code ${cleaned} applied (-5%)!` };
+      }
+
+      return {
+        success: false,
+        message: "Invalid promo code. Available codes: SHOP20, REF10, SAVE5",
+      };
+    },
+    [orderCount]
+  );
 
   const removePromoCode = useCallback(() => {
     setPromoCode("");
@@ -141,7 +229,48 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
-  // Read initial cache & URL referral parameters on client mount
+  // Check user order history to determine first-time buyer status vs returning customer
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!user) {
+      setOrderCount(0);
+      return;
+    }
+
+    const checkUserOrders = async () => {
+      try {
+        const res = await fetch("/api/orders");
+        const json = await res.json();
+        if (json.success && Array.isArray(json.orders)) {
+          const count = json.orders.length;
+          setOrderCount(count);
+
+          if (count > 0) {
+            // Returning customer: remove any first-order welcome discount from cache
+            const saved = localStorage.getItem(PROMO_STORAGE_KEY);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (parsed.code === "WELCOME20" || parsed.code === "FIRST20") {
+                removePromoCode();
+              }
+            }
+          } else {
+            // First-time logged-in buyer (0 previous orders): auto-apply 20% First-Order Welcome discount
+            const saved = localStorage.getItem(PROMO_STORAGE_KEY);
+            if (!saved) {
+              applyPromoCode("WELCOME20", "🎉 20% First-Order Welcome Discount Applied!");
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to verify user orders for promo status:", err);
+      }
+    };
+
+    checkUserOrders();
+  }, [user, isLoaded, removePromoCode, applyPromoCode]);
+
+  // Read initial cache & URL referral / ad parameters on client mount
   useEffect(() => {
     try {
       const cached = localStorage.getItem(USER_CACHE_KEY);
@@ -161,16 +290,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Check if arriving via Referral / Campaign link (e.g. ?ref=insta10 or ?promo=shop20)
+      // Check if arriving via Ads / Referral / Campaign link (e.g. ?ad=tiktok, ?ref=insta10, ?promo=save5)
       if (typeof window !== "undefined") {
         const params = new URLSearchParams(window.location.search);
         const refParam = params.get("ref") || params.get("referral");
-        const promoParam = params.get("promo");
+        const promoParam = params.get("promo") || params.get("code") || params.get("coupon");
+        const adParam = params.get("ad") || params.get("campaign") || params.get("utm_campaign");
 
         if (promoParam) {
           applyPromoCode(promoParam, `🏷️ Campaign Discount Applied (${promoParam.toUpperCase()})`);
         } else if (refParam) {
           applyPromoCode("REF10", `🏷️ Referral Discount Applied (via ${refParam})`);
+        } else if (adParam) {
+          if (adParam.includes("5")) {
+            applyPromoCode("SAVE5", `🏷️ Ad Special Discount Applied (-5%)`);
+          } else {
+            applyPromoCode("AD10", `🏷️ Ad Promotion Discount Applied (-10%)`);
+          }
         }
       }
     } catch {
